@@ -60,9 +60,49 @@ impl Lexer<'_> {
                 self.read_char();
                 Token::Colon
             }
-            '"' => self.read_str(),
-            'a'..='z' | 'A'..='Z' | '_' => self.read_ident(),
-            '0'..='9' | '.' => self.read_num(),
+            '-' => {
+                if self.peek_char() == '>' {
+                    self.read_char();
+                    self.read_char();
+                    Token::Arrow
+                } else {
+                    self.read_char();
+                    Token::Minus
+                }
+            }
+            '"' => {
+                let pos = self.pos + 1;
+                loop {
+                    self.read_char();
+                    if self.ch == '"' || self.ch == '\0' {
+                        break;
+                    }
+                }
+                let val = self.input[pos..self.pos].to_string();
+                self.read_char();
+                Token::Str(val)
+            }
+            'a'..='z' | 'A'..='Z' | '_' => {
+                let pos = self.pos;
+                while is_letter(self.ch) {
+                    self.read_char();
+                }
+                lookup_ident(&self.input[pos..self.pos])
+            }
+            '0'..='9' | '.' => {
+                let pos = self.pos;
+
+                while self.ch.is_ascii_digit() || self.ch == '.' {
+                    self.read_char();
+                }
+
+                let num_str = &self.input[pos..self.pos];
+                if num_str.contains('.') {
+                    Token::Float(num_str.parse::<f64>().unwrap())
+                } else {
+                    Token::Int(num_str.parse::<i64>().unwrap())
+                }
+            }
             '\0' => {
                 self.read_char();
                 Token::EOF
@@ -101,42 +141,6 @@ impl Lexer<'_> {
         }
     }
 
-    fn read_ident(&mut self) -> Token {
-        let pos = self.pos;
-        while is_letter(self.ch) {
-            self.read_char();
-        }
-        lookup_ident(&self.input[pos..self.pos])
-    }
-
-    fn read_str(&mut self) -> Token {
-        let pos = self.pos + 1;
-        loop {
-            self.read_char();
-            if self.ch == '"' || self.ch == '\0' {
-                break;
-            }
-        }
-        let val = self.input[pos..self.pos].to_string();
-        self.read_char();
-        Token::Str(val)
-    }
-
-    fn read_num(&mut self) -> Token {
-        let pos = self.pos;
-
-        while self.ch.is_ascii_digit() || self.ch == '.' {
-            self.read_char();
-        }
-
-        let num_str = &self.input[pos..self.pos];
-        if num_str.contains('.') {
-            Token::Float(num_str.parse::<f64>().unwrap())
-        } else {
-            Token::Int(num_str.parse::<i64>().unwrap())
-        }
-    }
-
     fn skip_comments(&mut self) {
         while self.ch == '/' && self.peek_char() == '/' {
             self.read_line();
@@ -164,11 +168,11 @@ mod tests {
 let five: int = 5;
 let ten: int = 10;
 
-fn add(x, y) {
+fn add(x: int, y: int) -> int {
     x + y
 }
 
-let result: int = add(five, ten);
+let result = add(five, ten);
 ";
 
         let mut lexer = Lexer::new(input);
@@ -192,9 +196,15 @@ let result: int = add(five, ten);
             Token::Ident("add".to_string()),
             Token::Lparen,
             Token::Ident("x".to_string()),
+            Token::Colon,
+            Token::IntType,
             Token::Comma,
             Token::Ident("y".to_string()),
+            Token::Colon,
+            Token::IntType,
             Token::Rparen,
+            Token::Arrow,
+            Token::IntType,
             Token::Lbrace,
             Token::Ident("x".to_string()),
             Token::Plus,
@@ -202,8 +212,6 @@ let result: int = add(five, ten);
             Token::Rbrace,
             Token::Let,
             Token::Ident("result".to_string()),
-            Token::Colon,
-            Token::IntType,
             Token::Assign,
             Token::Ident("add".to_string()),
             Token::Lparen,

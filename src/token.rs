@@ -21,11 +21,13 @@ pub enum Token {
     // Operators
     Assign,
     Plus,
+    Minus,
 
     // Delimiters
     Colon,
     Comma,
     Semicolon,
+    Arrow,
 
     Lparen,
     Rparen,
@@ -67,9 +69,11 @@ impl Display for Token {
             Token::BoolType => write!(f, "bool"),
             Token::Assign => write!(f, "assign"),
             Token::Plus => write!(f, "plus"),
+            Token::Minus => write!(f, "minus"),
             Token::Comma => write!(f, "comma"),
             Token::Colon => write!(f, "colon"),
             Token::Semicolon => write!(f, "semicolon"),
+            Token::Arrow => write!(f, "arrow"),
             Token::Lparen => write!(f, "lparen"),
             Token::Rparen => write!(f, "rparen"),
             Token::Lbrace => write!(f, "lbrace"),
