@@ -48,6 +48,10 @@ pub enum Token {
     // Keywords
     Function,
     Let,
+    If,
+    Elif,
+    Else,
+    Return,
 }
 
 pub fn lookup_ident(ident: &str) -> Token {
@@ -60,6 +64,10 @@ pub fn lookup_ident(ident: &str) -> Token {
         "float" => Token::FloatType,
         "str" => Token::StrType,
         "bool" => Token::BoolType,
+        "if" => Token::If,
+        "elif" => Token::Elif,
+        "else" => Token::Else,
+        "return" => Token::Return,
         _ => Token::Ident(ident.to_string()),
     }
 }
@@ -100,6 +108,10 @@ impl Display for Token {
             Token::Rbrace => write!(f, "rbrace"),
             Token::Function => write!(f, "fn"),
             Token::Let => write!(f, "let"),
+            Token::If => write!(f, "if"),
+            Token::Elif => write!(f, "elif"),
+            Token::Else => write!(f, "else"),
+            Token::Return => write!(f, "return"),
         }
     }
 }
