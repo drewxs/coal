@@ -22,6 +22,17 @@ pub enum Token {
     Assign,
     Plus,
     Minus,
+    Bang,
+    Asterisk,
+    Slash,
+
+    // Comparisons
+    LT,
+    GT,
+    LTE,
+    GTE,
+    EQ,
+    NEQ,
 
     // Delimiters
     Colon,
@@ -70,6 +81,15 @@ impl Display for Token {
             Token::Assign => write!(f, "assign"),
             Token::Plus => write!(f, "plus"),
             Token::Minus => write!(f, "minus"),
+            Token::Bang => write!(f, "bang"),
+            Token::Asterisk => write!(f, "asterisk"),
+            Token::Slash => write!(f, "slash"),
+            Token::LT => write!(f, "lt"),
+            Token::GT => write!(f, "gt"),
+            Token::LTE => write!(f, "lte"),
+            Token::GTE => write!(f, "gte"),
+            Token::EQ => write!(f, "eq"),
+            Token::NEQ => write!(f, "neq"),
             Token::Comma => write!(f, "comma"),
             Token::Colon => write!(f, "colon"),
             Token::Semicolon => write!(f, "semicolon"),

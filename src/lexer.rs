@@ -24,10 +24,17 @@ impl Lexer<'_> {
         self.skip_comments();
 
         match self.ch {
-            '=' => {
-                self.read_char();
-                Token::Assign
-            }
+            '=' => match self.peek_char() {
+                '=' => {
+                    self.read_char();
+                    self.read_char();
+                    Token::EQ
+                }
+                _ => {
+                    self.read_char();
+                    Token::Assign
+                }
+            },
             ';' => {
                 self.read_char();
                 Token::Semicolon
@@ -48,6 +55,58 @@ impl Lexer<'_> {
                 self.read_char();
                 Token::Plus
             }
+            '-' => match self.peek_char() {
+                '>' => {
+                    self.read_char();
+                    self.read_char();
+                    Token::Arrow
+                }
+                _ => {
+                    self.read_char();
+                    Token::Minus
+                }
+            },
+            '!' => match self.peek_char() {
+                '=' => {
+                    self.read_char();
+                    self.read_char();
+                    Token::NEQ
+                }
+                _ => {
+                    self.read_char();
+                    Token::Bang
+                }
+            },
+            '*' => {
+                self.read_char();
+                Token::Asterisk
+            }
+            '/' => {
+                self.read_char();
+                Token::Slash
+            }
+            '<' => match self.peek_char() {
+                '=' => {
+                    self.read_char();
+                    self.read_char();
+                    Token::LTE
+                }
+                _ => {
+                    self.read_char();
+                    Token::LT
+                }
+            },
+            '>' => match self.peek_char() {
+                '=' => {
+                    self.read_char();
+                    self.read_char();
+                    Token::GTE
+                }
+                _ => {
+                    self.read_char();
+                    Token::GT
+                }
+            },
             '{' => {
                 self.read_char();
                 Token::Lbrace
@@ -59,16 +118,6 @@ impl Lexer<'_> {
             ':' => {
                 self.read_char();
                 Token::Colon
-            }
-            '-' => {
-                if self.peek_char() == '>' {
-                    self.read_char();
-                    self.read_char();
-                    Token::Arrow
-                } else {
-                    self.read_char();
-                    Token::Minus
-                }
             }
             '"' => {
                 let pos = self.pos + 1;
@@ -173,6 +222,8 @@ fn add(x: int, y: int) -> int {
 }
 
 let result = add(five, ten);
+!-/*5;
+5 < 10 > 5;
 ";
 
         let mut lexer = Lexer::new(input);
@@ -219,6 +270,18 @@ let result = add(five, ten);
             Token::Comma,
             Token::Ident("ten".to_string()),
             Token::Rparen,
+            Token::Semicolon,
+            Token::Bang,
+            Token::Minus,
+            Token::Slash,
+            Token::Asterisk,
+            Token::Int(5),
+            Token::Semicolon,
+            Token::Int(5),
+            Token::LT,
+            Token::Int(10),
+            Token::GT,
+            Token::Int(5),
             Token::Semicolon,
             Token::EOF,
         ];
