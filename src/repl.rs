@@ -18,7 +18,7 @@ pub fn repl() {
         let lexer = Lexer::new(&input);
 
         for token in lexer {
-            println!("{token:?}");
+            println!("{token}");
             io::stdout().flush().unwrap();
         }
     }
