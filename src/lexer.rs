@@ -336,3 +336,14 @@ if 5 < 10 {
         }
     }
 }
+
+impl<'a> Iterator for Lexer<'a> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.next_token() {
+            Token::EOF => None,
+            token => Some(token),
+        }
+    }
+}
