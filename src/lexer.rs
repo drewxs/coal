@@ -32,13 +32,17 @@ impl Lexer<'_> {
             '+' => Token::Plus,
             '{' => Token::Lbrace,
             '}' => Token::Rbrace,
-            '\0' => Token::EOF,
+            '"' => return self.read_str(),
             'a'..='z' | 'A'..='Z' | '_' => {
-                return lookup_ident(&self.read_ident());
+                return match self.read_ident().as_str() {
+                    "true" => Token::Bool(true),
+                    "false" => Token::Bool(false),
+                    ident => lookup_ident(ident),
+                }
             }
-            '0'..='9' | '.' => {
-                return self.read_num();
-            }
+            '0'..='9' | '.' => return self.read_num(),
+            ':' => Token::Colon,
+            '\0' => Token::EOF,
             _ => Token::Illegal,
         };
 
@@ -82,28 +86,31 @@ impl Lexer<'_> {
         self.input[pos..self.pos].to_string()
     }
 
+    fn read_str(&mut self) -> Token {
+        let pos = self.pos + 1;
+        loop {
+            self.read_char();
+            if self.ch == '"' || self.ch == '\0' {
+                break;
+            }
+        }
+        let val = self.input[pos..self.pos].to_string();
+        self.read_char();
+        Token::Str(val)
+    }
+
     fn read_num(&mut self) -> Token {
         let pos = self.pos;
-        let mut is_float = false;
 
-        while self.ch == '.' || self.ch.is_ascii_digit() {
-            if self.ch == '.' {
-                is_float = true;
-            }
+        while self.ch.is_ascii_digit() || self.ch == '.' {
             self.read_char();
         }
 
         let num_str = &self.input[pos..self.pos];
-        if is_float {
-            match num_str.parse::<f64>() {
-                Ok(value) => Token::Float(value),
-                Err(_) => panic!("Failed to parse float: {}", num_str),
-            }
+        if num_str.contains('.') {
+            Token::Float(num_str.parse::<f64>().unwrap())
         } else {
-            match num_str.parse::<i64>() {
-                Ok(value) => Token::Int(value),
-                Err(_) => panic!("Failed to parse int: {}", num_str),
-            }
+            Token::Int(num_str.parse::<i64>().unwrap())
         }
     }
 
@@ -131,14 +138,14 @@ mod tests {
     #[test]
     fn test_next_token() {
         let input = "// comment
-let five = 5;
-let ten = 10;
+let five: int = 5;
+let ten: int = 10;
 
 let add = fn(x, y) {
     x + y
 };
 
-let result = add(five, ten);
+let result: int = add(five, ten);
 ";
 
         let mut lexer = Lexer::new(input);
@@ -146,11 +153,15 @@ let result = add(five, ten);
         let expected = vec![
             Token::Let,
             Token::Ident("five".to_string()),
+            Token::Colon,
+            Token::IntType,
             Token::Assign,
             Token::Int(5),
             Token::Semicolon,
             Token::Let,
             Token::Ident("ten".to_string()),
+            Token::Colon,
+            Token::IntType,
             Token::Assign,
             Token::Int(10),
             Token::Semicolon,
@@ -171,6 +182,8 @@ let result = add(five, ten);
             Token::Semicolon,
             Token::Let,
             Token::Ident("result".to_string()),
+            Token::Colon,
+            Token::IntType,
             Token::Assign,
             Token::Ident("add".to_string()),
             Token::Lparen,
@@ -182,9 +195,10 @@ let result = add(five, ten);
             Token::EOF,
         ];
 
-        for (i, token) in expected.iter().enumerate() {
-            println!("[{i}] {token}");
-            assert_eq!(lexer.next_token(), *token);
+        for (i, expected) in expected.iter().enumerate() {
+            let actual = lexer.next_token();
+            println!("[{i}] expected: {expected}, actual: {actual}");
+            assert_eq!(*expected, actual);
         }
     }
 }
