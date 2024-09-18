@@ -23,32 +23,55 @@ impl Lexer<'_> {
         self.skip_whitespace();
         self.skip_comments();
 
-        let token = match self.ch {
-            '=' => Token::Assign,
-            ';' => Token::Semicolon,
-            '(' => Token::Lparen,
-            ')' => Token::Rparen,
-            ',' => Token::Comma,
-            '+' => Token::Plus,
-            '{' => Token::Lbrace,
-            '}' => Token::Rbrace,
-            '"' => return self.read_str(),
-            'a'..='z' | 'A'..='Z' | '_' => {
-                return match self.read_ident().as_str() {
-                    "true" => Token::Bool(true),
-                    "false" => Token::Bool(false),
-                    ident => lookup_ident(ident),
-                }
+        match self.ch {
+            '=' => {
+                self.read_char();
+                Token::Assign
             }
-            '0'..='9' | '.' => return self.read_num(),
-            ':' => Token::Colon,
-            '\0' => Token::EOF,
-            _ => Token::Illegal,
-        };
-
-        self.read_char();
-
-        token
+            ';' => {
+                self.read_char();
+                Token::Semicolon
+            }
+            '(' => {
+                self.read_char();
+                Token::Lparen
+            }
+            ')' => {
+                self.read_char();
+                Token::Rparen
+            }
+            ',' => {
+                self.read_char();
+                Token::Comma
+            }
+            '+' => {
+                self.read_char();
+                Token::Plus
+            }
+            '{' => {
+                self.read_char();
+                Token::Lbrace
+            }
+            '}' => {
+                self.read_char();
+                Token::Rbrace
+            }
+            ':' => {
+                self.read_char();
+                Token::Colon
+            }
+            '"' => self.read_str(),
+            'a'..='z' | 'A'..='Z' | '_' => self.read_ident(),
+            '0'..='9' | '.' => self.read_num(),
+            '\0' => {
+                self.read_char();
+                Token::EOF
+            }
+            _ => {
+                self.read_char();
+                Token::Illegal
+            }
+        }
     }
 
     fn peek_char(&mut self) -> char {
@@ -78,12 +101,12 @@ impl Lexer<'_> {
         }
     }
 
-    fn read_ident(&mut self) -> String {
+    fn read_ident(&mut self) -> Token {
         let pos = self.pos;
         while is_letter(self.ch) {
             self.read_char();
         }
-        self.input[pos..self.pos].to_string()
+        lookup_ident(&self.input[pos..self.pos])
     }
 
     fn read_str(&mut self) -> Token {
@@ -141,9 +164,9 @@ mod tests {
 let five: int = 5;
 let ten: int = 10;
 
-let add = fn(x, y) {
+fn add(x, y) {
     x + y
-};
+}
 
 let result: int = add(five, ten);
 ";
@@ -165,10 +188,8 @@ let result: int = add(five, ten);
             Token::Assign,
             Token::Int(10),
             Token::Semicolon,
-            Token::Let,
-            Token::Ident("add".to_string()),
-            Token::Assign,
             Token::Function,
+            Token::Ident("add".to_string()),
             Token::Lparen,
             Token::Ident("x".to_string()),
             Token::Comma,
@@ -179,7 +200,6 @@ let result: int = add(five, ten);
             Token::Plus,
             Token::Ident("y".to_string()),
             Token::Rbrace,
-            Token::Semicolon,
             Token::Let,
             Token::Ident("result".to_string()),
             Token::Colon,
