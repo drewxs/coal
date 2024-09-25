@@ -1,9 +1,9 @@
 use std::io::{self, Write};
 
-use crate::lexer::Lexer;
+use crate::{config::VERSION, Lexer};
 
 pub fn repl() {
-    println!("Coal 0.1.0");
+    println!("Coal {VERSION}");
     loop {
         print!(">> ");
         io::stdout().flush().unwrap();

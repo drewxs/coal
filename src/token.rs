@@ -1,14 +1,14 @@
-use std::fmt::Display;
+use std::fmt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Illegal,
     EOF,
 
     // Identifiers + literals
     Ident(String),
-    Int(i64),
     Str(String),
+    Int(i64),
     Float(f64),
     Bool(bool),
 
@@ -72,8 +72,8 @@ pub fn lookup_ident(ident: &str) -> Token {
     }
 }
 
-impl Display for Token {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }

@@ -1,7 +1,8 @@
 use crate::token::{lookup_ident, Token};
 
-pub struct Lexer<'a> {
-    pub input: &'a str,
+#[derive(Clone, Debug)]
+pub struct Lexer<'i> {
+    pub input: &'i str,
     pub pos: usize,
     pub next_pos: usize,
     pub ch: char,
@@ -19,7 +20,7 @@ impl Lexer<'_> {
         lexer
     }
 
-    pub fn next_token(&mut self) -> Token {
+    pub fn next_tok(&mut self) -> Token {
         self.skip_whitespace();
         self.skip_comments();
 
@@ -212,7 +213,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_next_token() {
+    fn test_next_tok() {
         let input = "// comment
 let five: int = 5;
 let ten: int = 10;
@@ -239,7 +240,7 @@ if 5 < 10 {
 
         let mut lexer = Lexer::new(input);
 
-        let expected = vec![
+        let tests = vec![
             Token::Let,
             Token::Ident("five".to_string()),
             Token::Colon,
@@ -329,8 +330,8 @@ if 5 < 10 {
             Token::EOF,
         ];
 
-        for (i, expected) in expected.iter().enumerate() {
-            let actual = lexer.next_token();
+        for (i, expected) in tests.iter().enumerate() {
+            let actual = lexer.next_tok();
             println!("[{i}] expected: {expected}, actual: {actual}");
             assert_eq!(*expected, actual);
         }
@@ -341,7 +342,7 @@ impl<'a> Iterator for Lexer<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.next_token() {
+        match self.next_tok() {
             Token::EOF => None,
             token => Some(token),
         }
