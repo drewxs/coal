@@ -1,4 +1,4 @@
-use std::{env, fs::File, io::Read};
+use std::{env, fs::File, io::Read, process};
 
 use coal::{repl, Lexer, Token};
 
@@ -15,9 +15,17 @@ fn main() {
 }
 
 fn run(filename: &str) {
-    let mut file = File::open(filename).unwrap();
+    let mut file = File::open(filename).unwrap_or_else(|_| {
+        eprintln!("file not found: {filename}");
+        process::exit(1);
+    });
+
     let mut input = String::new();
-    file.read_to_string(&mut input).unwrap();
+    file.read_to_string(&mut input).unwrap_or_else(|_| {
+        eprintln!("failed to read file: {filename}");
+        process::exit(1);
+    });
+
     let mut lexer = Lexer::new(&input);
 
     let mut token = lexer.next_tok();
