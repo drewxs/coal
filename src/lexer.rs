@@ -134,7 +134,7 @@ impl Lexer<'_> {
             }
             'a'..='z' | 'A'..='Z' | '_' => {
                 let pos = self.pos;
-                while is_letter(self.ch) {
+                while self.ch == '_' || self.ch.is_alphabetic() {
                     self.read_char();
                 }
                 lookup_ident(&self.input[pos..self.pos])
@@ -204,8 +204,15 @@ impl Lexer<'_> {
     }
 }
 
-fn is_letter(ch: char) -> bool {
-    ch == '_' || ch.is_alphabetic()
+impl<'a> Iterator for Lexer<'a> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.next_tok() {
+            Token::EOF => None,
+            token => Some(token),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -334,17 +341,6 @@ if 5 < 10 {
             let actual = lexer.next_tok();
             println!("[{i}] expected: {expected}, actual: {actual}");
             assert_eq!(*expected, actual);
-        }
-    }
-}
-
-impl<'a> Iterator for Lexer<'a> {
-    type Item = Token;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.next_tok() {
-            Token::EOF => None,
-            token => Some(token),
         }
     }
 }
