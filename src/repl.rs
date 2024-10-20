@@ -19,7 +19,9 @@ pub fn repl() {
         let lexer = Lexer::new(&input);
         let mut parser = Parser::new(lexer.clone());
         parser.parse();
-        parser.check();
+        if let Err(e) = parser.check() {
+            println!("{e}");
+        }
 
         // for token in lexer {
         //     println!("{token}");

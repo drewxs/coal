@@ -71,28 +71,30 @@ impl<'l> Parser<'l> {
         let mut program = Program::new();
         while self.curr_tok != Token::EOF {
             if let Some(stmt) = self.parse_stmt() {
-                program.push(stmt);
+                program.statements.push(stmt);
             }
             self.advance();
         }
         program
     }
 
-    pub fn check(&mut self) -> bool {
+    /// Checks for parser errors and returns `Ok(())` if none, or an `Err` with error details if present.
+    pub fn check(&mut self) -> Result<(), String> {
         if self.errors.is_empty() {
-            return true;
+            return Ok(());
         }
 
-        println!("parser has {} errors", self.errors.len());
+        let mut errors = format!("parser has {} errors", self.errors.len());
         for error in self.errors.iter() {
-            println!("parser error: {error}");
+            errors += &format!("\nparser error: {error}");
         }
-        false
+        Err(errors)
     }
 
+    /// Runs `check`, then panics if there are errors.
     pub fn validate(&mut self) {
-        if !self.check() {
-            panic!("parser encountered errors");
+        if let Err(e) = self.check() {
+            panic!("parser encountered errors\n{}", e);
         }
     }
 
@@ -128,7 +130,7 @@ impl<'l> Parser<'l> {
         }
         self.advance();
 
-        let expr = self.parse_expr(Precedence::Lowest)?;
+        let expr = self.parse_expr()?;
 
         if self.next_tok != Token::Semicolon {
             self.advance();
@@ -137,7 +139,7 @@ impl<'l> Parser<'l> {
         Some(Stmt::Let(name, t, expr))
     }
 
-    fn parse_expr(&mut self, _: Precedence) -> Option<Expr> {
+    fn parse_expr_with_prec(&mut self, _: Precedence) -> Option<Expr> {
         match self.curr_tok.clone() {
             Token::Ident(_) => self.parse_ident().map(Expr::Ident),
             Token::Int(i) => Some(Expr::Literal(Literal::Int(i))),
@@ -155,14 +157,15 @@ impl<'l> Parser<'l> {
         // lhs
     }
 
+    fn parse_expr(&mut self) -> Option<Expr> {
+        self.parse_expr_with_prec(Precedence::Lowest)
+    }
+
     fn parse_expr_stmt(&mut self) -> Option<Stmt> {
-        match self.parse_expr(Precedence::Lowest) {
-            Some(expr) => {
-                self.expect_next_tok(Token::Semicolon);
-                Some(Stmt::Expr(expr))
-            }
-            None => None,
-        }
+        self.parse_expr().map(|expr| {
+            self.expect_next_tok(Token::Semicolon);
+            Stmt::Expr(expr)
+        })
     }
 
     fn parse_ident(&mut self) -> Option<Ident> {
@@ -185,11 +188,10 @@ impl<'l> Parser<'l> {
     fn expect_next_tok(&mut self, token: Token) -> bool {
         if self.next_tok == token {
             self.advance();
-            true
-        } else {
-            self.err_next_tok(token);
-            false
+            return true;
         }
+        self.err_next_tok(token);
+        false
     }
 
     fn err_next_tok(&mut self, token: Token) {
@@ -205,7 +207,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_let_stmts() {
+    fn test_parse_let_statements() {
         let input = r#"//
 // let 5;
 let x: int = 5;
@@ -220,25 +222,24 @@ let foo: int = 99999;
 
         dbg!(&parser.errors);
 
-        assert_eq!(
-            vec![
-                Stmt::Let(
-                    Ident(String::from("x")),
-                    Type::Int,
-                    Expr::Literal(Literal::Int(5))
-                ),
-                Stmt::Let(
-                    Ident(String::from("y")),
-                    Type::Int,
-                    Expr::Literal(Literal::Int(10))
-                ),
-                Stmt::Let(
-                    Ident(String::from("foo")),
-                    Type::Int,
-                    Expr::Literal(Literal::Int(99999))
-                ),
-            ],
-            program
-        );
+        let expected = vec![
+            Stmt::Let(
+                Ident(String::from("x")),
+                Type::Int,
+                Expr::Literal(Literal::Int(5)),
+            ),
+            Stmt::Let(
+                Ident(String::from("y")),
+                Type::Int,
+                Expr::Literal(Literal::Int(10)),
+            ),
+            Stmt::Let(
+                Ident(String::from("foo")),
+                Type::Int,
+                Expr::Literal(Literal::Int(99999)),
+            ),
+        ];
+
+        assert_eq!(expected, program.statements);
     }
 }

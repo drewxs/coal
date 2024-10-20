@@ -204,7 +204,7 @@ impl Lexer<'_> {
     }
 }
 
-impl<'a> Iterator for Lexer<'a> {
+impl Iterator for Lexer<'_> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -247,47 +247,47 @@ if 5 < 10 {
 
         let mut lexer = Lexer::new(input);
 
-        let tests = vec![
+        let expected = vec![
             Token::Let,
-            Token::Ident("five".to_string()),
+            Token::Ident(String::from("five")),
             Token::Colon,
             Token::IntType,
             Token::Assign,
             Token::Int(5),
             Token::Semicolon,
             Token::Let,
-            Token::Ident("ten".to_string()),
+            Token::Ident(String::from("ten")),
             Token::Colon,
             Token::IntType,
             Token::Assign,
             Token::Int(10),
             Token::Semicolon,
             Token::Function,
-            Token::Ident("add".to_string()),
+            Token::Ident(String::from("add")),
             Token::Lparen,
-            Token::Ident("x".to_string()),
+            Token::Ident(String::from("x")),
             Token::Colon,
             Token::IntType,
             Token::Comma,
-            Token::Ident("y".to_string()),
+            Token::Ident(String::from("y")),
             Token::Colon,
             Token::IntType,
             Token::Rparen,
             Token::Arrow,
             Token::IntType,
             Token::Lbrace,
-            Token::Ident("x".to_string()),
+            Token::Ident(String::from("x")),
             Token::Plus,
-            Token::Ident("y".to_string()),
+            Token::Ident(String::from("y")),
             Token::Rbrace,
             Token::Let,
-            Token::Ident("result".to_string()),
+            Token::Ident(String::from("result")),
             Token::Assign,
-            Token::Ident("add".to_string()),
+            Token::Ident(String::from("add")),
             Token::Lparen,
-            Token::Ident("five".to_string()),
+            Token::Ident(String::from("five")),
             Token::Comma,
-            Token::Ident("ten".to_string()),
+            Token::Ident(String::from("ten")),
             Token::Rparen,
             Token::Semicolon,
             Token::Bang,
@@ -337,7 +337,7 @@ if 5 < 10 {
             Token::EOF,
         ];
 
-        for (i, expected) in tests.iter().enumerate() {
+        for (i, expected) in expected.iter().enumerate() {
             let actual = lexer.next_tok();
             println!("[{i}] expected: {expected}, actual: {actual}");
             assert_eq!(*expected, actual);

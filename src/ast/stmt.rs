@@ -6,5 +6,3 @@ pub enum Stmt {
     Let(Ident, Type, Expr),
     Expr(Expr),
 }
-
-pub type BlockStmt = Vec<Stmt>;
