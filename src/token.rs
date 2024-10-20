@@ -1,5 +1,3 @@
-use std::fmt;
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Illegal,
@@ -69,11 +67,5 @@ pub fn lookup_ident(ident: &str) -> Token {
         "else" => Token::Else,
         "return" => Token::Return,
         _ => Token::Ident(ident.to_string()),
-    }
-}
-
-impl fmt::Display for Token {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
     }
 }

@@ -164,6 +164,14 @@ impl Lexer<'_> {
         }
     }
 
+    pub fn print_tokens(&mut self) {
+        let mut token = self.next_tok();
+        while token != Token::EOF {
+            println!("{token:?}");
+            token = self.next_tok();
+        }
+    }
+
     fn peek_char(&mut self) -> char {
         if self.next_pos < self.input.len() {
             self.input.chars().nth(self.next_pos).unwrap()
@@ -339,7 +347,7 @@ if 5 < 10 {
 
         for (i, expected) in expected.iter().enumerate() {
             let actual = lexer.next_tok();
-            println!("[{i}] expected: {expected}, actual: {actual}");
+            println!("[{i}] expected: {expected:?}, actual: {actual:?}");
             assert_eq!(*expected, actual);
         }
     }

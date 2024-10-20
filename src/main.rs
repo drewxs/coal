@@ -1,6 +1,6 @@
 use std::{env, fs::File, io::Read, process};
 
-use coal::{repl, Lexer, Token};
+use coal::{repl, Lexer};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -26,13 +26,7 @@ fn run(filename: &str) {
         process::exit(1);
     });
 
-    let mut lexer = Lexer::new(&input);
-
-    let mut token = lexer.next_tok();
-    while token != Token::EOF {
-        println!("{token}");
-        token = lexer.next_tok();
-    }
+    Lexer::new(&input).print_tokens();
 }
 
 fn help() {

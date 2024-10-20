@@ -201,7 +201,7 @@ impl Parser<'_> {
         }
         self.errors.push(ParserError::new(
             ParserErrorKind::UnexpectedToken,
-            format!("expected={}, got={}", token, self.next_tok),
+            format!("expected={:?}, got={:?}", token, self.next_tok),
         ));
         false
     }
