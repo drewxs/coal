@@ -1,4 +1,4 @@
-use crate::ast::Stmt;
+use crate::{ast::Stmt, Parser};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Program {
@@ -8,6 +8,13 @@ pub struct Program {
 impl Program {
     pub fn new() -> Self {
         Self { statements: vec![] }
+    }
+
+    pub fn parse(input: &str) -> Self {
+        let mut parser = Parser::from(input);
+        let program = parser.parse();
+        parser.validate();
+        program
     }
 
     pub fn iter(&self) -> ProgramIter {

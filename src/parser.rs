@@ -73,7 +73,7 @@ impl<'l> Parser<'l> {
         }
 
         let mut errors = format!("parser has {} errors", self.errors.len());
-        for error in self.errors.iter() {
+        for error in &self.errors {
             errors += &format!("\nparser error: {error}");
         }
         Err(errors)
@@ -137,7 +137,6 @@ impl<'l> Parser<'l> {
 
     fn parse_return_stmt(&mut self) -> Option<Stmt> {
         self.advance();
-        dbg!(&self.next_tok);
         self.parse_expr().map(Stmt::Return)
     }
 
@@ -150,13 +149,6 @@ impl<'l> Parser<'l> {
             Token::Bool(b) => Some(Expr::Literal(Literal::Bool(b))),
             _ => None,
         }
-        // let lhs = match self.curr_tok {
-        //     Token::Ident(_) => self.parse_ident_expr(),
-        //     Token::Int(_) => self.parse_int_expr(),
-        //     _ => None,
-        // };
-        // dbg!(&prec);
-        // lhs
     }
 
     fn parse_expr(&mut self) -> Option<Expr> {
@@ -235,18 +227,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_let_statements() {
+    fn test_let_statements() {
         let input = r#"//
 // let 5;
 let x: int = 5;
 let y: int = 10;
 let foo: int = 99999;
 "#;
-        let mut parser = Parser::from(input);
-        let program = parser.parse();
-        parser.validate();
 
-        dbg!(&parser.errors);
+        let program = Program::parse(input);
 
         let expected = vec![
             Stmt::Let(
@@ -270,16 +259,14 @@ let foo: int = 99999;
     }
 
     #[test]
-    fn test_parse_return_statements() {
+    fn test_return_statements() {
         let input = r#"
 return 7;
 return 100;
 return 999999;
 "#;
-        let mut parser = Parser::from(input);
 
-        let program = parser.parse();
-        parser.validate();
+        let program = Program::parse(input);
 
         for (i, stmt) in program.iter().enumerate() {
             if !matches!(stmt, Stmt::Return(_)) {
