@@ -13,6 +13,10 @@ pub fn repl() {
 
         match input.trim() {
             "exit" | "quit" => break,
+            "clear" => {
+                println!("\x1B[2J\x1B[1;1H");
+                continue;
+            }
             _ => {}
         }
 
