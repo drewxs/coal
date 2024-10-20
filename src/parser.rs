@@ -106,6 +106,7 @@ impl<'l> Parser<'l> {
     fn parse_stmt(&mut self) -> Option<Stmt> {
         match self.curr_tok {
             Token::Let => self.parse_let_stmt(),
+            Token::Return => self.parse_return_stmt(),
             _ => self.parse_expr_stmt(),
         }
     }
@@ -137,6 +138,12 @@ impl<'l> Parser<'l> {
         }
 
         Some(Stmt::Let(name, t, expr))
+    }
+
+    fn parse_return_stmt(&mut self) -> Option<Stmt> {
+        self.advance();
+        dbg!(&self.next_tok);
+        self.parse_expr().map(Stmt::Return)
     }
 
     fn parse_expr_with_prec(&mut self, _: Precedence) -> Option<Expr> {
@@ -241,5 +248,25 @@ let foo: int = 99999;
         ];
 
         assert_eq!(expected, program.statements);
+    }
+
+    #[test]
+    fn test_parse_return_statements() {
+        let input = r#"
+return 7;
+return 100;
+return 999999;
+"#;
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse();
+        parser.validate();
+
+        for (i, stmt) in program.iter().enumerate() {
+            if !matches!(stmt, Stmt::Return(_)) {
+                panic!("[{i}] expected=Stmt::Return, got={stmt:?}");
+            }
+        }
     }
 }

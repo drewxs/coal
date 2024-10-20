@@ -5,4 +5,5 @@ pub enum Stmt {
     Void,
     Let(Ident, Type, Expr),
     Expr(Expr),
+    Return(Expr),
 }
