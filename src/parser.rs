@@ -148,7 +148,13 @@ impl Parser<'_> {
             Token::Str(s) => Some(Expr::Literal(Literal::Str(s.clone()))),
             Token::Bool(b) => Some(Expr::Literal(Literal::Bool(*b))),
             Token::Plus | Token::Minus | Token::Bang => self.parse_prefix_expr(),
-            _ => None,
+            _ => {
+                self.errors.push(ParserError::new(
+                    ParserErrorKind::UnexpectedToken,
+                    format!("no prefix parse function found for {:?}", self.curr_tok),
+                ));
+                None
+            }
         }
     }
 
