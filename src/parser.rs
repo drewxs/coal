@@ -55,18 +55,6 @@ pub struct Parser<'l> {
 }
 
 impl<'l> Parser<'l> {
-    pub fn new(lexer: Lexer<'l>) -> Self {
-        let mut parser = Parser {
-            lexer,
-            curr_tok: Token::Illegal,
-            next_tok: Token::Illegal,
-            errors: vec![],
-        };
-        parser.advance();
-        parser.advance();
-        parser
-    }
-
     pub fn parse(&mut self) -> Program {
         let mut program = Program::new();
         while self.curr_tok != Token::EOF {
@@ -89,6 +77,13 @@ impl<'l> Parser<'l> {
             errors += &format!("\nparser error: {error}");
         }
         Err(errors)
+    }
+
+    /// Prints errors if there are any.
+    pub fn print_errors(&mut self) {
+        if let Err(e) = self.check() {
+            println!("{e}");
+        }
     }
 
     /// Runs `check`, then panics if there are errors.
@@ -209,6 +204,32 @@ impl<'l> Parser<'l> {
     }
 }
 
+impl<'l> From<&'l str> for Parser<'l> {
+    fn from(input: &'l str) -> Self {
+        Self::from(Lexer::new(input))
+    }
+}
+
+impl<'l> From<&'l String> for Parser<'l> {
+    fn from(input: &'l String) -> Self {
+        Self::from(input.as_str())
+    }
+}
+
+impl<'l> From<Lexer<'l>> for Parser<'l> {
+    fn from(lexer: Lexer<'l>) -> Self {
+        let mut parser = Parser {
+            lexer,
+            curr_tok: Token::Illegal,
+            next_tok: Token::Illegal,
+            errors: vec![],
+        };
+        parser.advance();
+        parser.advance();
+        parser
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -221,9 +242,7 @@ let x: int = 5;
 let y: int = 10;
 let foo: int = 99999;
 "#;
-        let lexer = Lexer::new(input);
-        let mut parser = Parser::new(lexer);
-
+        let mut parser = Parser::from(input);
         let program = parser.parse();
         parser.validate();
 
@@ -257,8 +276,7 @@ return 7;
 return 100;
 return 999999;
 "#;
-        let lexer = Lexer::new(input);
-        let mut parser = Parser::new(lexer);
+        let mut parser = Parser::from(input);
 
         let program = parser.parse();
         parser.validate();

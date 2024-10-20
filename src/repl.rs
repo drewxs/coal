@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use crate::{config::VERSION, Lexer, Parser};
+use crate::{config::VERSION, Parser};
 
 pub fn repl() {
     println!("Coal {VERSION}");
@@ -16,12 +16,9 @@ pub fn repl() {
             _ => {}
         }
 
-        let lexer = Lexer::new(&input);
-        let mut parser = Parser::new(lexer.clone());
+        let mut parser = Parser::from(&input);
         parser.parse();
-        if let Err(e) = parser.check() {
-            println!("{e}");
-        }
+        parser.print_errors();
 
         // for token in lexer {
         //     println!("{token}");
