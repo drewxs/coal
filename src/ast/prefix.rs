@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::Token;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -16,6 +18,16 @@ impl TryFrom<&Token> for Prefix {
             Token::Plus => Ok(Prefix::Plus),
             Token::Minus => Ok(Prefix::Minus),
             _ => Err(format!("invalid prefix token: {token:?}")),
+        }
+    }
+}
+
+impl fmt::Display for Prefix {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Prefix::Plus => write!(f, "+"),
+            Prefix::Minus => write!(f, "-"),
+            Prefix::Not => write!(f, "!"),
         }
     }
 }

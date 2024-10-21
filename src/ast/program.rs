@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::Parser;
 
 use super::Stmt;
@@ -38,6 +40,15 @@ impl Iterator for Program {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.statements.pop()
+    }
+}
+
+impl fmt::Display for Program {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for stmt in &self.statements {
+            writeln!(f, "{stmt}")?;
+        }
+        Ok(())
     }
 }
 
