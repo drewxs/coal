@@ -7,7 +7,7 @@ pub struct Lexer<'i> {
     pub next_pos: usize,
     pub ch: char,
     pub line: usize,
-    pub line_pos: usize,
+    pub col: usize,
 }
 
 impl Lexer<'_> {
@@ -18,7 +18,7 @@ impl Lexer<'_> {
             next_pos: 0,
             ch: '\0',
             line: 1,
-            line_pos: 1,
+            col: 1,
         };
         lexer.read_char();
         lexer
@@ -199,9 +199,9 @@ impl Lexer<'_> {
 
         if self.ch == '\n' {
             self.line += 1;
-            self.line_pos = 1;
+            self.col = 1;
         } else {
-            self.line_pos += 1;
+            self.col += 1;
         }
     }
 

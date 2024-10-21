@@ -122,7 +122,7 @@ impl Parser<'_> {
                     ParserErrorKind::UnexpectedToken,
                     format!(
                         "{}:{} no prefix parse function found for {:?}",
-                        self.lexer.line, self.lexer.line_pos, self.curr_tok
+                        self.lexer.line, self.lexer.col, self.curr_tok
                     ),
                 ));
                 return None;
@@ -161,7 +161,7 @@ impl Parser<'_> {
 
     fn parse_expr_stmt(&mut self) -> Option<Stmt> {
         self.parse_expr().map(|expr| {
-            self.expect_next_tok(Token::Semicolon);
+            self.consume(Token::Semicolon);
             Stmt::Expr(expr)
         })
     }
@@ -169,7 +169,7 @@ impl Parser<'_> {
     fn parse_prefix_expr(&mut self) -> Option<Expr> {
         let prefix = Prefix::try_from(&self.curr_tok).ok()?;
         self.advance();
-        self.parse_expr()
+        self.parse_expr_with_prec(Precedence::Prefix)
             .map(|expr| Expr::Prefix(prefix, Box::new(expr)))
     }
 
@@ -209,7 +209,7 @@ impl Parser<'_> {
             ParserErrorKind::UnexpectedToken,
             format!(
                 "{}:{} expected={:?}, got={:?}",
-                self.lexer.line, self.lexer.line_pos, token, self.next_tok
+                self.lexer.line, self.lexer.col, token, self.next_tok
             ),
         ));
         false
@@ -404,6 +404,20 @@ return 999999;
 
         for (i, actual) in program.iter().enumerate() {
             assert_eq!(&expected[i], actual);
+        }
+    }
+
+    #[test]
+    fn test_operator_precedence() {
+        let input = "
+-a * b;
+!-a;
+a + b + c;
+";
+        let expected = vec!["((-a) * b);", "(!(-a));", "((a + b) + c);"];
+
+        for (i, stmt) in Program::parse(input).iter().enumerate() {
+            assert_eq!(expected[i], stmt.to_string());
         }
     }
 }

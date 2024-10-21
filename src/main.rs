@@ -1,6 +1,6 @@
 use std::{env, fs::File, io::Read, process};
 
-use coal::{repl, Lexer};
+use coal::{repl, Program};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -26,7 +26,7 @@ fn run(filename: &str) {
         process::exit(1);
     });
 
-    Lexer::new(&input).print_tokens();
+    println!("{:#?}", Program::parse(&input).statements);
 }
 
 fn help() {
