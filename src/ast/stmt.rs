@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Ident, Type};
+use super::{Expr, Ident, Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {

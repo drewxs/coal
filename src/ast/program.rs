@@ -1,4 +1,6 @@
-use crate::{ast::Stmt, Parser};
+use crate::Parser;
+
+use super::Stmt;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Program {

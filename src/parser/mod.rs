@@ -1,50 +1,14 @@
-use std::fmt;
+pub mod error;
+pub mod precedence;
+
+pub use error::ParserError;
+use error::ParserErrorKind;
+pub use precedence::Precedence;
 
 use crate::{
-    ast::{Expr, Ident, Literal, Prefix, Stmt, Type},
+    ast::{Expr, Ident, Infix, Literal, Prefix, Stmt, Type},
     Lexer, Program, Token,
 };
-
-#[derive(Clone, Debug, PartialEq)]
-enum Precedence {
-    Lowest,
-    // Equals,      // ==
-    // Lessgreater, // > or <
-    // Sum,         // +
-    // Product,     // *
-    // Prefix,      // -x or !x
-    // Call,        // f(x)
-    // Index,       // vec[index]
-}
-
-#[derive(Clone, Debug)]
-pub enum ParserErrorKind {
-    UnexpectedToken,
-}
-
-impl fmt::Display for ParserErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct ParserError {
-    pub kind: ParserErrorKind,
-    pub msg: String,
-}
-
-impl ParserError {
-    pub fn new(kind: ParserErrorKind, msg: String) -> Self {
-        ParserError { kind, msg }
-    }
-}
-
-impl fmt::Display for ParserError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[{}] {}", self.kind, self.msg)
-    }
-}
 
 #[derive(Clone, Debug)]
 pub struct Parser<'l> {
@@ -74,7 +38,7 @@ impl Parser<'_> {
 
         let mut errors = format!("parser has {} errors", self.errors.len());
         for error in &self.errors {
-            errors += &format!("\nparser error: {error}");
+            errors += &format!("\n{error}");
         }
         Err(errors)
     }
@@ -98,6 +62,12 @@ impl Parser<'_> {
         self.next_tok = self.lexer.next_tok();
     }
 
+    fn consume(&mut self, token: Token) {
+        if self.next_tok == token {
+            self.advance();
+        }
+    }
+
     fn parse_stmt(&mut self) -> Option<Stmt> {
         match self.curr_tok {
             Token::Let => self.parse_let_stmt(),
@@ -112,7 +82,7 @@ impl Parser<'_> {
             _ => return None,
         }
 
-        let name = self.parse_ident()?;
+        let ident = self.parse_ident()?;
 
         if !self.expect_next_tok(Token::Colon) {
             return None;
@@ -127,35 +97,62 @@ impl Parser<'_> {
         self.advance();
 
         let expr = self.parse_expr()?;
+        self.consume(Token::Semicolon);
 
-        if self.next_tok != Token::Semicolon {
-            self.advance();
-        }
-
-        Some(Stmt::Let(name, t, expr))
+        Some(Stmt::Let(ident, t, expr))
     }
 
     fn parse_return_stmt(&mut self) -> Option<Stmt> {
         self.advance();
-        self.parse_expr().map(Stmt::Return)
+        let expr = self.parse_expr().map(Stmt::Return);
+        self.consume(Token::Semicolon);
+        expr
     }
 
-    fn parse_expr_with_prec(&mut self, _: Precedence) -> Option<Expr> {
-        match &self.curr_tok {
+    fn parse_expr_with_prec(&mut self, precedence: Precedence) -> Option<Expr> {
+        let mut lhs = match &self.curr_tok {
             Token::Ident(_) => self.parse_ident().map(Expr::Ident),
             Token::Int(i) => Some(Expr::Literal(Literal::Int(*i))),
             Token::Float(f) => Some(Expr::Literal(Literal::Float(*f))),
             Token::Str(s) => Some(Expr::Literal(Literal::Str(s.clone()))),
             Token::Bool(b) => Some(Expr::Literal(Literal::Bool(*b))),
-            Token::Plus | Token::Minus | Token::Bang => self.parse_prefix_expr(),
+            Token::Bang | Token::Plus | Token::Minus => self.parse_prefix_expr(),
             _ => {
                 self.errors.push(ParserError::new(
                     ParserErrorKind::UnexpectedToken,
-                    format!("no prefix parse function found for {:?}", self.curr_tok),
+                    format!(
+                        "{}:{} no prefix parse function found for {:?}",
+                        self.lexer.line, self.lexer.line_pos, self.curr_tok
+                    ),
                 ));
-                None
+                return None;
+            }
+        };
+
+        while self.next_tok != Token::Semicolon && precedence < Precedence::from(&self.next_tok) {
+            match self.next_tok {
+                Token::Plus
+                | Token::Minus
+                | Token::Asterisk
+                | Token::Slash
+                | Token::Modulo
+                | Token::EQ
+                | Token::NEQ
+                | Token::GT
+                | Token::GTE
+                | Token::LT
+                | Token::LTE => {
+                    self.advance();
+                    lhs = self.parse_infix_expr(&lhs?);
+                }
+                Token::Lbracket => {
+                    self.advance();
+                }
+                _ => break,
             }
         }
+
+        lhs
     }
 
     fn parse_expr(&mut self) -> Option<Expr> {
@@ -170,15 +167,18 @@ impl Parser<'_> {
     }
 
     fn parse_prefix_expr(&mut self) -> Option<Expr> {
-        let prefix = match self.curr_tok {
-            Token::Bang => Prefix::Not,
-            Token::Plus => Prefix::Plus,
-            Token::Minus => Prefix::Minus,
-            _ => return None,
-        };
+        let prefix = Prefix::try_from(&self.curr_tok).ok()?;
         self.advance();
         self.parse_expr()
             .map(|expr| Expr::Prefix(prefix, Box::new(expr)))
+    }
+
+    fn parse_infix_expr(&mut self, lhs: &Expr) -> Option<Expr> {
+        let infix = Infix::try_from(&self.curr_tok).ok()?;
+        let prec = Precedence::from(&self.curr_tok);
+        self.advance();
+        let rhs = self.parse_expr_with_prec(prec)?;
+        Some(Expr::Infix(infix, Box::new(lhs.clone()), Box::new(rhs)))
     }
 
     fn parse_ident(&mut self) -> Option<Ident> {
@@ -207,7 +207,10 @@ impl Parser<'_> {
         }
         self.errors.push(ParserError::new(
             ParserErrorKind::UnexpectedToken,
-            format!("expected={:?}, got={:?}", token, self.next_tok),
+            format!(
+                "{}:{} expected={:?}, got={:?}",
+                self.lexer.line, self.lexer.line_pos, token, self.next_tok
+            ),
         ));
         false
     }
@@ -323,5 +326,84 @@ return 999999;
         ];
 
         assert_eq!(expected, program.statements);
+    }
+
+    #[test]
+    fn test_infix_expressions() {
+        let input = "
+3 + 2;
+5 - 2;
+3 * 2;
+6 / 2;
+7 % 2;
+3 > 2;
+3 < 2;
+4 >= 2;
+4 <= 2;
+4 == 4;
+4 != 4;
+";
+        let program = Program::parse(input);
+        let expected = vec![
+            Stmt::Expr(Expr::Infix(
+                Infix::Plus,
+                Box::new(Expr::Literal(Literal::Int(3))),
+                Box::new(Expr::Literal(Literal::Int(2))),
+            )),
+            Stmt::Expr(Expr::Infix(
+                Infix::Minus,
+                Box::new(Expr::Literal(Literal::Int(5))),
+                Box::new(Expr::Literal(Literal::Int(2))),
+            )),
+            Stmt::Expr(Expr::Infix(
+                Infix::Mul,
+                Box::new(Expr::Literal(Literal::Int(3))),
+                Box::new(Expr::Literal(Literal::Int(2))),
+            )),
+            Stmt::Expr(Expr::Infix(
+                Infix::Div,
+                Box::new(Expr::Literal(Literal::Int(6))),
+                Box::new(Expr::Literal(Literal::Int(2))),
+            )),
+            Stmt::Expr(Expr::Infix(
+                Infix::Mod,
+                Box::new(Expr::Literal(Literal::Int(7))),
+                Box::new(Expr::Literal(Literal::Int(2))),
+            )),
+            Stmt::Expr(Expr::Infix(
+                Infix::GT,
+                Box::new(Expr::Literal(Literal::Int(3))),
+                Box::new(Expr::Literal(Literal::Int(2))),
+            )),
+            Stmt::Expr(Expr::Infix(
+                Infix::LT,
+                Box::new(Expr::Literal(Literal::Int(3))),
+                Box::new(Expr::Literal(Literal::Int(2))),
+            )),
+            Stmt::Expr(Expr::Infix(
+                Infix::GTE,
+                Box::new(Expr::Literal(Literal::Int(4))),
+                Box::new(Expr::Literal(Literal::Int(2))),
+            )),
+            Stmt::Expr(Expr::Infix(
+                Infix::LTE,
+                Box::new(Expr::Literal(Literal::Int(4))),
+                Box::new(Expr::Literal(Literal::Int(2))),
+            )),
+            Stmt::Expr(Expr::Infix(
+                Infix::EQ,
+                Box::new(Expr::Literal(Literal::Int(4))),
+                Box::new(Expr::Literal(Literal::Int(4))),
+            )),
+            Stmt::Expr(Expr::Infix(
+                Infix::NEQ,
+                Box::new(Expr::Literal(Literal::Int(4))),
+                Box::new(Expr::Literal(Literal::Int(4))),
+            )),
+        ];
+
+        for (i, actual) in program.iter().enumerate() {
+            assert_eq!(&expected[i], actual);
+        }
     }
 }

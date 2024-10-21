@@ -23,25 +23,29 @@ pub enum Token {
     Bang,
     Asterisk,
     Slash,
+    Modulo,
 
     // Comparisons
-    LT,
-    GT,
-    LTE,
-    GTE,
     EQ,
     NEQ,
+    LT,
+    LTE,
+    GT,
+    GTE,
 
     // Delimiters
     Colon,
-    Comma,
     Semicolon,
+    Comma,
     Arrow,
 
+    // Brackets
     Lparen,
     Rparen,
     Lbrace,
     Rbrace,
+    Lbracket,
+    Rbracket,
 
     // Keywords
     Function,
@@ -52,20 +56,45 @@ pub enum Token {
     Return,
 }
 
-pub fn lookup_ident(ident: &str) -> Token {
-    match ident {
-        "fn" => Token::Function,
-        "let" => Token::Let,
-        "true" => Token::Bool(true),
-        "false" => Token::Bool(false),
-        "int" => Token::IntType,
-        "float" => Token::FloatType,
-        "str" => Token::StrType,
-        "bool" => Token::BoolType,
-        "if" => Token::If,
-        "elif" => Token::Elif,
-        "else" => Token::Else,
-        "return" => Token::Return,
-        _ => Token::Ident(ident.to_string()),
+impl From<&str> for Token {
+    fn from(s: &str) -> Self {
+        match s {
+            "true" => Token::Bool(true),
+            "false" => Token::Bool(false),
+            "int" => Token::IntType,
+            "float" => Token::FloatType,
+            "str" => Token::StrType,
+            "bool" => Token::BoolType,
+            "=" => Token::Assign,
+            "+" => Token::Plus,
+            "-" => Token::Minus,
+            "!" => Token::Bang,
+            "*" => Token::Asterisk,
+            "/" => Token::Slash,
+            "%" => Token::Modulo,
+            "==" => Token::EQ,
+            "!=" => Token::NEQ,
+            "<" => Token::LT,
+            "<=" => Token::LTE,
+            ">" => Token::GT,
+            ">=" => Token::GTE,
+            ":" => Token::Colon,
+            ";" => Token::Semicolon,
+            "," => Token::Comma,
+            "->" => Token::Arrow,
+            "(" => Token::Lparen,
+            ")" => Token::Rparen,
+            "{" => Token::Lbrace,
+            "}" => Token::Rbrace,
+            "[" => Token::Lbracket,
+            "]" => Token::Rbracket,
+            "fn" => Token::Function,
+            "let" => Token::Let,
+            "if" => Token::If,
+            "elif" => Token::Elif,
+            "else" => Token::Else,
+            "return" => Token::Return,
+            _ => Token::Ident(s.to_string()),
+        }
     }
 }
