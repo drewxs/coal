@@ -1,4 +1,4 @@
-use crate::token::{lookup_ident, Token};
+use crate::Token;
 
 #[derive(Clone, Debug)]
 pub struct Lexer<'i> {
@@ -6,6 +6,8 @@ pub struct Lexer<'i> {
     pub pos: usize,
     pub next_pos: usize,
     pub ch: char,
+    pub line: usize,
+    pub line_pos: usize,
 }
 
 impl Lexer<'_> {
@@ -15,6 +17,8 @@ impl Lexer<'_> {
             pos: 0,
             next_pos: 0,
             ch: '\0',
+            line: 1,
+            line_pos: 1,
         };
         lexer.read_char();
         lexer
@@ -25,7 +29,7 @@ impl Lexer<'_> {
         self.skip_comments();
 
         match self.ch {
-            '=' => match self.peek_char() {
+            '=' => match self.next_char() {
                 '=' => {
                     self.read_char();
                     self.read_char();
@@ -52,22 +56,7 @@ impl Lexer<'_> {
                 self.read_char();
                 Token::Comma
             }
-            '+' => {
-                self.read_char();
-                Token::Plus
-            }
-            '-' => match self.peek_char() {
-                '>' => {
-                    self.read_char();
-                    self.read_char();
-                    Token::Arrow
-                }
-                _ => {
-                    self.read_char();
-                    Token::Minus
-                }
-            },
-            '!' => match self.peek_char() {
+            '!' => match self.next_char() {
                 '=' => {
                     self.read_char();
                     self.read_char();
@@ -78,6 +67,21 @@ impl Lexer<'_> {
                     Token::Bang
                 }
             },
+            '+' => {
+                self.read_char();
+                Token::Plus
+            }
+            '-' => match self.next_char() {
+                '>' => {
+                    self.read_char();
+                    self.read_char();
+                    Token::Arrow
+                }
+                _ => {
+                    self.read_char();
+                    Token::Minus
+                }
+            },
             '*' => {
                 self.read_char();
                 Token::Asterisk
@@ -86,7 +90,11 @@ impl Lexer<'_> {
                 self.read_char();
                 Token::Slash
             }
-            '<' => match self.peek_char() {
+            '%' => {
+                self.read_char();
+                Token::Modulo
+            }
+            '<' => match self.next_char() {
                 '=' => {
                     self.read_char();
                     self.read_char();
@@ -97,7 +105,7 @@ impl Lexer<'_> {
                     Token::LT
                 }
             },
-            '>' => match self.peek_char() {
+            '>' => match self.next_char() {
                 '=' => {
                     self.read_char();
                     self.read_char();
@@ -137,7 +145,7 @@ impl Lexer<'_> {
                 while self.ch == '_' || self.ch.is_alphabetic() {
                     self.read_char();
                 }
-                lookup_ident(&self.input[pos..self.pos])
+                Token::from(&self.input[pos..self.pos])
             }
             '0'..='9' | '.' => {
                 let pos = self.pos;
@@ -172,7 +180,7 @@ impl Lexer<'_> {
         }
     }
 
-    fn peek_char(&mut self) -> char {
+    fn next_char(&mut self) -> char {
         if self.next_pos < self.input.len() {
             self.input.chars().nth(self.next_pos).unwrap()
         } else {
@@ -188,6 +196,13 @@ impl Lexer<'_> {
         }
         self.pos = self.next_pos;
         self.next_pos += 1;
+
+        if self.ch == '\n' {
+            self.line += 1;
+            self.line_pos = 1;
+        } else {
+            self.line_pos += 1;
+        }
     }
 
     fn read_line(&mut self) {
@@ -200,7 +215,7 @@ impl Lexer<'_> {
     }
 
     fn skip_comments(&mut self) {
-        while self.ch == '/' && self.peek_char() == '/' {
+        while self.ch == '/' && self.next_char() == '/' {
             self.read_line();
         }
     }
