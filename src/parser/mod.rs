@@ -96,7 +96,7 @@ impl Parser<'_> {
         }
         self.advance();
 
-        let expr = self.parse_expr()?;
+        let expr = self.parse_expr(Precedence::Lowest)?;
         self.consume(Token::Semicolon);
 
         Some(Stmt::Let(ident, t, expr))
@@ -104,12 +104,12 @@ impl Parser<'_> {
 
     fn parse_return_stmt(&mut self) -> Option<Stmt> {
         self.advance();
-        let expr = self.parse_expr().map(Stmt::Return);
+        let expr = self.parse_expr(Precedence::Lowest).map(Stmt::Return);
         self.consume(Token::Semicolon);
         expr
     }
 
-    fn parse_expr_with_prec(&mut self, precedence: Precedence) -> Option<Expr> {
+    fn parse_expr(&mut self, precedence: Precedence) -> Option<Expr> {
         let mut lhs = match &self.curr_tok {
             Token::Ident(_) => self.parse_ident().map(Expr::Ident),
             Token::Int(i) => Some(Expr::Literal(Literal::Int(*i))),
@@ -155,12 +155,8 @@ impl Parser<'_> {
         lhs
     }
 
-    fn parse_expr(&mut self) -> Option<Expr> {
-        self.parse_expr_with_prec(Precedence::Lowest)
-    }
-
     fn parse_expr_stmt(&mut self) -> Option<Stmt> {
-        self.parse_expr().map(|expr| {
+        self.parse_expr(Precedence::Lowest).map(|expr| {
             self.consume(Token::Semicolon);
             Stmt::Expr(expr)
         })
@@ -169,7 +165,7 @@ impl Parser<'_> {
     fn parse_prefix_expr(&mut self) -> Option<Expr> {
         let prefix = Prefix::try_from(&self.curr_tok).ok()?;
         self.advance();
-        self.parse_expr_with_prec(Precedence::Prefix)
+        self.parse_expr(Precedence::Prefix)
             .map(|expr| Expr::Prefix(prefix, Box::new(expr)))
     }
 
@@ -177,7 +173,7 @@ impl Parser<'_> {
         let infix = Infix::try_from(&self.curr_tok).ok()?;
         let prec = Precedence::from(&self.curr_tok);
         self.advance();
-        let rhs = self.parse_expr_with_prec(prec)?;
+        let rhs = self.parse_expr(prec)?;
         Some(Expr::Infix(infix, Box::new(lhs.clone()), Box::new(rhs)))
     }
 
@@ -294,18 +290,27 @@ return 999999;
 
     #[test]
     fn test_identifier_expressions() {
-        let input = "foobar;";
+        let input = "foo; bar; foobar;";
         let program = Program::parse(input);
-        let expected = vec![Stmt::Expr(Expr::Ident(Ident(String::from("foobar"))))];
+        let expected = vec![
+            Stmt::Expr(Expr::Ident(Ident(String::from("foo")))),
+            Stmt::Expr(Expr::Ident(Ident(String::from("bar")))),
+            Stmt::Expr(Expr::Ident(Ident(String::from("foobar")))),
+        ];
 
         assert_eq!(expected, program.statements);
     }
 
     #[test]
-    fn test_int_literal_expressions() {
-        let input = "5;";
+    fn test_literal_expressions() {
+        let input = r#"5; 10.0; false; "foo";"#;
         let program = Program::parse(input);
-        let expected = vec![Stmt::Expr(Expr::Literal(Literal::Int(5)))];
+        let expected = vec![
+            Stmt::Expr(Expr::Literal(Literal::Int(5))),
+            Stmt::Expr(Expr::Literal(Literal::Float(10.0))),
+            Stmt::Expr(Expr::Literal(Literal::Bool(false))),
+            Stmt::Expr(Expr::Literal(Literal::Str(String::from("foo")))),
+        ];
 
         assert_eq!(expected, program.statements);
     }
