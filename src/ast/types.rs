@@ -8,7 +8,7 @@ pub enum Type {
     Int,
     Float,
     Bool,
-    Vec(Box<Type>),
+    List(Box<Type>),
     Hash(Box<(Type, Type)>),
     Function(Vec<Ident>, Vec<Stmt>),
     Nil,
@@ -21,8 +21,11 @@ impl fmt::Display for Type {
             Type::Int => write!(f, "int"),
             Type::Float => write!(f, "float"),
             Type::Bool => write!(f, "bool"),
-            Type::Vec(t) => write!(f, "[{t}]"),
-            Type::Hash(t) => write!(f, "{{{t:?}}}"),
+            Type::List(t) => write!(f, "list[{t}]"),
+            Type::Hash(t) => {
+                let (k, v) = t.as_ref();
+                write!(f, "hash[{k}, {v}]")
+            }
             Type::Function(idents, stmts) => write!(f, "fn({idents:?}) {{{stmts:?}}}"),
             Type::Nil => write!(f, "nil"),
         }

@@ -9,7 +9,7 @@ pub enum Precedence {
     Product, // *
     Prefix,  // -x or !x
     Call,    // f(x)
-    Index,   // vec[index]
+    Index,   // list[index]
 }
 
 impl From<&Token> for Precedence {
