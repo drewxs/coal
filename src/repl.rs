@@ -21,12 +21,9 @@ pub fn repl() {
         }
 
         let mut parser = Parser::from(&input);
-        parser.parse();
+        let program = parser.parse();
         parser.print_errors();
 
-        // for token in lexer {
-        //     println!("{token}");
-        //     io::stdout().flush().unwrap();
-        // }
+        println!("{:#?}", program.statements);
     }
 }

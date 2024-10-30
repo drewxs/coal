@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::Index;
 
 use crate::Parser;
 
@@ -69,5 +70,13 @@ impl<'a> Iterator for ProgramIter<'a> {
         } else {
             None
         }
+    }
+}
+
+impl Index<usize> for Program {
+    type Output = Stmt;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.statements[index]
     }
 }
