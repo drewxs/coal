@@ -414,15 +414,26 @@ return 999999;
 
     #[test]
     fn test_operator_precedence() {
-        let input = "
--a * b;
-!-a;
-a + b + c;
-";
-        let expected = vec!["((-a) * b);", "(!(-a));", "((a + b) + c);"];
+        let tests = vec![
+            ("-a * b;", "((-a) * b);"),
+            ("!-a;", "(!(-a));"),
+            ("a + b + c;", "((a + b) + c);"),
+            ("a + b - c;", "((a + b) - c);"),
+            ("a * b * c;", "((a * b) * c);"),
+            ("a * b / c;", "((a * b) / c);"),
+            ("a + b / c;", "(a + (b / c));"),
+            ("a + b * c + d / e - f;", "(((a + (b * c)) + (d / e)) - f);"),
+            ("5 > 4 == 3 < 4;", "((5 > 4) == (3 < 4));"),
+            ("5 < 4 != 3 > 4;", "((5 < 4) != (3 > 4));"),
+            (
+                "3 + 4 * 5 == 3 * 1 + 4 * 5;",
+                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)));",
+            ),
+        ];
 
-        for (i, stmt) in Program::parse(input).iter().enumerate() {
-            assert_eq!(expected[i], stmt.to_string());
+        for (input, expected) in tests {
+            let actual = Program::parse(input)[0].to_string();
+            assert_eq!(expected, actual);
         }
     }
 }
