@@ -1,8 +1,8 @@
 use std::fmt;
 
-use super::{Ident, Stmt};
+use super::{Expr, Ident, Literal, Stmt};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub enum Type {
     String,
     Int,
@@ -11,6 +11,7 @@ pub enum Type {
     List(Box<Type>),
     Hash(Box<(Type, Type)>),
     Function(Vec<Ident>, Vec<Stmt>),
+    #[default]
     Nil,
 }
 
@@ -28,6 +29,20 @@ impl fmt::Display for Type {
             }
             Type::Function(idents, stmts) => write!(f, "fn({idents:?}) {{{stmts:?}}}"),
             Type::Nil => write!(f, "nil"),
+        }
+    }
+}
+
+impl TryFrom<&Expr> for Type {
+    type Error = String;
+
+    fn try_from(literal: &Expr) -> Result<Self, Self::Error> {
+        match literal {
+            Expr::Literal(Literal::Str(_)) => Ok(Type::String),
+            Expr::Literal(Literal::Int(_)) => Ok(Type::Int),
+            Expr::Literal(Literal::Float(_)) => Ok(Type::Float),
+            Expr::Literal(Literal::Bool(_)) => Ok(Type::Bool),
+            _ => Err(String::from("invaild literal")),
         }
     }
 }

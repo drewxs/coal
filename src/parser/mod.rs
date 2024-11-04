@@ -53,13 +53,20 @@ impl Parser<'_> {
     /// Runs `check`, then panics if there are errors.
     pub fn validate(&mut self) {
         if let Err(e) = self.check() {
-            panic!("parser encountered errors\n{}", e);
+            panic!("{e}");
         }
     }
 
     fn advance(&mut self) {
         self.curr_tok = self.next_tok.clone();
         self.next_tok = self.lexer.next_tok();
+    }
+
+    fn advance_n(&mut self, n: usize) {
+        for _ in 0..n {
+            self.curr_tok = self.next_tok.clone();
+            self.next_tok = self.lexer.next_tok();
+        }
     }
 
     fn consume(&mut self, token: Token) {
@@ -77,19 +84,19 @@ impl Parser<'_> {
     }
 
     fn parse_let_stmt(&mut self) -> Option<Stmt> {
-        match self.next_tok {
-            Token::Ident(_) => self.advance(),
-            _ => return None,
+        if let Token::Ident(_) = self.next_tok {
+            self.advance();
+        } else {
+            return None;
         }
 
         let ident = self.parse_ident()?;
-
-        if !self.expect_next_tok(Token::Colon) {
-            return None;
-        }
-        self.advance();
-
-        let t = self.parse_type()?;
+        let mut t = if self.next_tok == Token::Colon {
+            self.advance_n(2);
+            self.parse_type()
+        } else {
+            None
+        };
 
         if !self.expect_next_tok(Token::Assign) {
             return None;
@@ -97,9 +104,15 @@ impl Parser<'_> {
         self.advance();
 
         let expr = self.parse_expr(Precedence::Lowest)?;
-        self.consume(Token::Semicolon);
 
-        Some(Stmt::Let(ident, t, expr))
+        if t.is_none() {
+            t = Type::try_from(&expr).ok();
+        }
+
+        t.map(|t| {
+            self.consume(Token::Semicolon);
+            Stmt::Let(ident, t, expr)
+        })
     }
 
     fn parse_return_stmt(&mut self) -> Option<Stmt> {
@@ -212,18 +225,6 @@ impl Parser<'_> {
     }
 }
 
-impl<'l> From<&'l str> for Parser<'l> {
-    fn from(input: &'l str) -> Self {
-        Self::from(Lexer::new(input))
-    }
-}
-
-impl<'l> From<&'l String> for Parser<'l> {
-    fn from(input: &'l String) -> Self {
-        Self::from(input.as_str())
-    }
-}
-
 impl<'l> From<Lexer<'l>> for Parser<'l> {
     fn from(lexer: Lexer<'l>) -> Self {
         let mut parser = Parser {
@@ -238,6 +239,18 @@ impl<'l> From<Lexer<'l>> for Parser<'l> {
     }
 }
 
+impl<'l> From<&'l str> for Parser<'l> {
+    fn from(input: &'l str) -> Self {
+        Self::from(Lexer::new(input))
+    }
+}
+
+impl<'l> From<&'l String> for Parser<'l> {
+    fn from(input: &'l String) -> Self {
+        Self::from(input.as_str())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -245,7 +258,6 @@ mod tests {
     #[test]
     fn test_let_statements() {
         let input = "//
-// let 5;
 let x: int = 5;
 let y: int = 10;
 let foo: int = 99999;
@@ -266,6 +278,35 @@ let foo: int = 99999;
                 Ident(String::from("foo")),
                 Type::Int,
                 Expr::Literal(Literal::Int(99999)),
+            ),
+        ];
+
+        assert_eq!(expected, program.statements);
+    }
+
+    #[test]
+    fn test_let_statements_inference() {
+        let input = r#"
+let x = 5;
+let y = 5.0;
+let z = "hello";
+"#;
+        let program = Program::parse(input);
+        let expected = vec![
+            Stmt::Let(
+                Ident(String::from("x")),
+                Type::Int,
+                Expr::Literal(Literal::Int(5)),
+            ),
+            Stmt::Let(
+                Ident(String::from("y")),
+                Type::Float,
+                Expr::Literal(Literal::Float(5.0)),
+            ),
+            Stmt::Let(
+                Ident(String::from("z")),
+                Type::String,
+                Expr::Literal(Literal::Str(String::from("hello"))),
             ),
         ];
 
