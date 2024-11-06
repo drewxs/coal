@@ -340,7 +340,7 @@ let z = "hello";
 
     #[test]
     fn test_prefix_expressions() {
-        let input = "!5; -5;";
+        let input = "!5; -5; !true; !false;";
         let program = Program::parse(input);
         let expected = vec![
             Stmt::Expr(Expr::Prefix(
@@ -351,6 +351,14 @@ let z = "hello";
                 Prefix::Minus,
                 Box::new(Expr::Literal(Literal::Int(5))),
             )),
+            Stmt::Expr(Expr::Prefix(
+                Prefix::Not,
+                Box::new(Expr::Literal(Literal::Bool(true))),
+            )),
+            Stmt::Expr(Expr::Prefix(
+                Prefix::Not,
+                Box::new(Expr::Literal(Literal::Bool(false))),
+            )),
         ];
 
         assert_eq!(expected, program.statements);
@@ -359,8 +367,20 @@ let z = "hello";
     #[test]
     fn test_infix_expressions() {
         let input = vec![
-            "3 + 2", "5 - 2", "3 * 2", "6 / 2", "7 % 2", "3 > 2", "3 < 2", "4 >= 2", "4 <= 2",
-            "4 == 4", "4 != 4",
+            "3 + 2",
+            "5 - 2",
+            "3 * 2",
+            "6 / 2",
+            "7 % 2",
+            "3 > 2",
+            "3 < 2",
+            "4 >= 2",
+            "4 <= 2",
+            "4 == 4",
+            "4 != 4",
+            "true == true",
+            "false == false",
+            "true != false",
         ];
         let program = Program::parse_lines(&input);
         let expected = vec![
@@ -419,6 +439,21 @@ let z = "hello";
                 Box::new(Expr::Literal(Literal::Int(4))),
                 Box::new(Expr::Literal(Literal::Int(4))),
             )),
+            Stmt::Expr(Expr::Infix(
+                Infix::EQ,
+                Box::new(Expr::Literal(Literal::Bool(true))),
+                Box::new(Expr::Literal(Literal::Bool(true))),
+            )),
+            Stmt::Expr(Expr::Infix(
+                Infix::EQ,
+                Box::new(Expr::Literal(Literal::Bool(false))),
+                Box::new(Expr::Literal(Literal::Bool(false))),
+            )),
+            Stmt::Expr(Expr::Infix(
+                Infix::NEQ,
+                Box::new(Expr::Literal(Literal::Bool(true))),
+                Box::new(Expr::Literal(Literal::Bool(false))),
+            )),
         ];
 
         for (i, actual) in program.iter().enumerate() {
@@ -429,20 +464,24 @@ let z = "hello";
     #[test]
     fn test_operator_precedence() {
         let tests = vec![
-            ("-a * b;", "((-a) * b);"),
-            ("!-a;", "(!(-a));"),
-            ("a + b + c;", "((a + b) + c);"),
-            ("a + b - c;", "((a + b) - c);"),
-            ("a * b * c;", "((a * b) * c);"),
-            ("a * b / c;", "((a * b) / c);"),
-            ("a + b / c;", "(a + (b / c));"),
-            ("a + b * c + d / e - f;", "(((a + (b * c)) + (d / e)) - f);"),
-            ("5 > 4 == 3 < 4;", "((5 > 4) == (3 < 4));"),
-            ("5 < 4 != 3 > 4;", "((5 < 4) != (3 > 4));"),
+            ("-a * b", "((-a) * b);"),
+            ("!-a", "(!(-a));"),
+            ("a + b + c", "((a + b) + c);"),
+            ("a + b - c", "((a + b) - c);"),
+            ("a * b * c", "((a * b) * c);"),
+            ("a * b / c", "((a * b) / c);"),
+            ("a + b / c", "(a + (b / c));"),
+            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f);"),
+            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4));"),
+            ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4));"),
             (
-                "3 + 4 * 5 == 3 * 1 + 4 * 5;",
+                "3 + 4 * 5 == 3 * 1 + 4 * 5",
                 "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)));",
             ),
+            ("true", "true;"),
+            ("false", "false;"),
+            ("1 < 2 == true", "((1 < 2) == true);"),
+            ("1 > 2 == false", "((1 > 2) == false);"),
         ];
 
         for (input, expected) in tests {
