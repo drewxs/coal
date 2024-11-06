@@ -75,6 +75,21 @@ impl Parser<'_> {
         }
     }
 
+    fn expect_next_tok(&mut self, token: Token) -> bool {
+        if self.next_tok == token {
+            self.advance();
+            return true;
+        }
+        self.errors.push(ParserError::new(
+            ParserErrorKind::UnexpectedToken,
+            format!(
+                "{}:{} expected={:?}, got={:?}",
+                self.lexer.line, self.lexer.col, token, self.next_tok
+            ),
+        ));
+        false
+    }
+
     fn parse_stmt(&mut self) -> Option<Stmt> {
         match self.curr_tok {
             Token::Let => self.parse_let_stmt(),
@@ -101,7 +116,7 @@ impl Parser<'_> {
         if !self.expect_next_tok(Token::Assign) {
             return None;
         }
-        self.advance_n(2);
+        self.advance();
 
         let expr = self.parse_expr(Precedence::Lowest)?;
 
@@ -130,6 +145,7 @@ impl Parser<'_> {
             Token::Str(s) => Some(Expr::Literal(Literal::Str(s.clone()))),
             Token::Bool(b) => Some(Expr::Literal(Literal::Bool(*b))),
             Token::Bang | Token::Plus | Token::Minus => self.parse_prefix_expr(),
+            Token::Lparen => self.parse_grouped_expr(),
             _ => {
                 self.errors.push(ParserError::new(
                     ParserErrorKind::UnexpectedToken,
@@ -190,18 +206,13 @@ impl Parser<'_> {
         Some(Expr::Infix(infix, Box::new(lhs.clone()), Box::new(rhs)))
     }
 
-    fn expect_next_tok(&mut self, token: Token) -> bool {
-        if self.next_tok == token {
-            return true;
+    fn parse_grouped_expr(&mut self) -> Option<Expr> {
+        self.advance();
+        let expr = self.parse_expr(Precedence::Lowest);
+        if !self.expect_next_tok(Token::Rparen) {
+            return None;
         }
-        self.errors.push(ParserError::new(
-            ParserErrorKind::UnexpectedToken,
-            format!(
-                "{}:{} expected={:?}, got={:?}",
-                self.lexer.line, self.lexer.col, token, self.next_tok
-            ),
-        ));
-        false
+        expr
     }
 }
 
@@ -482,6 +493,11 @@ let z = "hello";
             ("false", "false;"),
             ("1 < 2 == true", "((1 < 2) == true);"),
             ("1 > 2 == false", "((1 > 2) == false);"),
+            ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4);"),
+            ("(1 + 1) * 2", "((1 + 1) * 2);"),
+            ("1 / (2 + 2)", "(1 / (2 + 2));"),
+            ("-(1 + 2)", "(-(1 + 2));"),
+            ("!(true == true)", "(!(true == true));"),
         ];
 
         for (input, expected) in tests {
