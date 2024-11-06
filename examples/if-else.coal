@@ -1,0 +1,10 @@
+let x = 5;
+let y = 10;
+
+if x > y {
+    return x;
+} elif x < y {
+    return y;
+} else {
+    return 0;
+}

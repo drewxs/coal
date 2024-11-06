@@ -6,7 +6,7 @@ use error::ParserErrorKind;
 pub use precedence::Precedence;
 
 use crate::{
-    ast::{Expr, Ident, Infix, Literal, Prefix, Stmt, Type},
+    ast::{Expr, Ident, IfExpr, Infix, Literal, Prefix, Stmt, Type},
     Lexer, Program, Token,
 };
 
@@ -98,6 +98,18 @@ impl Parser<'_> {
         }
     }
 
+    fn parse_block_stmt(&mut self) -> Vec<Stmt> {
+        self.advance();
+        let mut block = vec![];
+        while self.curr_tok != Token::Rbrace && self.curr_tok != Token::EOF {
+            if let Some(stmt) = self.parse_stmt() {
+                block.push(stmt)
+            }
+            self.advance();
+        }
+        block
+    }
+
     fn parse_let_stmt(&mut self) -> Option<Stmt> {
         if let Token::Ident(_) = self.next_tok {
             self.advance();
@@ -146,6 +158,7 @@ impl Parser<'_> {
             Token::Bool(b) => Some(Expr::Literal(Literal::Bool(*b))),
             Token::Bang | Token::Plus | Token::Minus => self.parse_prefix_expr(),
             Token::Lparen => self.parse_grouped_expr(),
+            Token::If => self.parse_if_expr(),
             _ => {
                 self.errors.push(ParserError::new(
                     ParserErrorKind::UnexpectedToken,
@@ -214,6 +227,50 @@ impl Parser<'_> {
         }
         expr
     }
+
+    fn parse_if_expr(&mut self) -> Option<Expr> {
+        self.advance();
+        let condition = self.parse_expr(Precedence::Lowest)?;
+
+        if !self.expect_next_tok(Token::Lbrace) {
+            return None;
+        }
+
+        let consequence = self.parse_block_stmt();
+        self.advance();
+
+        let mut else_ifs = vec![];
+        let mut alternative = None;
+
+        while self.curr_tok == Token::Elif {
+            self.advance();
+            let condition = self.parse_expr(Precedence::Lowest)?;
+
+            if !self.expect_next_tok(Token::Lbrace) {
+                return None;
+            }
+
+            else_ifs.push(IfExpr {
+                condition: Box::new(condition),
+                consequence: self.parse_block_stmt(),
+            });
+        }
+
+        if self.next_tok == Token::Else {
+            self.advance();
+            if !self.expect_next_tok(Token::Lbrace) {
+                return None;
+            }
+            alternative = Some(self.parse_block_stmt());
+        }
+
+        Some(Expr::If {
+            condition: Box::new(condition),
+            consequence,
+            else_ifs,
+            alternative,
+        })
+    }
 }
 
 impl<'l> From<Lexer<'l>> for Parser<'l> {
@@ -224,8 +281,7 @@ impl<'l> From<Lexer<'l>> for Parser<'l> {
             next_tok: Token::Illegal,
             errors: vec![],
         };
-        parser.advance();
-        parser.advance();
+        parser.advance_n(2);
         parser
     }
 }
@@ -503,5 +559,45 @@ let z = "hello";
         for (input, expected) in tests {
             assert_eq!(expected, Program::read_line(input));
         }
+    }
+
+    #[test]
+    fn test_if_expression() {
+        let input = "if x < y { return x }";
+        let program = Program::parse(input);
+        let expected = Stmt::Expr(Expr::If {
+            condition: Box::new(Expr::Infix(
+                Infix::LT,
+                Box::new(Expr::Ident(Ident(String::from("x")))),
+                Box::new(Expr::Ident(Ident(String::from("y")))),
+            )),
+            consequence: vec![Stmt::Return(Expr::Ident(Ident(String::from("x"))))],
+            else_ifs: vec![],
+            alternative: None,
+        });
+
+        assert_eq!(expected, program.statements[0]);
+    }
+
+    #[test]
+    fn test_elif_expression() {
+        let input = r#"
+if x < y {
+    return x;
+} elif x > y {
+    return y;
+} else {
+    return z;
+}"#;
+        let expected = r#"if (x < y) {
+    return x;
+} elif (x > y) {
+    return y;
+} else {
+    return z;
+}
+"#;
+        let program = Program::from(input);
+        assert_eq!(expected, program.to_string());
     }
 }
