@@ -10,12 +10,6 @@ pub enum Token {
     Float(f64),
     Bool(bool),
 
-    // Types
-    IntType,
-    FloatType,
-    StrType,
-    BoolType,
-
     // Operators
     Assign,
     Plus,
@@ -61,10 +55,6 @@ impl From<&str> for Token {
         match s {
             "true" => Token::Bool(true),
             "false" => Token::Bool(false),
-            "int" => Token::IntType,
-            "float" => Token::FloatType,
-            "str" => Token::StrType,
-            "bool" => Token::BoolType,
             "=" => Token::Assign,
             "+" => Token::Plus,
             "-" => Token::Minus,

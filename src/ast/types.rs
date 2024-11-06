@@ -42,11 +42,13 @@ impl TryFrom<&Token> for Type {
 
     fn try_from(token: &Token) -> Result<Self, Self::Error> {
         match token {
-            Token::IntType => Ok(Type::Int),
-            Token::FloatType => Ok(Type::Float),
-            Token::StrType => Ok(Type::String),
-            Token::BoolType => Ok(Type::Bool),
-            Token::Ident(name) => Ok(Type::UserDefined(name.clone())),
+            Token::Ident(name) => match name.as_str() {
+                "int" => Ok(Type::Int),
+                "float" => Ok(Type::Float),
+                "str" => Ok(Type::String),
+                "bool" => Ok(Type::Bool),
+                _ => Ok(Type::UserDefined(name.clone())),
+            },
             _ => Err(String::from("invalid type token")),
         }
     }
