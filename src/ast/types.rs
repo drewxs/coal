@@ -13,6 +13,7 @@ pub enum Type {
     List(Box<Type>),
     Map(Box<(Type, Type)>),
     Function(Vec<Ident>, Vec<Stmt>),
+    UserDefined(String),
     #[default]
     Nil,
 }
@@ -30,6 +31,7 @@ impl fmt::Display for Type {
                 write!(f, "map[{k}, {v}]")
             }
             Type::Function(idents, stmts) => write!(f, "fn({idents:?}) {{{stmts:?}}}"),
+            Type::UserDefined(name) => write!(f, "{}", name),
             Type::Nil => write!(f, "nil"),
         }
     }
@@ -44,6 +46,7 @@ impl TryFrom<&Token> for Type {
             Token::FloatType => Ok(Type::Float),
             Token::StrType => Ok(Type::String),
             Token::BoolType => Ok(Type::Bool),
+            Token::Ident(name) => Ok(Type::UserDefined(name.clone())),
             _ => Err(String::from("invalid type token")),
         }
     }
@@ -58,6 +61,7 @@ impl TryFrom<&Expr> for Type {
             Expr::Literal(Literal::Int(_)) => Ok(Type::Int),
             Expr::Literal(Literal::Float(_)) => Ok(Type::Float),
             Expr::Literal(Literal::Bool(_)) => Ok(Type::Bool),
+            Expr::Ident(ident) => Ok(Type::UserDefined(ident.name())),
             _ => Err(String::from("invaild literal")),
         }
     }

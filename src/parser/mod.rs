@@ -240,7 +240,8 @@ mod tests {
         let input = "//
 let x: int = 5;
 let y: int = 10;
-let foo: int = 99999;
+let z: int = 99999;
+let foo: Foo = 0;
 ";
         let program = Program::parse(input);
         let expected = vec![
@@ -255,9 +256,14 @@ let foo: int = 99999;
                 Expr::Literal(Literal::Int(10)),
             ),
             Stmt::Let(
-                Ident(String::from("foo")),
+                Ident(String::from("z")),
                 Type::Int,
                 Expr::Literal(Literal::Int(99999)),
+            ),
+            Stmt::Let(
+                Ident(String::from("foo")),
+                Type::UserDefined(String::from("Foo")),
+                Expr::Literal(Literal::Int(0)),
             ),
         ];
 
