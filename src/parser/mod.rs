@@ -101,7 +101,7 @@ impl Parser<'_> {
         if !self.expect_next_tok(Token::Assign) {
             return None;
         }
-        self.advance();
+        self.advance_n(2);
 
         let expr = self.parse_expr(Precedence::Lowest)?;
 
@@ -124,7 +124,7 @@ impl Parser<'_> {
 
     fn parse_expr(&mut self, precedence: Precedence) -> Option<Expr> {
         let mut lhs = match &self.curr_tok {
-            Token::Ident(_) => Ident::try_from(&self.curr_tok).ok().map(Expr::Ident),
+            Token::Ident(_) => Ident::try_from(&self.curr_tok).map(Expr::Ident).ok(),
             Token::Int(i) => Some(Expr::Literal(Literal::Int(*i))),
             Token::Float(f) => Some(Expr::Literal(Literal::Float(*f))),
             Token::Str(s) => Some(Expr::Literal(Literal::Str(s.clone()))),
@@ -190,11 +190,8 @@ impl Parser<'_> {
         Some(Expr::Infix(infix, Box::new(lhs.clone()), Box::new(rhs)))
     }
 
-    /// Returns whether the next token matches the given token.
-    /// Also, advances if it does, and adds an error if it doesn't.
     fn expect_next_tok(&mut self, token: Token) -> bool {
         if self.next_tok == token {
-            self.advance();
             return true;
         }
         self.errors.push(ParserError::new(
