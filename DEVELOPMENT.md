@@ -1,0 +1,36 @@
+# Roadmap
+
+- [ ] Standard library
+  - [ ] Data structures
+    - [ ] List
+    - [ ] Hash map
+    - [ ] Hash set
+    - [ ] Deque
+    - [ ] Linked list
+    - [ ] BTree map
+- [ ] Type system
+  - [ ] Inference
+  - [ ] Static type checking
+  - [ ] Generics
+  - [ ] Sum types
+    - [ ] Tagged unions
+    - [ ] Disjoint unions
+    - [ ] Anonymous sum types
+  - [ ] Product types
+    - [ ] Tuples
+    - [ ] Structs
+- [ ] Compiler/VM optimizations
+  - [ ] Tail call optimization
+  - [ ] Constant folding
+  - [ ] Dead code elimination
+- [ ] LSP
+  - [ ] Hover
+  - [ ] Completions
+  - [ ] Diagnostics
+  - [ ] Signature help
+- [ ] Treesitter grammar
+- [ ] Linter
+- [ ] Formatter
+- [ ] REPL
+  - [ ] History
+  - [ ] Autocomplete
