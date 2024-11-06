@@ -1,12 +1,12 @@
 pub mod ast;
+pub mod cli;
 pub mod config;
 pub mod lexer;
 pub mod parser;
-mod repl;
 pub mod token;
 
 pub use ast::Program;
+pub use cli::*;
 pub use lexer::Lexer;
 pub use parser::Parser;
-pub use repl::repl;
 pub use token::Token;

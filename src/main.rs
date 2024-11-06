@@ -1,34 +1,13 @@
-use std::{env, fs::File, io::Read, process};
-
-use coal::{repl, Program};
+use std::env;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     match args.len() {
         2 => match args[1].as_str() {
-            "--help" | "-h" => help(),
-            filename => run(filename),
+            "--help" | "-h" => coal::help(),
+            filename => coal::run(filename),
         },
-        1 => repl(),
-        _ => help(),
+        1 => coal::repl(),
+        _ => coal::help(),
     }
-}
-
-fn run(filename: &str) {
-    let mut file = File::open(filename).unwrap_or_else(|_| {
-        eprintln!("file not found: {filename}");
-        process::exit(1);
-    });
-
-    let mut input = String::new();
-    file.read_to_string(&mut input).unwrap_or_else(|_| {
-        eprintln!("failed to read file: {filename}");
-        process::exit(1);
-    });
-
-    println!("{:#?}", Program::parse(&input).statements);
-}
-
-fn help() {
-    println!("Usage: coal [file?]")
 }
