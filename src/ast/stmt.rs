@@ -15,7 +15,7 @@ impl fmt::Display for Stmt {
         match self {
             Stmt::Void => write!(f, ";"),
             Stmt::Let(ident, t, expr) => write!(f, "let {ident}: {t} = {expr};"),
-            Stmt::Expr(expr) => write!(f, "{expr};"),
+            Stmt::Expr(expr) => write!(f, "{expr}"),
             Stmt::Return(expr) => write!(f, "return {expr};"),
         }
     }
