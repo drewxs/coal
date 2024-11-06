@@ -90,10 +90,10 @@ impl Parser<'_> {
             return None;
         }
 
-        let ident = self.parse_ident()?;
+        let ident = Ident::try_from(&self.curr_tok).ok()?;
         let mut t = if self.next_tok == Token::Colon {
             self.advance_n(2);
-            self.parse_type()
+            Type::try_from(&self.curr_tok).ok()
         } else {
             None
         };
@@ -124,7 +124,7 @@ impl Parser<'_> {
 
     fn parse_expr(&mut self, precedence: Precedence) -> Option<Expr> {
         let mut lhs = match &self.curr_tok {
-            Token::Ident(_) => self.parse_ident().map(Expr::Ident),
+            Token::Ident(_) => Ident::try_from(&self.curr_tok).ok().map(Expr::Ident),
             Token::Int(i) => Some(Expr::Literal(Literal::Int(*i))),
             Token::Float(f) => Some(Expr::Literal(Literal::Float(*f))),
             Token::Str(s) => Some(Expr::Literal(Literal::Str(s.clone()))),
@@ -188,23 +188,6 @@ impl Parser<'_> {
         self.advance();
         let rhs = self.parse_expr(prec)?;
         Some(Expr::Infix(infix, Box::new(lhs.clone()), Box::new(rhs)))
-    }
-
-    fn parse_ident(&mut self) -> Option<Ident> {
-        match &self.curr_tok {
-            Token::Ident(ident) => Some(Ident(ident.clone())),
-            _ => None,
-        }
-    }
-
-    fn parse_type(&mut self) -> Option<Type> {
-        match self.curr_tok {
-            Token::IntType => Some(Type::Int),
-            Token::FloatType => Some(Type::Float),
-            Token::StrType => Some(Type::String),
-            Token::BoolType => Some(Type::Bool),
-            _ => None,
-        }
     }
 
     /// Returns whether the next token matches the given token.
