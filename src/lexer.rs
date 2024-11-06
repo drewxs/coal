@@ -172,11 +172,13 @@ impl Lexer<'_> {
         }
     }
 
+    pub fn tokens(&mut self) -> Vec<Token> {
+        self.collect()
+    }
+
     pub fn print_tokens(&mut self) {
-        let mut token = self.next_tok();
-        while token != Token::EOF {
+        for token in self {
             println!("{token:?}");
-            token = self.next_tok();
         }
     }
 
