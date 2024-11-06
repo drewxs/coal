@@ -237,13 +237,13 @@ mod tests {
 
     #[test]
     fn test_let_statements() {
-        let input = "//
-let x: int = 5;
-let y: int = 10;
-let z: int = 99999;
-let foo: Foo = 0;
-";
-        let program = Program::parse(input);
+        let input = vec![
+            "let x: int = 5;",
+            "let y: int = 10;",
+            "let z: int = 99999;",
+            "let foo: Foo = 0;",
+        ];
+        let program = Program::parse_lines(&input);
         let expected = vec![
             Stmt::Let(
                 Ident(String::from("x")),
@@ -301,12 +301,8 @@ let z = "hello";
 
     #[test]
     fn test_return_statements() {
-        let input = "
-return 7;
-return 100;
-return 999999;
-";
-        let program = Program::parse(input);
+        let input = vec!["return 7;", "return 100;", "return 999999;"];
+        let program = Program::parse_lines(&input);
 
         for (i, stmt) in program.iter().enumerate() {
             if !matches!(stmt, Stmt::Return(_)) {
@@ -362,20 +358,11 @@ return 999999;
 
     #[test]
     fn test_infix_expressions() {
-        let input = "
-3 + 2;
-5 - 2;
-3 * 2;
-6 / 2;
-7 % 2;
-3 > 2;
-3 < 2;
-4 >= 2;
-4 <= 2;
-4 == 4;
-4 != 4;
-";
-        let program = Program::parse(input);
+        let input = vec![
+            "3 + 2", "5 - 2", "3 * 2", "6 / 2", "7 % 2", "3 > 2", "3 < 2", "4 >= 2", "4 <= 2",
+            "4 == 4", "4 != 4",
+        ];
+        let program = Program::parse_lines(&input);
         let expected = vec![
             Stmt::Expr(Expr::Infix(
                 Infix::Plus,
@@ -459,8 +446,7 @@ return 999999;
         ];
 
         for (input, expected) in tests {
-            let actual = Program::parse(input)[0].to_string();
-            assert_eq!(expected, actual);
+            assert_eq!(expected, Program::read_line(input));
         }
     }
 }
