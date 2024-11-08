@@ -22,14 +22,6 @@ impl Program {
         program
     }
 
-    pub fn parse_lines(lines: &Vec<&str>) -> Self {
-        let input = lines.join("\n");
-        let mut parser = Parser::from(&input);
-        let program = parser.parse();
-        parser.validate();
-        program
-    }
-
     pub fn read_line(input: &str) -> String {
         Program::parse(input)[0].to_string()
     }

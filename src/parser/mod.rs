@@ -341,37 +341,44 @@ mod tests {
 
     #[test]
     fn test_let_statements() {
-        let input = vec![
-            "let x: int = 5;",
-            "let y: int = 10;",
-            "let z: int = 99999;",
-            "let foo: Foo = 0;",
-        ];
-        let program = Program::parse_lines(&input);
-        let expected = vec![
-            Stmt::Let(
-                Ident(String::from("x")),
-                Type::Int,
-                Expr::Literal(Literal::Int(5)),
+        let tests = vec![
+            (
+                "let x: int = 5;",
+                Stmt::Let(
+                    Ident(String::from("x")),
+                    Type::Int,
+                    Expr::Literal(Literal::Int(5)),
+                ),
             ),
-            Stmt::Let(
-                Ident(String::from("y")),
-                Type::Int,
-                Expr::Literal(Literal::Int(10)),
+            (
+                "let y: int = 10;",
+                Stmt::Let(
+                    Ident(String::from("y")),
+                    Type::Int,
+                    Expr::Literal(Literal::Int(10)),
+                ),
             ),
-            Stmt::Let(
-                Ident(String::from("z")),
-                Type::Int,
-                Expr::Literal(Literal::Int(99999)),
+            (
+                "let z: int = 99999;",
+                Stmt::Let(
+                    Ident(String::from("z")),
+                    Type::Int,
+                    Expr::Literal(Literal::Int(99999)),
+                ),
             ),
-            Stmt::Let(
-                Ident(String::from("foo")),
-                Type::UserDefined(String::from("Foo")),
-                Expr::Literal(Literal::Int(0)),
+            (
+                "let foo: Foo = 0;",
+                Stmt::Let(
+                    Ident(String::from("foo")),
+                    Type::UserDefined(String::from("Foo")),
+                    Expr::Literal(Literal::Int(0)),
+                ),
             ),
         ];
 
-        assert_eq!(expected, program.statements);
+        for (input, expected) in tests {
+            assert_eq!(expected, Program::parse(input).statements[0]);
+        }
     }
 
     #[test]
@@ -404,12 +411,12 @@ mod tests {
 
     #[test]
     fn test_return_statements() {
-        let input = vec!["return 7;", "return 100;", "return 999999;"];
-        let program = Program::parse_lines(&input);
+        let tests = vec!["return 7;", "return 100;", "return 999999;"];
 
-        for (i, stmt) in program.iter().enumerate() {
+        for input in tests {
+            let stmt = &Program::parse(input).statements[0];
             if !matches!(stmt, Stmt::Return(_)) {
-                panic!("[{i}] expected=Stmt::Return, got={stmt:?}");
+                panic!("[{input}] expected=Stmt::Return, got={stmt:?}");
             }
         }
     }
@@ -469,98 +476,123 @@ mod tests {
 
     #[test]
     fn test_infix_expressions() {
-        let input = vec![
-            "3 + 2",
-            "5 - 2",
-            "3 * 2",
-            "6 / 2",
-            "7 % 2",
-            "3 > 2",
-            "3 < 2",
-            "4 >= 2",
-            "4 <= 2",
-            "4 == 4",
-            "4 != 4",
-            "true == true",
-            "false == false",
-            "true != false",
-        ];
-        let program = Program::parse_lines(&input);
-        let expected = vec![
-            Stmt::Expr(Expr::Infix(
-                Infix::Plus,
-                Box::new(Expr::Literal(Literal::Int(3))),
-                Box::new(Expr::Literal(Literal::Int(2))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::Minus,
-                Box::new(Expr::Literal(Literal::Int(5))),
-                Box::new(Expr::Literal(Literal::Int(2))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::Mul,
-                Box::new(Expr::Literal(Literal::Int(3))),
-                Box::new(Expr::Literal(Literal::Int(2))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::Div,
-                Box::new(Expr::Literal(Literal::Int(6))),
-                Box::new(Expr::Literal(Literal::Int(2))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::Mod,
-                Box::new(Expr::Literal(Literal::Int(7))),
-                Box::new(Expr::Literal(Literal::Int(2))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::GT,
-                Box::new(Expr::Literal(Literal::Int(3))),
-                Box::new(Expr::Literal(Literal::Int(2))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::LT,
-                Box::new(Expr::Literal(Literal::Int(3))),
-                Box::new(Expr::Literal(Literal::Int(2))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::GTE,
-                Box::new(Expr::Literal(Literal::Int(4))),
-                Box::new(Expr::Literal(Literal::Int(2))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::LTE,
-                Box::new(Expr::Literal(Literal::Int(4))),
-                Box::new(Expr::Literal(Literal::Int(2))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::EQ,
-                Box::new(Expr::Literal(Literal::Int(4))),
-                Box::new(Expr::Literal(Literal::Int(4))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::NEQ,
-                Box::new(Expr::Literal(Literal::Int(4))),
-                Box::new(Expr::Literal(Literal::Int(4))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::EQ,
-                Box::new(Expr::Literal(Literal::Bool(true))),
-                Box::new(Expr::Literal(Literal::Bool(true))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::EQ,
-                Box::new(Expr::Literal(Literal::Bool(false))),
-                Box::new(Expr::Literal(Literal::Bool(false))),
-            )),
-            Stmt::Expr(Expr::Infix(
-                Infix::NEQ,
-                Box::new(Expr::Literal(Literal::Bool(true))),
-                Box::new(Expr::Literal(Literal::Bool(false))),
-            )),
+        let tests = vec![
+            (
+                "3 + 2",
+                Stmt::Expr(Expr::Infix(
+                    Infix::Plus,
+                    Box::new(Expr::Literal(Literal::Int(3))),
+                    Box::new(Expr::Literal(Literal::Int(2))),
+                )),
+            ),
+            (
+                "5 - 2",
+                Stmt::Expr(Expr::Infix(
+                    Infix::Minus,
+                    Box::new(Expr::Literal(Literal::Int(5))),
+                    Box::new(Expr::Literal(Literal::Int(2))),
+                )),
+            ),
+            (
+                "3 * 2",
+                Stmt::Expr(Expr::Infix(
+                    Infix::Mul,
+                    Box::new(Expr::Literal(Literal::Int(3))),
+                    Box::new(Expr::Literal(Literal::Int(2))),
+                )),
+            ),
+            (
+                "6 / 2",
+                Stmt::Expr(Expr::Infix(
+                    Infix::Div,
+                    Box::new(Expr::Literal(Literal::Int(6))),
+                    Box::new(Expr::Literal(Literal::Int(2))),
+                )),
+            ),
+            (
+                "7 % 2",
+                Stmt::Expr(Expr::Infix(
+                    Infix::Mod,
+                    Box::new(Expr::Literal(Literal::Int(7))),
+                    Box::new(Expr::Literal(Literal::Int(2))),
+                )),
+            ),
+            (
+                "3 > 2",
+                Stmt::Expr(Expr::Infix(
+                    Infix::GT,
+                    Box::new(Expr::Literal(Literal::Int(3))),
+                    Box::new(Expr::Literal(Literal::Int(2))),
+                )),
+            ),
+            (
+                "3 < 2",
+                Stmt::Expr(Expr::Infix(
+                    Infix::LT,
+                    Box::new(Expr::Literal(Literal::Int(3))),
+                    Box::new(Expr::Literal(Literal::Int(2))),
+                )),
+            ),
+            (
+                "4 >= 2",
+                Stmt::Expr(Expr::Infix(
+                    Infix::GTE,
+                    Box::new(Expr::Literal(Literal::Int(4))),
+                    Box::new(Expr::Literal(Literal::Int(2))),
+                )),
+            ),
+            (
+                "4 <= 2",
+                Stmt::Expr(Expr::Infix(
+                    Infix::LTE,
+                    Box::new(Expr::Literal(Literal::Int(4))),
+                    Box::new(Expr::Literal(Literal::Int(2))),
+                )),
+            ),
+            (
+                "4 == 4",
+                Stmt::Expr(Expr::Infix(
+                    Infix::EQ,
+                    Box::new(Expr::Literal(Literal::Int(4))),
+                    Box::new(Expr::Literal(Literal::Int(4))),
+                )),
+            ),
+            (
+                "4 != 4",
+                Stmt::Expr(Expr::Infix(
+                    Infix::NEQ,
+                    Box::new(Expr::Literal(Literal::Int(4))),
+                    Box::new(Expr::Literal(Literal::Int(4))),
+                )),
+            ),
+            (
+                "true == true",
+                Stmt::Expr(Expr::Infix(
+                    Infix::EQ,
+                    Box::new(Expr::Literal(Literal::Bool(true))),
+                    Box::new(Expr::Literal(Literal::Bool(true))),
+                )),
+            ),
+            (
+                "false == false",
+                Stmt::Expr(Expr::Infix(
+                    Infix::EQ,
+                    Box::new(Expr::Literal(Literal::Bool(false))),
+                    Box::new(Expr::Literal(Literal::Bool(false))),
+                )),
+            ),
+            (
+                "true != false",
+                Stmt::Expr(Expr::Infix(
+                    Infix::NEQ,
+                    Box::new(Expr::Literal(Literal::Bool(true))),
+                    Box::new(Expr::Literal(Literal::Bool(false))),
+                )),
+            ),
         ];
 
-        for (i, actual) in program.iter().enumerate() {
-            assert_eq!(&expected[i], actual);
+        for (input, expected) in tests {
+            assert_eq!(expected, Program::parse(input).statements[0]);
         }
     }
 
