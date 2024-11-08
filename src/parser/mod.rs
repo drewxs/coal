@@ -5,10 +5,7 @@ pub use error::ParserError;
 use error::ParserErrorKind;
 pub use precedence::Precedence;
 
-use crate::{
-    ast::{Expr, Ident, IfExpr, Infix, Literal, Prefix, Stmt, Type},
-    Lexer, Program, Token,
-};
+use crate::{Expr, Ident, IfExpr, Infix, Lexer, Literal, Prefix, Program, Stmt, Token, Type, Var};
 
 #[derive(Clone, Debug)]
 pub struct Parser<'l> {
