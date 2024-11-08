@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
     Illegal,
@@ -42,7 +44,7 @@ pub enum Token {
     Rbracket,
 
     // Keywords
-    Function,
+    Fn,
     Let,
     If,
     Elif,
@@ -78,13 +80,56 @@ impl From<&str> for Token {
             "}" => Token::Rbrace,
             "[" => Token::Lbracket,
             "]" => Token::Rbracket,
-            "fn" => Token::Function,
+            "fn" => Token::Fn,
             "let" => Token::Let,
             "if" => Token::If,
             "elif" => Token::Elif,
             "else" => Token::Else,
             "return" => Token::Return,
             _ => Token::Ident(s.to_string()),
+        }
+    }
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Token::Illegal => write!(f, "ILLEGAL"),
+            Token::EOF => write!(f, "EOF"),
+            Token::Ident(name) => write!(f, "{name}"),
+            Token::Str(s) => write!(f, "{s}"),
+            Token::Int(i) => write!(f, "{i}"),
+            Token::Float(n) => write!(f, "{n}"),
+            Token::Bool(b) => write!(f, "{b}"),
+            Token::Assign => write!(f, "="),
+            Token::Plus => write!(f, "+"),
+            Token::Minus => write!(f, "-"),
+            Token::Bang => write!(f, "!"),
+            Token::Asterisk => write!(f, "*"),
+            Token::Slash => write!(f, "/"),
+            Token::Modulo => write!(f, "%"),
+            Token::EQ => write!(f, "=="),
+            Token::NEQ => write!(f, "!="),
+            Token::LT => write!(f, "<"),
+            Token::LTE => write!(f, "<="),
+            Token::GT => write!(f, ">"),
+            Token::GTE => write!(f, ">="),
+            Token::Colon => write!(f, ":"),
+            Token::Semicolon => write!(f, ";"),
+            Token::Comma => write!(f, ","),
+            Token::Arrow => write!(f, "->"),
+            Token::Lparen => write!(f, "("),
+            Token::Rparen => write!(f, ")"),
+            Token::Lbrace => write!(f, "{{"),
+            Token::Rbrace => write!(f, "}}"),
+            Token::Lbracket => write!(f, "["),
+            Token::Rbracket => write!(f, "]"),
+            Token::Fn => write!(f, "fn"),
+            Token::Let => write!(f, "let"),
+            Token::If => write!(f, "if"),
+            Token::Elif => write!(f, "elif"),
+            Token::Else => write!(f, "else"),
+            Token::Return => write!(f, "return"),
         }
     }
 }

@@ -77,7 +77,7 @@ impl Parser<'_> {
             .push(ParserError::new(kind, self.lexer.line, self.lexer.col));
     }
 
-    fn expect_next_tok(&mut self, token: Token) -> bool {
+    fn expect_next(&mut self, token: Token) -> bool {
         if self.next_tok == token {
             self.advance();
             return true;
@@ -124,7 +124,7 @@ impl Parser<'_> {
             None
         };
 
-        if !self.expect_next_tok(Token::Assign) {
+        if !self.expect_next(Token::Assign) {
             return None;
         }
         self.advance();
@@ -158,6 +158,7 @@ impl Parser<'_> {
             Token::Bang | Token::Plus | Token::Minus => self.parse_prefix_expr(),
             Token::Lparen => self.parse_grouped_expr(),
             Token::If => self.parse_if_expr(),
+            Token::Fn => self.parse_fn_expr(),
             _ => {
                 self.error(ParserErrorKind::SyntaxError(self.curr_tok.clone()));
                 return None;
@@ -215,7 +216,7 @@ impl Parser<'_> {
     fn parse_grouped_expr(&mut self) -> Option<Expr> {
         self.advance();
         let expr = self.parse_expr(Precedence::Lowest);
-        if !self.expect_next_tok(Token::Rparen) {
+        if !self.expect_next(Token::Rparen) {
             return None;
         }
         expr
@@ -225,7 +226,7 @@ impl Parser<'_> {
         self.advance();
         let condition = self.parse_expr(Precedence::Lowest)?;
 
-        if !self.expect_next_tok(Token::Lbrace) {
+        if !self.expect_next(Token::Lbrace) {
             return None;
         }
 
@@ -239,7 +240,7 @@ impl Parser<'_> {
             self.advance();
             let condition = self.parse_expr(Precedence::Lowest)?;
 
-            if !self.expect_next_tok(Token::Lbrace) {
+            if !self.expect_next(Token::Lbrace) {
                 return None;
             }
 
@@ -251,7 +252,7 @@ impl Parser<'_> {
 
         if self.next_tok == Token::Else {
             self.advance();
-            if !self.expect_next_tok(Token::Lbrace) {
+            if !self.expect_next(Token::Lbrace) {
                 return None;
             }
             alternative = Some(self.parse_block_stmt());
@@ -263,6 +264,47 @@ impl Parser<'_> {
             else_ifs,
             alternative,
         })
+    }
+
+    fn parse_fn_expr(&mut self) -> Option<Expr> {
+        self.advance();
+
+        let ident = Ident::try_from(&self.curr_tok).ok()?;
+        self.expect_next(Token::Lparen);
+        self.advance();
+
+        let args = self.parse_decl_args()?;
+        self.expect_next(Token::Arrow);
+        self.advance();
+
+        let return_t = Type::try_from(&self.curr_tok).ok()?;
+        self.advance();
+
+        let body = self.parse_block_stmt();
+
+        Some(Expr::Fn {
+            name: ident.name(),
+            args,
+            return_t,
+            body,
+        })
+    }
+
+    fn parse_decl_args(&mut self) -> Option<Vec<Var>> {
+        let mut args = vec![];
+
+        while let Token::Ident(name) = self.curr_tok.clone() {
+            self.expect_next(Token::Colon);
+            self.advance();
+
+            let t = Type::try_from(&self.curr_tok).ok()?;
+            self.consume(Token::Comma);
+            self.advance();
+
+            args.push(Var::new(name, t));
+        }
+
+        Some(args)
     }
 }
 
@@ -293,6 +335,8 @@ impl<'l> From<&'l String> for Parser<'l> {
 
 #[cfg(test)]
 mod tests {
+    use crate::Var;
+
     use super::*;
 
     #[test]
@@ -333,10 +377,9 @@ mod tests {
     #[test]
     fn test_let_statements_inference() {
         let input = r#"
-let x = 5;
-let y = 5.0;
-let z = "hello";
-"#;
+            let x = 5;
+            let y = 5.0;
+            let z = "hello";"#;
         let program = Program::parse(input);
         let expected = vec![
             Stmt::Let(
@@ -575,13 +618,13 @@ let z = "hello";
     #[test]
     fn test_elif_expression() {
         let input = r#"
-if x < y {
-    return x;
-} elif x > y {
-    return y;
-} else {
-    return z;
-}"#;
+        if x < y {
+            return x;
+        } elif x > y {
+            return y;
+        } else {
+            return z;
+        }"#;
         let expected = r#"if (x < y) {
     return x;
 } elif (x > y) {
@@ -592,5 +635,44 @@ if x < y {
 "#;
         let program = Program::from(input);
         assert_eq!(expected, program.to_string());
+    }
+
+    #[test]
+    fn test_function_exprs() {
+        let tests = [
+            (
+                r#"fn foo() -> int {
+                    return 0;
+                }"#,
+                Stmt::Expr(Expr::Fn {
+                    name: String::from("foo"),
+                    args: vec![],
+                    return_t: Type::Int,
+                    body: vec![Stmt::Return(Expr::Literal(Literal::Int(0)))],
+                }),
+            ),
+            (
+                r#"fn add(x: int, y: int) -> int {
+                    return x + y;
+                }"#,
+                Stmt::Expr(Expr::Fn {
+                    name: String::from("add"),
+                    args: vec![
+                        Var::new(String::from("x"), Type::Int),
+                        Var::new(String::from("y"), Type::Int),
+                    ],
+                    return_t: Type::Int,
+                    body: vec![Stmt::Return(Expr::Infix(
+                        Infix::Plus,
+                        Box::new(Expr::Ident(Ident(String::from("x")))),
+                        Box::new(Expr::Ident(Ident(String::from("y")))),
+                    ))],
+                }),
+            ),
+        ];
+
+        for (input, expected) in tests {
+            assert_eq!(expected, Program::parse(input).statements[0]);
+        }
     }
 }

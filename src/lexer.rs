@@ -287,7 +287,7 @@ if 5 < 10 {
             Token::Assign,
             Token::Int(10),
             Token::Semicolon,
-            Token::Function,
+            Token::Fn,
             Token::Ident(String::from("add")),
             Token::Lparen,
             Token::Ident(String::from("x")),

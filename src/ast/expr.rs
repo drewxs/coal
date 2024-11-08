@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{Ident, Infix, Literal, Prefix, Stmt};
+use super::{Ident, Infix, Literal, Prefix, Stmt, Type, Var};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
@@ -14,6 +14,16 @@ pub enum Expr {
         else_ifs: Vec<IfExpr>,
         alternative: Option<Vec<Stmt>>,
     },
+    Fn {
+        name: String,
+        args: Vec<Var>,
+        return_t: Type,
+        body: Vec<Stmt>,
+    },
+    // Call {
+    //     func: Box<Expr>,
+    //     args: Vec<Expr>,
+    // },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -50,6 +60,25 @@ impl fmt::Display for Expr {
                     for stmt in alternative {
                         writeln!(f, "    {stmt}")?;
                     }
+                }
+                write!(f, "}}")
+            }
+            Expr::Fn {
+                name,
+                args,
+                return_t,
+                body,
+            } => {
+                writeln!(f, "fn {name}(")?;
+                let args_str = args
+                    .iter()
+                    .map(|arg| format!("{}: {}", arg.name, arg.t))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+
+                writeln!(f, "{args_str}) -> {return_t} {{")?;
+                for stmt in body {
+                    writeln!(f, "    {stmt}")?;
                 }
                 write!(f, "}}")
             }
