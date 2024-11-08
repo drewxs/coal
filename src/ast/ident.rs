@@ -17,6 +17,18 @@ impl fmt::Display for Ident {
     }
 }
 
+impl From<&str> for Ident {
+    fn from(name: &str) -> Self {
+        Ident(name.to_string())
+    }
+}
+
+impl From<&String> for Ident {
+    fn from(name: &String) -> Self {
+        Ident(name.clone())
+    }
+}
+
 impl TryFrom<&Token> for Ident {
     type Error = String;
 
