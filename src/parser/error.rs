@@ -1,30 +1,39 @@
 use std::fmt;
 
+use crate::Token;
+
 #[derive(Clone, Debug)]
 pub struct ParserError {
     pub kind: ParserErrorKind,
-    pub msg: String,
+    pub line: usize,
+    pub col: usize,
 }
 
 impl ParserError {
-    pub fn new(kind: ParserErrorKind, msg: String) -> Self {
-        ParserError { kind, msg }
+    pub fn new(kind: ParserErrorKind, line: usize, col: usize) -> Self {
+        ParserError { kind, line, col }
     }
 }
 
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[{}] {}", self.kind, self.msg)
+        write!(f, "{}:{} {}", self.line, self.col, self.kind)
     }
 }
 
 #[derive(Clone, Debug)]
 pub enum ParserErrorKind {
-    UnexpectedToken,
+    SyntaxError(Token),
+    UnexpectedToken { expected: Token, got: Token },
 }
 
 impl fmt::Display for ParserErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+        match self {
+            ParserErrorKind::SyntaxError(token) => write!(f, "syntax error: '{token}'"),
+            ParserErrorKind::UnexpectedToken { expected, got } => {
+                write!(f, "unexpected token: '{got}', expected='{expected}'")
+            }
+        }
     }
 }

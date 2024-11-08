@@ -72,18 +72,20 @@ impl Parser<'_> {
         }
     }
 
+    fn error(&mut self, kind: ParserErrorKind) {
+        self.errors
+            .push(ParserError::new(kind, self.lexer.line, self.lexer.col));
+    }
+
     fn expect_next_tok(&mut self, token: Token) -> bool {
         if self.next_tok == token {
             self.advance();
             return true;
         }
-        self.errors.push(ParserError::new(
-            ParserErrorKind::UnexpectedToken,
-            format!(
-                "{}:{} expected={:?}, got={:?}",
-                self.lexer.line, self.lexer.col, token, self.next_tok
-            ),
-        ));
+        self.error(ParserErrorKind::UnexpectedToken {
+            expected: token,
+            got: self.next_tok.clone(),
+        });
         false
     }
 
@@ -157,13 +159,7 @@ impl Parser<'_> {
             Token::Lparen => self.parse_grouped_expr(),
             Token::If => self.parse_if_expr(),
             _ => {
-                self.errors.push(ParserError::new(
-                    ParserErrorKind::UnexpectedToken,
-                    format!(
-                        "{}:{} no prefix parse function found for {:?}",
-                        self.lexer.line, self.lexer.col, self.curr_tok
-                    ),
-                ));
+                self.error(ParserErrorKind::SyntaxError(self.curr_tok.clone()));
                 return None;
             }
         };
