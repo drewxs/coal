@@ -90,14 +90,14 @@ impl Expr {
                 write!(f, "}}")
             }
             Expr::Call { func, args } => match func.as_ref() {
-                Expr::Fn { name, .. } => write!(
-                    f,
-                    "{name}({})",
-                    args.iter()
+                Expr::Ident(ident) => {
+                    let args_str = args
+                        .iter()
                         .map(|arg| format!("{arg}"))
                         .collect::<Vec<String>>()
-                        .join(", ")
-                ),
+                        .join(", ");
+                    write!(f, "{ident}({})", args_str)
+                }
                 _ => Err(fmt::Error),
             },
         }

@@ -1,30 +1,21 @@
-use std::env;
+use clap::Parser;
+
+use coal::Cli;
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    match args.len() {
-        4 => match args[1].as_str() {
-            "fmt" => match args[2].as_str() {
-                "--write" | "-w" => match coal::fmt_file(args[3].as_str(), true) {
-                    Ok(output) => println!("{output}"),
-                    Err(err) => eprintln!("{err}"),
-                },
-                _ => coal::help(),
-            },
-            _ => coal::help(),
-        },
-        3 => match args[1].as_str() {
-            "fmt" => match coal::fmt_file(args[2].as_str(), false) {
+    let args = Cli::parse();
+
+    match args.cmd {
+        Some(coal::Command::Fmt { path, dry_run }) => {
+            let path = path.unwrap_or(String::from("."));
+            match coal::fmt_path(path.as_str(), dry_run) {
                 Ok(output) => println!("{output}"),
                 Err(err) => eprintln!("{err}"),
-            },
-            _ => coal::help(),
+            }
+        }
+        None => match args.file {
+            Some(path) => coal::run(&path),
+            None => coal::repl(),
         },
-        2 => match args[1].as_str() {
-            "help" | "--help" | "-h" => coal::help(),
-            filename => coal::run(filename),
-        },
-        1 => coal::repl(),
-        _ => coal::help(),
     }
 }

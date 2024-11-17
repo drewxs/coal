@@ -3,7 +3,11 @@ name = "coal"
 description = "General purpose programming language"
 version = "0.1.0"
 edition = "2021"
-authors = ["Andrew X. Shah <drewshah0@gmail.com>"]
+authors = ["Andrew X. Shah <drew@drewxs.dev>"]
 repository = "https://github.com/drewxs/coal"
 readme = "README.md"
 license = "Apache-2.0"
+
+[dependencies]
+clap = { version = "4.5.21", features = ["derive"] }
+ignore = "0.4.23"
