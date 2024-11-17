@@ -9,14 +9,29 @@ pub enum Stmt {
     Expr(Expr),
     Return(Expr),
 }
+impl Stmt {
+    pub fn fmt_with_indent(&self, f: &mut fmt::Formatter<'_>, indent_level: usize) -> fmt::Result {
+        let indent = "    ".repeat(indent_level); // Create the current indentation
+
+        match self {
+            Stmt::Void => write!(f, "{indent}"),
+            Stmt::Let(ident, t, expr) => {
+                write!(f, "{indent}let {ident}: {t} = ")?;
+                expr.fmt_with_indent(f, indent_level)?;
+                writeln!(f, ";")
+            }
+            Stmt::Expr(expr) => expr.fmt_with_indent(f, indent_level),
+            Stmt::Return(expr) => {
+                write!(f, "{}return ", indent)?;
+                expr.fmt_with_indent(f, indent_level)?;
+                writeln!(f, ";")
+            }
+        }
+    }
+}
 
 impl fmt::Display for Stmt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Stmt::Void => write!(f, ";"),
-            Stmt::Let(ident, t, expr) => write!(f, "let {ident}: {t} = {expr};"),
-            Stmt::Expr(expr) => write!(f, "{expr}"),
-            Stmt::Return(expr) => write!(f, "return {expr};"),
-        }
+        self.fmt_with_indent(f, 0)
     }
 }

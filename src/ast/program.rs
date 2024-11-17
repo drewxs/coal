@@ -69,7 +69,7 @@ impl Iterator for Program {
 impl fmt::Display for Program {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for stmt in &self.statements {
-            writeln!(f, "{stmt}")?;
+            write!(f, "{stmt}")?;
         }
         Ok(())
     }

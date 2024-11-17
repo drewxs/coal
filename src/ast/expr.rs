@@ -34,6 +34,14 @@ pub struct IfExpr {
 
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt_with_indent(f, 0)
+    }
+}
+
+impl Expr {
+    pub fn fmt_with_indent(&self, f: &mut fmt::Formatter<'_>, indent_level: usize) -> fmt::Result {
+        let indent = "    ".repeat(indent_level);
+
         match self {
             Expr::Ident(ident) => write!(f, "{ident}"),
             Expr::Literal(literal) => write!(f, "{literal}"),
@@ -45,23 +53,23 @@ impl fmt::Display for Expr {
                 elifs,
                 alt,
             } => {
-                writeln!(f, "if {cond} {{")?;
+                writeln!(f, "{indent}if {cond} {{")?;
                 for stmt in then {
-                    writeln!(f, "    {stmt}")?;
+                    stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
-                for expr in elifs {
-                    writeln!(f, "}} elif {} {{", expr.cond)?;
-                    for stmt in &expr.then {
-                        writeln!(f, "    {stmt}")?;
+                for elif in elifs {
+                    writeln!(f, "{indent}}} elif {} {{", elif.cond)?;
+                    for stmt in &elif.then {
+                        stmt.fmt_with_indent(f, indent_level + 1)?;
                     }
                 }
-                if let Some(alternative) = alt {
-                    writeln!(f, "}} else {{")?;
-                    for stmt in alternative {
-                        writeln!(f, "    {stmt}")?;
+                if let Some(else_block) = alt {
+                    writeln!(f, "{indent}}} else {{")?;
+                    for stmt in else_block {
+                        stmt.fmt_with_indent(f, indent_level + 1)?;
                     }
                 }
-                write!(f, "}}")
+                writeln!(f, "{indent}}}")
             }
             Expr::Fn {
                 name,
@@ -84,8 +92,7 @@ impl fmt::Display for Expr {
             Expr::Call { func, args } => match func.as_ref() {
                 Expr::Fn { name, .. } => write!(
                     f,
-                    "{}({})",
-                    name,
+                    "{name}({})",
                     args.iter()
                         .map(|arg| format!("{arg}"))
                         .collect::<Vec<String>>()
