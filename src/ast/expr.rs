@@ -9,27 +9,27 @@ pub enum Expr {
     Prefix(Prefix, Box<Expr>),
     Infix(Infix, Box<Expr>, Box<Expr>),
     If {
-        condition: Box<Expr>,
-        consequence: Vec<Stmt>,
-        else_ifs: Vec<IfExpr>,
-        alternative: Option<Vec<Stmt>>,
+        cond: Box<Expr>,
+        then: Vec<Stmt>,
+        elifs: Vec<IfExpr>,
+        alt: Option<Vec<Stmt>>,
     },
     Fn {
         name: String,
         args: Vec<Var>,
-        return_t: Type,
+        ret_t: Type,
         body: Vec<Stmt>,
     },
-    // Call {
-    //     func: Box<Expr>,
-    //     args: Vec<Expr>,
-    // },
+    Call {
+        func: Box<Expr>,
+        args: Vec<Expr>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct IfExpr {
-    pub condition: Box<Expr>,
-    pub consequence: Vec<Stmt>,
+    pub cond: Box<Expr>,
+    pub then: Vec<Stmt>,
 }
 
 impl fmt::Display for Expr {
@@ -40,22 +40,22 @@ impl fmt::Display for Expr {
             Expr::Prefix(prefix, expr) => write!(f, "({prefix}{expr})"),
             Expr::Infix(infix, lhs, rhs) => write!(f, "({lhs} {infix} {rhs})"),
             Expr::If {
-                condition,
-                consequence,
-                else_ifs,
-                alternative,
+                cond,
+                then,
+                elifs,
+                alt,
             } => {
-                writeln!(f, "if {condition} {{")?;
-                for stmt in consequence {
+                writeln!(f, "if {cond} {{")?;
+                for stmt in then {
                     writeln!(f, "    {stmt}")?;
                 }
-                for expr in else_ifs {
-                    writeln!(f, "}} elif {} {{", expr.condition)?;
-                    for stmt in &expr.consequence {
+                for expr in elifs {
+                    writeln!(f, "}} elif {} {{", expr.cond)?;
+                    for stmt in &expr.then {
                         writeln!(f, "    {stmt}")?;
                     }
                 }
-                if let Some(alternative) = alternative {
+                if let Some(alternative) = alt {
                     writeln!(f, "}} else {{")?;
                     for stmt in alternative {
                         writeln!(f, "    {stmt}")?;
@@ -66,22 +66,33 @@ impl fmt::Display for Expr {
             Expr::Fn {
                 name,
                 args,
-                return_t,
+                ret_t,
                 body,
             } => {
                 writeln!(f, "fn {name}(")?;
                 let args_str = args
                     .iter()
-                    .map(|arg| format!("{}: {}", arg.name, arg.t))
+                    .map(|arg| format!("{arg}"))
                     .collect::<Vec<String>>()
                     .join(", ");
-
-                writeln!(f, "{args_str}) -> {return_t} {{")?;
+                writeln!(f, "{args_str}) -> {ret_t} {{")?;
                 for stmt in body {
                     writeln!(f, "    {stmt}")?;
                 }
                 write!(f, "}}")
             }
+            Expr::Call { func, args } => match func.as_ref() {
+                Expr::Fn { name, .. } => write!(
+                    f,
+                    "{}({})",
+                    name,
+                    args.iter()
+                        .map(|arg| format!("{arg}"))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                ),
+                _ => Err(fmt::Error),
+            },
         }
     }
 }

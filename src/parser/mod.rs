@@ -1,8 +1,10 @@
 pub mod error;
 pub mod precedence;
 
-pub use error::ParserError;
-use error::ParserErrorKind;
+#[cfg(test)]
+mod tests;
+
+pub use error::{ParserError, ParserErrorKind};
 pub use precedence::Precedence;
 
 use crate::{Expr, Ident, IfExpr, Infix, Lexer, Literal, Prefix, Program, Stmt, Token, Type, Var};
@@ -92,7 +94,7 @@ impl Parser<'_> {
     fn parse_stmt(&mut self) -> Option<Stmt> {
         match self.curr_tok {
             Token::Let => self.parse_let_stmt(),
-            Token::Return => self.parse_return_stmt(),
+            Token::Return => self.parse_ret_stmt(),
             _ => self.parse_expr_stmt(),
         }
     }
@@ -141,7 +143,7 @@ impl Parser<'_> {
         })
     }
 
-    fn parse_return_stmt(&mut self) -> Option<Stmt> {
+    fn parse_ret_stmt(&mut self) -> Option<Stmt> {
         self.advance();
         let expr = self.parse_expr(Precedence::Lowest).map(Stmt::Return);
         self.consume(Token::Semicolon);
@@ -181,6 +183,10 @@ impl Parser<'_> {
                     self.advance();
                     lhs = self.parse_infix_expr(&lhs?);
                 }
+                Token::Lparen => {
+                    self.advance();
+                    lhs = self.parse_call_expr(&lhs?);
+                }
                 Token::Lbracket => {
                     self.advance();
                 }
@@ -213,6 +219,13 @@ impl Parser<'_> {
         Some(Expr::Infix(infix, Box::new(lhs.clone()), Box::new(rhs)))
     }
 
+    fn parse_call_expr(&mut self, func: &Expr) -> Option<Expr> {
+        Some(Expr::Call {
+            func: Box::new(func.clone()),
+            args: self.parse_expr_list(Token::Rparen)?,
+        })
+    }
+
     fn parse_grouped_expr(&mut self) -> Option<Expr> {
         self.advance();
         let expr = self.parse_expr(Precedence::Lowest);
@@ -224,29 +237,29 @@ impl Parser<'_> {
 
     fn parse_if_expr(&mut self) -> Option<Expr> {
         self.advance();
-        let condition = self.parse_expr(Precedence::Lowest)?;
+        let cond = self.parse_expr(Precedence::Lowest)?;
 
         if !self.expect_next(Token::Lbrace) {
             return None;
         }
 
-        let consequence = self.parse_block_stmt();
+        let then = self.parse_block_stmt();
         self.advance();
 
-        let mut else_ifs = vec![];
-        let mut alternative = None;
+        let mut elifs = vec![];
+        let mut alt = None;
 
         while self.curr_tok == Token::Elif {
             self.advance();
-            let condition = self.parse_expr(Precedence::Lowest)?;
+            let cond = self.parse_expr(Precedence::Lowest)?;
 
             if !self.expect_next(Token::Lbrace) {
                 return None;
             }
 
-            else_ifs.push(IfExpr {
-                condition: Box::new(condition),
-                consequence: self.parse_block_stmt(),
+            elifs.push(IfExpr {
+                cond: Box::new(cond),
+                then: self.parse_block_stmt(),
             });
         }
 
@@ -255,14 +268,14 @@ impl Parser<'_> {
             if !self.expect_next(Token::Lbrace) {
                 return None;
             }
-            alternative = Some(self.parse_block_stmt());
+            alt = Some(self.parse_block_stmt());
         }
 
         Some(Expr::If {
-            condition: Box::new(condition),
-            consequence,
-            else_ifs,
-            alternative,
+            cond: Box::new(cond),
+            then,
+            elifs,
+            alt,
         })
     }
 
@@ -277,7 +290,7 @@ impl Parser<'_> {
         self.expect_next(Token::Arrow);
         self.advance();
 
-        let return_t = Type::try_from(&self.curr_tok).ok()?;
+        let ret_t = Type::try_from(&self.curr_tok).ok()?;
         self.advance();
 
         let body = self.parse_block_stmt();
@@ -285,7 +298,7 @@ impl Parser<'_> {
         Some(Expr::Fn {
             name: ident.name(),
             args,
-            return_t,
+            ret_t,
             body,
         })
     }
@@ -305,6 +318,32 @@ impl Parser<'_> {
         }
 
         Some(args)
+    }
+
+    fn parse_expr_list(&mut self, end_tok: Token) -> Option<Vec<Expr>> {
+        let mut list = vec![];
+
+        if self.next_tok == end_tok {
+            self.advance();
+            return Some(list);
+        }
+
+        self.advance();
+
+        let expr = self.parse_expr(Precedence::Lowest)?;
+        list.push(expr);
+
+        while self.next_tok == Token::Comma {
+            self.advance_n(2);
+            let expr = self.parse_expr(Precedence::Lowest)?;
+            list.push(expr);
+        }
+
+        if self.expect_next(end_tok) {
+            Some(list)
+        } else {
+            None
+        }
     }
 }
 
@@ -330,381 +369,5 @@ impl<'l> From<&'l str> for Parser<'l> {
 impl<'l> From<&'l String> for Parser<'l> {
     fn from(input: &'l String) -> Self {
         Self::from(input.as_str())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::Var;
-
-    use super::*;
-
-    #[test]
-    fn test_let_statements() {
-        let tests = vec![
-            (
-                "let x: int = 5;",
-                Stmt::Let(
-                    Ident(String::from("x")),
-                    Type::Int,
-                    Expr::Literal(Literal::Int(5)),
-                ),
-            ),
-            (
-                "let y: int = 10;",
-                Stmt::Let(
-                    Ident(String::from("y")),
-                    Type::Int,
-                    Expr::Literal(Literal::Int(10)),
-                ),
-            ),
-            (
-                "let z: int = 99999;",
-                Stmt::Let(
-                    Ident(String::from("z")),
-                    Type::Int,
-                    Expr::Literal(Literal::Int(99999)),
-                ),
-            ),
-            (
-                "let foo: Foo = 0;",
-                Stmt::Let(
-                    Ident(String::from("foo")),
-                    Type::UserDefined(String::from("Foo")),
-                    Expr::Literal(Literal::Int(0)),
-                ),
-            ),
-        ];
-
-        for (input, expected) in tests {
-            assert_eq!(expected, Program::parse(input).statements[0]);
-        }
-    }
-
-    #[test]
-    fn test_let_statements_inference() {
-        let input = r#"
-            let x = 5;
-            let y = 5.0;
-            let z = "hello";"#;
-        let program = Program::parse(input);
-        let expected = vec![
-            Stmt::Let(
-                Ident(String::from("x")),
-                Type::Int,
-                Expr::Literal(Literal::Int(5)),
-            ),
-            Stmt::Let(
-                Ident(String::from("y")),
-                Type::Float,
-                Expr::Literal(Literal::Float(5.0)),
-            ),
-            Stmt::Let(
-                Ident(String::from("z")),
-                Type::String,
-                Expr::Literal(Literal::Str(String::from("hello"))),
-            ),
-        ];
-
-        assert_eq!(expected, program.statements);
-    }
-
-    #[test]
-    fn test_return_statements() {
-        let tests = vec!["return 7;", "return 100;", "return 999999;"];
-
-        for input in tests {
-            let stmt = &Program::parse(input).statements[0];
-            if !matches!(stmt, Stmt::Return(_)) {
-                panic!("[{input}] expected=Stmt::Return, got={stmt:?}");
-            }
-        }
-    }
-
-    #[test]
-    fn test_identifier_expressions() {
-        let input = "foo; bar; foobar;";
-        let program = Program::parse(input);
-        let expected = vec![
-            Stmt::Expr(Expr::Ident(Ident(String::from("foo")))),
-            Stmt::Expr(Expr::Ident(Ident(String::from("bar")))),
-            Stmt::Expr(Expr::Ident(Ident(String::from("foobar")))),
-        ];
-
-        assert_eq!(expected, program.statements);
-    }
-
-    #[test]
-    fn test_literal_expressions() {
-        let input = r#"5; 10.0; false; "foo";"#;
-        let program = Program::parse(input);
-        let expected = vec![
-            Stmt::Expr(Expr::Literal(Literal::Int(5))),
-            Stmt::Expr(Expr::Literal(Literal::Float(10.0))),
-            Stmt::Expr(Expr::Literal(Literal::Bool(false))),
-            Stmt::Expr(Expr::Literal(Literal::Str(String::from("foo")))),
-        ];
-
-        assert_eq!(expected, program.statements);
-    }
-
-    #[test]
-    fn test_prefix_expressions() {
-        let input = "!5; -5; !true; !false;";
-        let program = Program::parse(input);
-        let expected = vec![
-            Stmt::Expr(Expr::Prefix(
-                Prefix::Not,
-                Box::new(Expr::Literal(Literal::Int(5))),
-            )),
-            Stmt::Expr(Expr::Prefix(
-                Prefix::Minus,
-                Box::new(Expr::Literal(Literal::Int(5))),
-            )),
-            Stmt::Expr(Expr::Prefix(
-                Prefix::Not,
-                Box::new(Expr::Literal(Literal::Bool(true))),
-            )),
-            Stmt::Expr(Expr::Prefix(
-                Prefix::Not,
-                Box::new(Expr::Literal(Literal::Bool(false))),
-            )),
-        ];
-
-        assert_eq!(expected, program.statements);
-    }
-
-    #[test]
-    fn test_infix_expressions() {
-        let tests = vec![
-            (
-                "3 + 2",
-                Stmt::Expr(Expr::Infix(
-                    Infix::Plus,
-                    Box::new(Expr::Literal(Literal::Int(3))),
-                    Box::new(Expr::Literal(Literal::Int(2))),
-                )),
-            ),
-            (
-                "5 - 2",
-                Stmt::Expr(Expr::Infix(
-                    Infix::Minus,
-                    Box::new(Expr::Literal(Literal::Int(5))),
-                    Box::new(Expr::Literal(Literal::Int(2))),
-                )),
-            ),
-            (
-                "3 * 2",
-                Stmt::Expr(Expr::Infix(
-                    Infix::Mul,
-                    Box::new(Expr::Literal(Literal::Int(3))),
-                    Box::new(Expr::Literal(Literal::Int(2))),
-                )),
-            ),
-            (
-                "6 / 2",
-                Stmt::Expr(Expr::Infix(
-                    Infix::Div,
-                    Box::new(Expr::Literal(Literal::Int(6))),
-                    Box::new(Expr::Literal(Literal::Int(2))),
-                )),
-            ),
-            (
-                "7 % 2",
-                Stmt::Expr(Expr::Infix(
-                    Infix::Mod,
-                    Box::new(Expr::Literal(Literal::Int(7))),
-                    Box::new(Expr::Literal(Literal::Int(2))),
-                )),
-            ),
-            (
-                "3 > 2",
-                Stmt::Expr(Expr::Infix(
-                    Infix::GT,
-                    Box::new(Expr::Literal(Literal::Int(3))),
-                    Box::new(Expr::Literal(Literal::Int(2))),
-                )),
-            ),
-            (
-                "3 < 2",
-                Stmt::Expr(Expr::Infix(
-                    Infix::LT,
-                    Box::new(Expr::Literal(Literal::Int(3))),
-                    Box::new(Expr::Literal(Literal::Int(2))),
-                )),
-            ),
-            (
-                "4 >= 2",
-                Stmt::Expr(Expr::Infix(
-                    Infix::GTE,
-                    Box::new(Expr::Literal(Literal::Int(4))),
-                    Box::new(Expr::Literal(Literal::Int(2))),
-                )),
-            ),
-            (
-                "4 <= 2",
-                Stmt::Expr(Expr::Infix(
-                    Infix::LTE,
-                    Box::new(Expr::Literal(Literal::Int(4))),
-                    Box::new(Expr::Literal(Literal::Int(2))),
-                )),
-            ),
-            (
-                "4 == 4",
-                Stmt::Expr(Expr::Infix(
-                    Infix::EQ,
-                    Box::new(Expr::Literal(Literal::Int(4))),
-                    Box::new(Expr::Literal(Literal::Int(4))),
-                )),
-            ),
-            (
-                "4 != 4",
-                Stmt::Expr(Expr::Infix(
-                    Infix::NEQ,
-                    Box::new(Expr::Literal(Literal::Int(4))),
-                    Box::new(Expr::Literal(Literal::Int(4))),
-                )),
-            ),
-            (
-                "true == true",
-                Stmt::Expr(Expr::Infix(
-                    Infix::EQ,
-                    Box::new(Expr::Literal(Literal::Bool(true))),
-                    Box::new(Expr::Literal(Literal::Bool(true))),
-                )),
-            ),
-            (
-                "false == false",
-                Stmt::Expr(Expr::Infix(
-                    Infix::EQ,
-                    Box::new(Expr::Literal(Literal::Bool(false))),
-                    Box::new(Expr::Literal(Literal::Bool(false))),
-                )),
-            ),
-            (
-                "true != false",
-                Stmt::Expr(Expr::Infix(
-                    Infix::NEQ,
-                    Box::new(Expr::Literal(Literal::Bool(true))),
-                    Box::new(Expr::Literal(Literal::Bool(false))),
-                )),
-            ),
-        ];
-
-        for (input, expected) in tests {
-            assert_eq!(expected, Program::parse(input).statements[0]);
-        }
-    }
-
-    #[test]
-    fn test_operator_precedence() {
-        let tests = vec![
-            ("-a * b", "((-a) * b)"),
-            ("!-a", "(!(-a))"),
-            ("a + b + c", "((a + b) + c)"),
-            ("a + b - c", "((a + b) - c)"),
-            ("a * b * c", "((a * b) * c)"),
-            ("a * b / c", "((a * b) / c)"),
-            ("a + b / c", "(a + (b / c))"),
-            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
-            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
-            ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
-            (
-                "3 + 4 * 5 == 3 * 1 + 4 * 5",
-                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
-            ),
-            ("true", "true"),
-            ("false", "false"),
-            ("1 < 2 == true", "((1 < 2) == true)"),
-            ("1 > 2 == false", "((1 > 2) == false)"),
-            ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
-            ("(1 + 1) * 2", "((1 + 1) * 2)"),
-            ("1 / (2 + 2)", "(1 / (2 + 2))"),
-            ("-(1 + 2)", "(-(1 + 2))"),
-            ("!(true == true)", "(!(true == true))"),
-        ];
-
-        for (input, expected) in tests {
-            assert_eq!(expected, Program::read_line(input));
-        }
-    }
-
-    #[test]
-    fn test_if_expression() {
-        let input = "if x < y { return x }";
-        let program = Program::parse(input);
-        let expected = Stmt::Expr(Expr::If {
-            condition: Box::new(Expr::Infix(
-                Infix::LT,
-                Box::new(Expr::Ident(Ident(String::from("x")))),
-                Box::new(Expr::Ident(Ident(String::from("y")))),
-            )),
-            consequence: vec![Stmt::Return(Expr::Ident(Ident(String::from("x"))))],
-            else_ifs: vec![],
-            alternative: None,
-        });
-
-        assert_eq!(expected, program.statements[0]);
-    }
-
-    #[test]
-    fn test_elif_expression() {
-        let input = r#"
-        if x < y {
-            return x;
-        } elif x > y {
-            return y;
-        } else {
-            return z;
-        }"#;
-        let expected = r#"if (x < y) {
-    return x;
-} elif (x > y) {
-    return y;
-} else {
-    return z;
-}
-"#;
-        let program = Program::from(input);
-        assert_eq!(expected, program.to_string());
-    }
-
-    #[test]
-    fn test_function_exprs() {
-        let tests = [
-            (
-                r#"fn foo() -> int {
-                    return 0;
-                }"#,
-                Stmt::Expr(Expr::Fn {
-                    name: String::from("foo"),
-                    args: vec![],
-                    return_t: Type::Int,
-                    body: vec![Stmt::Return(Expr::Literal(Literal::Int(0)))],
-                }),
-            ),
-            (
-                r#"fn add(x: int, y: int) -> int {
-                    return x + y;
-                }"#,
-                Stmt::Expr(Expr::Fn {
-                    name: String::from("add"),
-                    args: vec![
-                        Var::new(String::from("x"), Type::Int),
-                        Var::new(String::from("y"), Type::Int),
-                    ],
-                    return_t: Type::Int,
-                    body: vec![Stmt::Return(Expr::Infix(
-                        Infix::Plus,
-                        Box::new(Expr::Ident(Ident(String::from("x")))),
-                        Box::new(Expr::Ident(Ident(String::from("y")))),
-                    ))],
-                }),
-            ),
-        ];
-
-        for (input, expected) in tests {
-            assert_eq!(expected, Program::parse(input).statements[0]);
-        }
     }
 }
