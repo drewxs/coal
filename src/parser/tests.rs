@@ -309,12 +309,48 @@ fn test_if_expression() {
 }
 
 #[test]
+fn test_nested_if_expression() {
+    let input = r#"
+        if x < y {
+            if x > 1 {
+                return x;
+            }
+        } else {
+            return y;
+        }"#;
+    let program = Program::parse(input);
+    let expected = Stmt::Expr(Expr::If {
+        cond: Box::new(Expr::Infix(
+            Infix::LT,
+            Box::new(Expr::Ident(Ident::from("x"))),
+            Box::new(Expr::Ident(Ident::from("y"))),
+        )),
+        then: vec![Stmt::Expr(Expr::If {
+            cond: Box::new(Expr::Infix(
+                Infix::GT,
+                Box::new(Expr::Ident(Ident::from("x"))),
+                Box::new(Expr::Literal(Literal::Int(1))),
+            )),
+            then: vec![Stmt::Return(Expr::Ident(Ident::from("x")))],
+            elifs: vec![],
+            alt: None,
+        })],
+        elifs: vec![],
+        alt: Some(vec![Stmt::Return(Expr::Ident(Ident::from("y")))]),
+    });
+
+    assert_eq!(expected, program.statements[0]);
+}
+
+#[test]
 fn test_elif_expression() {
     let input = r#"
         if x < y {
             return x;
         } elif x > y {
             return y;
+        } elif x > 1 {
+            return 1;
         } else {
             return z;
         }"#;
@@ -322,6 +358,8 @@ fn test_elif_expression() {
     return x;
 } elif (x > y) {
     return y;
+} elif (x > 1) {
+    return 1;
 } else {
     return z;
 }

@@ -244,12 +244,12 @@ impl Parser<'_> {
         }
 
         let then = self.parse_block_stmt();
-        self.advance();
 
         let mut elifs = vec![];
         let mut alt = None;
 
-        while self.curr_tok == Token::Elif {
+        while self.next_tok == Token::Elif {
+            self.advance();
             self.advance();
             let cond = self.parse_expr(Precedence::Lowest)?;
 
