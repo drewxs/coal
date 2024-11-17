@@ -13,7 +13,7 @@ impl fmt::Display for Literal {
         match self {
             Literal::Str(s) => write!(f, "\"{s}\""),
             Literal::Int(i) => write!(f, "{i}"),
-            Literal::Float(x) => write!(f, "{x}"),
+            Literal::Float(x) => write!(f, "{x:?}"),
             Literal::Bool(b) => write!(f, "{b}"),
         }
     }
