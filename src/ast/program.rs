@@ -46,6 +46,12 @@ impl From<&str> for Program {
     }
 }
 
+impl From<&String> for Program {
+    fn from(input: &String) -> Self {
+        Parser::from(input).parse()
+    }
+}
+
 impl From<&Vec<&str>> for Program {
     fn from(input: &Vec<&str>) -> Self {
         Parser::from(&input.join("\n")).parse()
