@@ -81,14 +81,14 @@ mod tests {
         "#;
         let expected = r#"let x: int = 5;
 let y: int = 10;
-if (x > y) {
-    if (x > 1) {
+if x > y {
+    if x > 1 {
         let z: float = 1.0;
         return z;
     } else {
         return 1;
     }
-} elif (x < y) {
+} elif x < y {
     return y;
 } else {
     return 0;

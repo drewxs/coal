@@ -45,8 +45,8 @@ impl Expr {
         match self {
             Expr::Ident(ident) => write!(f, "{ident}"),
             Expr::Literal(literal) => write!(f, "{literal}"),
-            Expr::Prefix(prefix, expr) => write!(f, "({prefix}{expr})"),
-            Expr::Infix(infix, lhs, rhs) => write!(f, "({lhs} {infix} {rhs})"),
+            Expr::Prefix(prefix, expr) => write!(f, "{prefix}{expr}"),
+            Expr::Infix(infix, lhs, rhs) => write!(f, "{lhs} {infix} {rhs}"),
             Expr::If {
                 cond,
                 then,
