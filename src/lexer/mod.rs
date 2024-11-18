@@ -1,3 +1,10 @@
+pub mod node;
+
+#[cfg(test)]
+mod tests;
+
+pub use node::{Node, Position};
+
 use crate::Token;
 
 #[derive(Clone, Debug)]
@@ -24,11 +31,11 @@ impl Lexer<'_> {
         lexer
     }
 
-    pub fn next_tok(&mut self) -> Token {
+    pub fn next_tok(&mut self) -> Node {
         self.skip_whitespace();
         self.skip_comments();
 
-        match self.ch {
+        let tok = match self.ch {
             '=' => match self.next_char() {
                 '=' => {
                     self.read_char();
@@ -169,6 +176,11 @@ impl Lexer<'_> {
                 self.read_char();
                 Token::Illegal
             }
+        };
+
+        Node {
+            token: tok,
+            pos: (self.line, self.col),
         }
     }
 
@@ -234,138 +246,10 @@ impl Iterator for Lexer<'_> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.next_tok() {
-            Token::EOF => None,
-            token => Some(token),
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_next_tok() {
-        let input = "// comment
-let five: int = 5;
-let ten: int = 10;
-
-fn add(x: int, y: int) -> int {
-    x + y
-}
-
-let result = add(five, ten);
-!-/*5;
-5 < 10 > 5;
-
-if 5 < 10 {
-    return 1;
-} elif 4 < 5 {
-    return true;
-} else {
-    return false;
-}
-
-10 == 10;
-10 != 9;
-";
-
-        let mut lexer = Lexer::new(input);
-
-        let expected = vec![
-            Token::Let,
-            Token::Ident(String::from("five")),
-            Token::Colon,
-            Token::Ident(String::from("int")),
-            Token::Assign,
-            Token::Int(5),
-            Token::Semicolon,
-            Token::Let,
-            Token::Ident(String::from("ten")),
-            Token::Colon,
-            Token::Ident(String::from("int")),
-            Token::Assign,
-            Token::Int(10),
-            Token::Semicolon,
-            Token::Fn,
-            Token::Ident(String::from("add")),
-            Token::Lparen,
-            Token::Ident(String::from("x")),
-            Token::Colon,
-            Token::Ident(String::from("int")),
-            Token::Comma,
-            Token::Ident(String::from("y")),
-            Token::Colon,
-            Token::Ident(String::from("int")),
-            Token::Rparen,
-            Token::Arrow,
-            Token::Ident(String::from("int")),
-            Token::Lbrace,
-            Token::Ident(String::from("x")),
-            Token::Plus,
-            Token::Ident(String::from("y")),
-            Token::Rbrace,
-            Token::Let,
-            Token::Ident(String::from("result")),
-            Token::Assign,
-            Token::Ident(String::from("add")),
-            Token::Lparen,
-            Token::Ident(String::from("five")),
-            Token::Comma,
-            Token::Ident(String::from("ten")),
-            Token::Rparen,
-            Token::Semicolon,
-            Token::Bang,
-            Token::Minus,
-            Token::Slash,
-            Token::Asterisk,
-            Token::Int(5),
-            Token::Semicolon,
-            Token::Int(5),
-            Token::LT,
-            Token::Int(10),
-            Token::GT,
-            Token::Int(5),
-            Token::Semicolon,
-            Token::If,
-            Token::Int(5),
-            Token::LT,
-            Token::Int(10),
-            Token::Lbrace,
-            Token::Return,
-            Token::Int(1),
-            Token::Semicolon,
-            Token::Rbrace,
-            Token::Elif,
-            Token::Int(4),
-            Token::LT,
-            Token::Int(5),
-            Token::Lbrace,
-            Token::Return,
-            Token::Bool(true),
-            Token::Semicolon,
-            Token::Rbrace,
-            Token::Else,
-            Token::Lbrace,
-            Token::Return,
-            Token::Bool(false),
-            Token::Semicolon,
-            Token::Rbrace,
-            Token::Int(10),
-            Token::EQ,
-            Token::Int(10),
-            Token::Semicolon,
-            Token::Int(10),
-            Token::NEQ,
-            Token::Int(9),
-            Token::Semicolon,
-            Token::EOF,
-        ];
-
-        for (i, expected) in expected.iter().enumerate() {
-            let actual = lexer.next_tok();
-            println!("[{i}] expected: {expected:?}, actual: {actual:?}");
-            assert_eq!(*expected, actual);
+            Node {
+                token: Token::EOF, ..
+            } => None,
+            Node { token, .. } => Some(token),
         }
     }
 }

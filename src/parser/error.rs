@@ -32,7 +32,7 @@ impl fmt::Display for ParserErrorKind {
         match self {
             ParserErrorKind::SyntaxError(token) => write!(f, "syntax error: '{token}'"),
             ParserErrorKind::UnexpectedToken { expected, got } => {
-                write!(f, "unexpected token: '{got}', expected='{expected}'")
+                write!(f, "unexpected token: '{got}', expected: '{expected}'")
             }
         }
     }
