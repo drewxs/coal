@@ -51,3 +51,51 @@ pub fn fmt_path(path: &str, dry_run: bool) -> Result<String, String> {
 
     Ok(out)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fmt_call_expr() {
+        let input = r#"   hello  ( "hello, world!"   )  ; "#;
+        let expected = r#"hello("hello, world!")"#;
+        let (actual, _) = fmt(input);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_fmt_nested_ifs() {
+        let input = r#"
+      let       x =        5   ;
+   let y   = 10  ;
+
+           if x  > y {
+    if x > 1 {        let z = 1.;
+            return z;  } else {
+        return 1;  }   } elif x < y {
+              return y; } else {
+                        return   0;
+                     }
+        "#;
+        let expected = r#"let x: int = 5;
+let y: int = 10;
+if (x > y) {
+    if (x > 1) {
+        let z: float = 1.0;
+        return z;
+    } else {
+        return 1;
+    }
+} elif (x < y) {
+    return y;
+} else {
+    return 0;
+}
+"#;
+        let (actual, _) = fmt(input);
+
+        assert_eq!(expected, actual);
+    }
+}
