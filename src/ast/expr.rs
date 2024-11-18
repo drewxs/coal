@@ -77,7 +77,7 @@ impl Expr {
                 ret_t,
                 body,
             } => {
-                writeln!(f, "fn {name}(")?;
+                write!(f, "fn {name}(")?;
                 let args_str = args
                     .iter()
                     .map(|arg| format!("{arg}"))
