@@ -19,9 +19,20 @@ pub struct Parser<'l> {
     pub errors: Vec<ParserError>,
 }
 
-impl Parser<'_> {
+impl<'l> Parser<'l> {
+    pub fn new(lexer: Lexer<'l>) -> Self {
+        let mut parser = Parser {
+            lexer,
+            curr_node: Node::default(),
+            next_node: Node::default(),
+            errors: vec![],
+        };
+        parser.advance_n(2);
+        parser
+    }
+
     pub fn parse(&mut self) -> Program {
-        let mut program = Program::new();
+        let mut program = Program::default();
         while !matches!(
             self.curr_node,
             Node {
@@ -66,13 +77,13 @@ impl Parser<'_> {
 
     fn advance(&mut self) {
         self.curr_node = self.next_node.clone();
-        self.next_node = self.lexer.next_tok();
+        self.next_node = self.lexer.next_node();
     }
 
     fn advance_n(&mut self, n: usize) {
         for _ in 0..n {
             self.curr_node = self.next_node.clone();
-            self.next_node = self.lexer.next_tok();
+            self.next_node = self.lexer.next_node();
         }
     }
 
@@ -359,28 +370,9 @@ impl Parser<'_> {
     }
 }
 
-impl<'l> From<Lexer<'l>> for Parser<'l> {
-    fn from(lexer: Lexer<'l>) -> Self {
-        let mut parser = Parser {
-            lexer,
-            curr_node: Node {
-                token: Token::Illegal,
-                pos: (0, 0),
-            },
-            next_node: Node {
-                token: Token::Illegal,
-                pos: (0, 0),
-            },
-            errors: vec![],
-        };
-        parser.advance_n(2);
-        parser
-    }
-}
-
 impl<'l> From<&'l str> for Parser<'l> {
     fn from(input: &'l str) -> Self {
-        Self::from(Lexer::new(input))
+        Self::new(Lexer::new(input))
     }
 }
 

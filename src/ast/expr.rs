@@ -53,18 +53,18 @@ impl Expr {
                 elifs,
                 alt,
             } => {
-                writeln!(f, "{indent}if {cond} {{")?;
+                writeln!(f, "{}if {cond} {{", indent)?;
                 for stmt in then {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
                 for elif in elifs {
-                    writeln!(f, "{indent}}} elif {} {{", elif.cond)?;
+                    writeln!(f, "{}}} elif {} {{", indent, elif.cond)?;
                     for stmt in &elif.then {
                         stmt.fmt_with_indent(f, indent_level + 1)?;
                     }
                 }
                 if let Some(else_block) = alt {
-                    writeln!(f, "{indent}}} else {{")?;
+                    writeln!(f, "{}}} else {{", indent)?;
                     for stmt in else_block {
                         stmt.fmt_with_indent(f, indent_level + 1)?;
                     }
@@ -77,7 +77,7 @@ impl Expr {
                 ret_t,
                 body,
             } => {
-                write!(f, "fn {name}(")?;
+                write!(f, "{}fn {name}(", indent)?;
                 let args_str = args
                     .iter()
                     .map(|arg| format!("{arg}"))
@@ -85,18 +85,18 @@ impl Expr {
                     .join(", ");
                 writeln!(f, "{args_str}) -> {ret_t} {{")?;
                 for stmt in body {
-                    writeln!(f, "    {stmt}")?;
+                    writeln!(f, "{}    {stmt}", indent)?;
                 }
                 write!(f, "}}")
             }
             Expr::Call { func, args } => match func.as_ref() {
-                Expr::Ident(ident) => {
+                Expr::Ident(name) => {
                     let args_str = args
                         .iter()
                         .map(|arg| format!("{arg}"))
                         .collect::<Vec<String>>()
                         .join(", ");
-                    write!(f, "{ident}({})", args_str)
+                    write!(f, "{name}({args_str})")
                 }
                 _ => Err(fmt::Error),
             },

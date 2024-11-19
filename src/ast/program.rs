@@ -5,14 +5,14 @@ use crate::Parser;
 
 use super::Stmt;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct Program {
     pub statements: Vec<Stmt>,
 }
 
 impl Program {
-    pub fn new() -> Self {
-        Self { statements: vec![] }
+    pub fn new(statements: Vec<Stmt>) -> Self {
+        Self { statements }
     }
 
     pub fn parse(input: &str) -> Self {
@@ -31,12 +31,6 @@ impl Program {
             program: self,
             index: 0,
         }
-    }
-}
-
-impl Default for Program {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

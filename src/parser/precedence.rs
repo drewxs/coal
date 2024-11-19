@@ -1,7 +1,8 @@
 use crate::Token;
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum Precedence {
+    #[default]
     Lowest,
     Eq,      // ==
     Cmp,     // > | < | >= | <=

@@ -25,6 +25,6 @@ pub fn repl() {
         let program = parser.parse();
         parser.print_errors();
 
-        println!("{:#?}", program.statements);
+        println!("{program}");
     }
 }

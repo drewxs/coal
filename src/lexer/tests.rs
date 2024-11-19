@@ -119,7 +119,7 @@ if 5 < 10 {
     ];
 
     for (i, expected) in expected.iter().enumerate() {
-        let Node { token, .. } = lexer.next_tok();
+        let Node { token, .. } = lexer.next_node();
         println!("[{i}] expected: {expected:?}, actual: {token:?}");
         assert_eq!(*expected, token);
     }

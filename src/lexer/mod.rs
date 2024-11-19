@@ -31,7 +31,7 @@ impl Lexer<'_> {
         lexer
     }
 
-    pub fn next_tok(&mut self) -> Node {
+    pub fn next_node(&mut self) -> Node {
         self.skip_whitespace();
         self.skip_comments();
 
@@ -245,7 +245,7 @@ impl Iterator for Lexer<'_> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.next_tok() {
+        match self.next_node() {
             Node {
                 token: Token::EOF, ..
             } => None,

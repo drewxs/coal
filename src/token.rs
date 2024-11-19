@@ -1,7 +1,8 @@
 use std::fmt;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub enum Token {
+    #[default]
     Illegal,
     EOF,
 
