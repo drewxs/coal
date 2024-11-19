@@ -15,7 +15,7 @@ fn main() {
         }
         None => match args.file {
             Some(path) => coal::run(&path),
-            None => coal::repl(),
+            None => coal::repl().unwrap(),
         },
     }
 }
