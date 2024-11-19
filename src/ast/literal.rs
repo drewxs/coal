@@ -6,6 +6,7 @@ pub enum Literal {
     Int(i64),
     Float(f64),
     Bool(bool),
+    Nil,
 }
 
 impl fmt::Display for Literal {
@@ -15,6 +16,22 @@ impl fmt::Display for Literal {
             Literal::Int(i) => write!(f, "{i}"),
             Literal::Float(x) => write!(f, "{x:?}"),
             Literal::Bool(b) => write!(f, "{b}"),
+            Literal::Nil => write!(f, "nil"),
+        }
+    }
+}
+
+impl From<&str> for Literal {
+    fn from(s: &str) -> Self {
+        match s.parse::<f64>() {
+            Ok(f) if f.fract() == 0.0 => Literal::Int(f as i64),
+            Ok(f) => Literal::Float(f),
+            Err(_) => match s {
+                "true" => Literal::Bool(true),
+                "false" => Literal::Bool(false),
+                "nil" => Literal::Nil,
+                _ => Literal::Str(s.to_string()),
+            },
         }
     }
 }

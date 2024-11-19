@@ -1,6 +1,7 @@
 pub mod ast;
 pub mod cli;
 pub mod config;
+pub mod evaluator;
 pub mod fmt;
 pub mod lexer;
 pub mod parser;
