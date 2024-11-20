@@ -5,6 +5,7 @@ pub mod evaluator;
 pub mod fmt;
 pub mod lexer;
 pub mod parser;
+pub mod path;
 mod repl;
 mod run;
 pub mod token;

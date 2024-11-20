@@ -25,4 +25,28 @@ pub enum Command {
         #[arg(help = "Print formatted code to stdout")]
         dry_run: bool,
     },
+
+    #[command(about = "Data management")]
+    Data {
+        #[command(subcommand)]
+        cmd: DataCommand,
+    },
+
+    #[command(about = "Cache management")]
+    Cache {
+        #[command(subcommand)]
+        cmd: CacheCommand,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum DataCommand {
+    #[command(about = "Clear the data directory")]
+    Clear,
+}
+
+#[derive(Subcommand)]
+pub enum CacheCommand {
+    #[command(about = "Clear the cache directory")]
+    Clear,
 }

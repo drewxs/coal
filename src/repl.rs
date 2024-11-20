@@ -1,16 +1,11 @@
-use std::{
-    env, fs,
-    path::{Path, PathBuf},
-};
-
 use rustyline::{error::ReadlineError, DefaultEditor, Result};
 
-use crate::{config::VERSION, Parser};
+use crate::{config::VERSION, path, Parser};
 
 pub fn repl() -> Result<()> {
     println!("Coal {VERSION}");
 
-    let history_path = get_history_path();
+    let history_path = path::history();
 
     let mut rl = DefaultEditor::new()?;
     let _ = rl.load_history(&history_path);
@@ -44,26 +39,7 @@ pub fn repl() -> Result<()> {
         }
     }
 
-    if let Some(path) = history_path.parent() {
-        let _ = fs::create_dir(path);
-        let _ = rl.save_history(&history_path);
-    }
+    let _ = rl.save_history(&history_path);
 
     Ok(())
-}
-
-fn get_history_path() -> PathBuf {
-    let home_dir = dirs::home_dir().unwrap_or_default();
-    let data_dir = env::var("XDG_DATA_HOME")
-        .unwrap_or(String::from("~/.local/share"))
-        .replace("~", &home_dir.to_string_lossy());
-    let data_path = Path::new(&data_dir);
-
-    if !data_path.exists() {
-        return home_dir.join(".coal_history");
-    }
-
-    let path = data_path.join("coal/history");
-    let _ = fs::create_dir_all(&path.parent().unwrap());
-    path
 }
