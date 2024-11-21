@@ -1,19 +1,24 @@
 use std::{fs, time::Instant};
 
-use ignore::Walk;
+use ignore::{DirEntry, Walk};
 
 use crate::Program;
 
-pub fn fmt(input: &str) -> (String, u128) {
+pub fn fmt(input: &str) -> String {
+    Program::from(input).to_string()
+}
+
+pub fn fmt_timed(input: &str) -> (String, u128) {
     let start = Instant::now();
-    let out = Program::from(input).to_string();
+    let out = fmt(input);
     let elapsed = start.elapsed().as_millis();
+
     (out, elapsed)
 }
 
 pub fn fmt_file(path: &str) -> Result<u128, String> {
     let input = fs::read_to_string(path).unwrap_or(String::from("failed to read file"));
-    let (out, elapsed) = fmt(&input);
+    let (out, elapsed) = fmt_timed(&input);
 
     match fs::write(path, out) {
         Ok(_) => Ok(elapsed),
@@ -23,7 +28,7 @@ pub fn fmt_file(path: &str) -> Result<u128, String> {
 
 pub fn fmt_file_dry_run(path: &str) -> Result<String, String> {
     let input = fs::read_to_string(path).unwrap_or(String::from("failed to read file"));
-    let (out, _) = fmt(&input);
+    let out = fmt(&input);
 
     Ok(out)
 }
@@ -31,12 +36,7 @@ pub fn fmt_file_dry_run(path: &str) -> Result<String, String> {
 pub fn fmt_path(path: &str, dry_run: bool) -> Result<String, String> {
     let mut out = String::new();
 
-    let walker = Walk::new(path).flatten().filter(|e| {
-        e.metadata().ok().map_or(false, |m| m.is_file())
-            && e.path().extension().map_or(false, |ext| ext == "coal")
-    });
-
-    for entry in walker {
+    for entry in iter_src_files(path) {
         let path = entry.path();
         let file_path = path.to_str().unwrap();
 
@@ -52,6 +52,13 @@ pub fn fmt_path(path: &str, dry_run: bool) -> Result<String, String> {
     Ok(out)
 }
 
+fn iter_src_files(path: &str) -> impl Iterator<Item = DirEntry> {
+    Walk::new(path).flatten().filter(|e| {
+        e.metadata().ok().is_some_and(|m| m.is_file())
+            && e.path().extension().is_some_and(|ext| ext == "coal")
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,9 +67,8 @@ mod tests {
     fn test_fmt_call_expr() {
         let input = r#"   hello  ( "hello, world!"   )  ; "#;
         let expected = r#"hello("hello, world!")"#;
-        let (actual, _) = fmt(input);
 
-        assert_eq!(expected, actual);
+        assert_eq!(expected, fmt(input));
     }
 
     #[test]
@@ -94,8 +100,7 @@ if x > y {
     return 0;
 }
 "#;
-        let (actual, _) = fmt(input);
 
-        assert_eq!(expected, actual);
+        assert_eq!(expected, fmt(input));
     }
 }
