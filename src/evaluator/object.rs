@@ -56,7 +56,7 @@ impl Object {
 
         match self {
             Object::Int(i) => write!(f, "{i}"),
-            Object::Float(x) => write!(f, "{x}"),
+            Object::Float(x) => write!(f, "{x:?}"),
             Object::Str(s) => write!(f, "{s}"),
             Object::Bool(b) => write!(f, "{b}"),
             Object::List { data, .. } => write!(f, "{data:?}"),
