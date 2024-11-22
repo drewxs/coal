@@ -32,12 +32,6 @@ pub struct IfExpr {
     pub then: Vec<Stmt>,
 }
 
-impl fmt::Display for Expr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.fmt_with_indent(f, 0)
-    }
-}
-
 impl Expr {
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter<'_>, indent_level: usize) -> fmt::Result {
         let indent = "    ".repeat(indent_level);
@@ -101,5 +95,11 @@ impl Expr {
                 _ => Err(fmt::Error),
             },
         }
+    }
+}
+
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt_with_indent(f, 0)
     }
 }
