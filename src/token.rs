@@ -20,6 +20,7 @@ pub enum Token {
     Bang,
     Asterisk,
     Slash,
+    DoubleSlash,
     Modulo,
 
     // Comparisons
@@ -64,6 +65,7 @@ impl From<&str> for Token {
             "!" => Token::Bang,
             "*" => Token::Asterisk,
             "/" => Token::Slash,
+            "//" => Token::DoubleSlash,
             "%" => Token::Modulo,
             "==" => Token::EQ,
             "!=" => Token::NEQ,
@@ -108,6 +110,7 @@ impl fmt::Display for Token {
             Token::Bang => write!(f, "!"),
             Token::Asterisk => write!(f, "*"),
             Token::Slash => write!(f, "/"),
+            Token::DoubleSlash => write!(f, "//"),
             Token::Modulo => write!(f, "%"),
             Token::EQ => write!(f, "=="),
             Token::NEQ => write!(f, "!="),

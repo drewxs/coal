@@ -93,10 +93,17 @@ impl Lexer<'_> {
                 self.read_char();
                 Token::Asterisk
             }
-            '/' => {
-                self.read_char();
-                Token::Slash
-            }
+            '/' => match self.next_char() {
+                '/' => {
+                    self.read_char();
+                    Token::DoubleSlash
+                }
+
+                _ => {
+                    self.read_char();
+                    Token::Slash
+                }
+            },
             '%' => {
                 self.read_char();
                 Token::Modulo
