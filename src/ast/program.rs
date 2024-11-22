@@ -17,6 +17,11 @@ impl Program {
 
     pub fn parse(input: &str) -> Self {
         let mut parser = Parser::from(input);
+        parser.parse()
+    }
+
+    pub fn parse_validate(input: &str) -> Self {
+        let mut parser = Parser::from(input);
         let program = parser.parse();
         parser.validate();
         program

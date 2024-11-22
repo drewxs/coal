@@ -1,6 +1,6 @@
 use rustyline::{error::ReadlineError, DefaultEditor, Result};
 
-use crate::{config::VERSION, path, Parser};
+use crate::{config::VERSION, path, Evaluator};
 
 pub fn repl() -> Result<()> {
     println!("Coal {VERSION}");
@@ -9,6 +9,7 @@ pub fn repl() -> Result<()> {
 
     let mut rl = DefaultEditor::new()?;
     let _ = rl.load_history(&history_path);
+    let mut evaluator = Evaluator::default();
 
     loop {
         match rl.readline(">> ") {
@@ -16,12 +17,10 @@ pub fn repl() -> Result<()> {
                 "exit" | "quit" => break,
                 "clear" => println!("\x1B[2J\x1B[1;1H"),
                 _ => {
-                    let mut parser = Parser::from(&line);
-                    let program = parser.parse();
-                    parser.print_errors();
+                    if let Some(evaluated) = evaluator.eval(&line) {
+                        println!("{evaluated}");
+                    }
                     let _ = rl.add_history_entry(line);
-
-                    println!("{program}");
                 }
             },
             Err(ReadlineError::Interrupted) => {
