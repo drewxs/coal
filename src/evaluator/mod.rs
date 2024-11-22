@@ -9,7 +9,7 @@ use std::{cell::RefCell, rc::Rc};
 pub use env::*;
 pub use object::*;
 
-use crate::{Expr, Ident, Prefix, Program, Stmt, Type};
+use crate::{Expr, Ident, Literal, Prefix, Program, Stmt, Type};
 
 #[derive(Clone, Debug)]
 pub struct Evaluator {
@@ -45,7 +45,7 @@ impl Evaluator {
             Stmt::Let(Ident(name), _, expr) => {
                 let val = self.eval_expr(&expr)?;
                 self.env.borrow_mut().set(name, &val);
-                Some(Object::Int(0))
+                None
             }
             Stmt::Expr(expr) => self.eval_expr(&expr),
             _ => None,
@@ -55,9 +55,16 @@ impl Evaluator {
     fn eval_expr(&mut self, expr: &Expr) -> Option<Object> {
         match expr {
             Expr::Ident(Ident(name)) => self.env.borrow().get(name),
-            Expr::Literal(literal) => Some(Object::from(literal)),
+            Expr::Literal(literal) => self.eval_literal_expr(literal),
             Expr::Prefix(prefix, rhs) => self.eval_prefix_expr(prefix, rhs),
             _ => None,
+        }
+    }
+
+    fn eval_literal_expr(&mut self, literal: &Literal) -> Option<Object> {
+        match literal {
+            Literal::Str(s) => self.eval_str(s),
+            _ => Some(Object::from(literal)),
         }
     }
 
@@ -81,6 +88,45 @@ impl Evaluator {
         };
 
         Some(obj)
+    }
+
+    fn eval_str(&mut self, s: &str) -> Option<Object> {
+        let mut res = String::new();
+        let mut expr = String::new();
+        let mut in_expr = false;
+
+        let mut chars = s.chars().peekable();
+
+        while let Some(c) = chars.next() {
+            if c == '\\' {
+                if let Some(next_c) = chars.peek() {
+                    res.push(*next_c);
+                    chars.next();
+                }
+                continue;
+            }
+
+            if c == '{' && !in_expr {
+                in_expr = true;
+                expr.clear();
+            } else if c == '}' && in_expr {
+                if let Some(obj) = self.eval(&expr) {
+                    res.push_str(&obj.to_string());
+                }
+
+                in_expr = false;
+            } else if in_expr {
+                expr.push(c);
+            } else {
+                res.push(c);
+            }
+        }
+
+        if in_expr {
+            return None;
+        }
+
+        Some(Object::String(res))
     }
 }
 

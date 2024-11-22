@@ -35,3 +35,24 @@ fn test_eval_not_expressions() {
         assert_eq!(expected, actual);
     }
 }
+
+#[test]
+fn test_eval_str_interpolation() {
+    let tests = vec![
+        (
+            r#""not {!false} or {!!false}""#,
+            Object::String(String::from("not true or false")),
+        ),
+        (
+            r#""(1 + \"{-false})""#,
+            Object::String(String::from(r#"(1 + "0)"#)),
+        ),
+    ];
+
+    let mut evaluator = Evaluator::default();
+
+    for (expr, expected) in tests {
+        let actual = evaluator.eval(expr).unwrap();
+        assert_eq!(expected, actual);
+    }
+}

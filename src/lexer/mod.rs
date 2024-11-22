@@ -139,6 +139,10 @@ impl Lexer<'_> {
                 let pos = self.pos + 1;
                 loop {
                     self.read_char();
+                    if self.ch == '\\' && self.next_char() != '\0' {
+                        self.read_char();
+                        continue;
+                    }
                     if self.ch == '"' || self.ch == '\0' {
                         break;
                     }
@@ -196,7 +200,7 @@ impl Lexer<'_> {
 
     fn next_char(&mut self) -> char {
         if self.next_pos < self.input.len() {
-            self.input.chars().nth(self.next_pos).unwrap()
+            self.input.chars().nth(self.next_pos).unwrap_or('\0')
         } else {
             '\0'
         }
@@ -204,7 +208,7 @@ impl Lexer<'_> {
 
     fn read_char(&mut self) {
         if self.next_pos < self.input.len() {
-            self.ch = self.input.chars().nth(self.next_pos).unwrap();
+            self.ch = self.input.chars().nth(self.next_pos).unwrap_or('\0');
         } else {
             self.ch = '\0';
         }
