@@ -1,15 +1,3 @@
-[package]
-name = "coal"
-description = "General purpose programming language"
-version = "0.1.0"
-edition = "2021"
-authors = ["Andrew X. Shah <drew@drewxs.dev>"]
-repository = "https://github.com/drewxs/coal"
-readme = "README.md"
-license = "Apache-2.0"
-
-[dependencies]
-clap = { version = "4.5.21", features = ["derive"] }
-dirs = "5.0.1"
-ignore = "0.4.23"
-rustyline = "15.0.0"
+[workspace]
+members = ["coal", "coal-*"]
+resolver = "2"

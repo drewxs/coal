@@ -1,0 +1,11 @@
+[package]
+name = "coal-core"
+description = "General purpose programming language"
+version = "0.1.0"
+edition = "2021"
+authors = ["Andrew X. Shah <drew@drewxs.dev>"]
+repository = "https://github.com/drewxs/coal"
+readme = "README.md"
+license = "Apache-2.0"
+
+[dependencies]

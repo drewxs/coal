@@ -10,7 +10,7 @@ fn main() {
     match args.cmd {
         Some(Command::Fmt { path, dry_run }) => {
             let path = path.unwrap_or(String::from("."));
-            match coal::fmt_path(path.as_str(), dry_run) {
+            match coal::fmt_path(&path, dry_run) {
                 Ok(output) => println!("{output}"),
                 Err(err) => eprintln!("{err}"),
             }

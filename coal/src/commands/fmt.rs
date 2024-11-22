@@ -2,7 +2,7 @@ use std::{fs, time::Instant};
 
 use ignore::{DirEntry, Walk};
 
-use crate::Program;
+use coal_core::Program;
 
 pub fn fmt(input: &str) -> String {
     Program::from(input).to_string()

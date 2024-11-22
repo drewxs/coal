@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
     name = "Coal",
     author = "Andrew X. Shah <drew@drewxs.dev>",
     version,
-    about = "General purpose programming language"
+    about = "Run without arguments to start the REPL"
 )]
 pub struct Cli {
     #[arg(help = "File to run", required = false)]

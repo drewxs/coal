@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read, process};
 
-use crate::Program;
+use coal_core::Program;
 
 pub fn run(path: &str) {
     let mut file = File::open(path).unwrap_or_else(|_| {

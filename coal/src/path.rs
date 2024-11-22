@@ -1,4 +1,7 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 pub fn data() -> PathBuf {
     let data_dir = dirs::data_dir().unwrap_or_default();
@@ -18,7 +21,7 @@ pub fn history() -> PathBuf {
     data().join("history")
 }
 
-fn resolve_program_dir(path: &PathBuf) -> PathBuf {
+fn resolve_program_dir(path: &Path) -> PathBuf {
     if path.exists() {
         path.join("coal")
     } else {
