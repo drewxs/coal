@@ -6,7 +6,7 @@ use super::{Expr, Ident, Literal, Stmt};
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub enum Type {
-    String,
+    Str,
     Int,
     Float,
     Bool,
@@ -21,7 +21,7 @@ pub enum Type {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Type::String => write!(f, "str"),
+            Type::Str => write!(f, "str"),
             Type::Int => write!(f, "int"),
             Type::Float => write!(f, "float"),
             Type::Bool => write!(f, "bool"),
@@ -45,7 +45,7 @@ impl TryFrom<&Token> for Type {
             Token::Ident(name) => match name.as_str() {
                 "int" => Ok(Type::Int),
                 "float" => Ok(Type::Float),
-                "str" => Ok(Type::String),
+                "str" => Ok(Type::Str),
                 "bool" => Ok(Type::Bool),
                 _ => Ok(Type::UserDefined(name.clone())),
             },
@@ -59,7 +59,7 @@ impl TryFrom<&Expr> for Type {
 
     fn try_from(literal: &Expr) -> Result<Self, Self::Error> {
         match literal {
-            Expr::Literal(Literal::Str(_)) => Ok(Type::String),
+            Expr::Literal(Literal::Str(_)) => Ok(Type::Str),
             Expr::Literal(Literal::Int(_)) => Ok(Type::Int),
             Expr::Literal(Literal::Float(_)) => Ok(Type::Float),
             Expr::Literal(Literal::Bool(_)) => Ok(Type::Bool),
@@ -74,7 +74,7 @@ impl From<&Object> for Type {
         match obj {
             Object::Int(_) => Type::Int,
             Object::Float(_) => Type::Float,
-            Object::String(_) => Type::String,
+            Object::Str(_) => Type::Str,
             Object::Bool(_) => Type::Bool,
             Object::List { t, .. } => Type::List(Box::new(t.clone())),
             Object::Map { t, .. } => Type::Map(Box::new(t.clone())),

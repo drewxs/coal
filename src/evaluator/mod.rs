@@ -9,7 +9,7 @@ use std::{cell::RefCell, rc::Rc};
 pub use env::*;
 pub use object::*;
 
-use crate::{Expr, Ident, Literal, Prefix, Program, Stmt, Type};
+use crate::{Expr, Ident, Infix, Literal, Prefix, Program, Stmt, Type};
 
 #[derive(Clone, Debug)]
 pub struct Evaluator {
@@ -57,6 +57,7 @@ impl Evaluator {
             Expr::Ident(Ident(name)) => self.env.borrow().get(name),
             Expr::Literal(literal) => self.eval_literal_expr(literal),
             Expr::Prefix(prefix, rhs) => self.eval_prefix_expr(prefix, rhs),
+            Expr::Infix(op, lhs, rhs) => self.eval_infix_expr(op, lhs, rhs),
             _ => None,
         }
     }
@@ -88,6 +89,141 @@ impl Evaluator {
         };
 
         Some(obj)
+    }
+
+    fn eval_infix_expr(&mut self, op: &Infix, lhs: &Expr, rhs: &Expr) -> Option<Object> {
+        let lhs = self.eval_expr(lhs)?;
+        let rhs = self.eval_expr(rhs)?;
+
+        match lhs {
+            Object::Int(lhs) => match rhs {
+                Object::Int(rhs) => Some(self.eval_infix_int_int(op, lhs, rhs)),
+                Object::Float(rhs) => Some(self.eval_infix_int_float(op, lhs, rhs)),
+                _ => Some(Object::Error(format!(
+                    "unsupported operation: {} {op} {}",
+                    Type::Int,
+                    Type::from(&rhs)
+                ))),
+            },
+            Object::Float(lhs) => match rhs {
+                Object::Int(rhs) => Some(self.eval_infix_float_int(op, lhs, rhs)),
+                Object::Float(rhs) => Some(self.eval_infix_float_float(op, lhs, rhs)),
+                _ => Some(Object::Error(format!(
+                    "unsupported operation: {} {op} {}",
+                    Type::Float,
+                    Type::from(&rhs)
+                ))),
+            },
+            Object::Str(lhs) => match rhs {
+                Object::Str(rhs) => self.eval_infix_str_str(op, &lhs, &rhs),
+                Object::Int(rhs) => self.eval_infix_str_int(op, &lhs, &rhs),
+                _ => Some(Object::Error(format!(
+                    "unsupported operation: {} {op} {}",
+                    Type::Str,
+                    Type::from(&rhs)
+                ))),
+            },
+            _ => Some(Object::Error(format!(
+                "unsupported operation: {} {op} {}",
+                Type::from(&lhs),
+                Type::from(&rhs)
+            ))),
+        }
+    }
+
+    fn eval_infix_int_int(&mut self, op: &Infix, lhs: i64, rhs: i64) -> Object {
+        match op {
+            Infix::Plus => Object::Int(lhs + rhs),
+            Infix::Minus => Object::Int(lhs - rhs),
+            Infix::Mul => Object::Int(lhs * rhs),
+            Infix::Div => Object::Float(lhs as f64 / rhs as f64),
+            Infix::IntDiv => Object::Int(lhs / rhs),
+            Infix::Mod => Object::Int(lhs % rhs),
+            Infix::EQ => Object::Bool(lhs == rhs),
+            Infix::NEQ => Object::Bool(lhs != rhs),
+            Infix::LT => Object::Bool(lhs < rhs),
+            Infix::LTE => Object::Bool(lhs <= rhs),
+            Infix::GT => Object::Bool(lhs > rhs),
+            Infix::GTE => Object::Bool(lhs >= rhs),
+        }
+    }
+
+    fn eval_infix_int_float(&mut self, op: &Infix, lhs: i64, rhs: f64) -> Object {
+        match op {
+            Infix::Plus => Object::Float((lhs as f64) + rhs),
+            Infix::Minus => Object::Float((lhs as f64) - rhs),
+            Infix::Mul => Object::Float((lhs as f64) * rhs),
+            Infix::Div => Object::Float((lhs as f64) / rhs),
+            Infix::IntDiv => Object::Float(((lhs as f64) / rhs).floor()),
+            Infix::Mod => Object::Float((lhs as f64) % rhs),
+            Infix::EQ => Object::Bool(lhs as f64 == rhs),
+            Infix::NEQ => Object::Bool(lhs as f64 != rhs),
+            Infix::LT => Object::Bool((lhs as f64) < rhs),
+            Infix::LTE => Object::Bool((lhs as f64) <= rhs),
+            Infix::GT => Object::Bool((lhs as f64) > rhs),
+            Infix::GTE => Object::Bool((lhs as f64) >= rhs),
+        }
+    }
+
+    fn eval_infix_float_int(&mut self, op: &Infix, lhs: f64, rhs: i64) -> Object {
+        match op {
+            Infix::Plus => Object::Float(lhs + (rhs as f64)),
+            Infix::Minus => Object::Float(lhs - (rhs as f64)),
+            Infix::Mul => Object::Float(lhs * (rhs as f64)),
+            Infix::Div => Object::Float(lhs / (rhs as f64)),
+            Infix::IntDiv => Object::Float((lhs / (rhs as f64)).floor()),
+            Infix::Mod => Object::Float(lhs % (rhs as f64)),
+            Infix::EQ => Object::Bool(lhs == (rhs as f64)),
+            Infix::NEQ => Object::Bool(lhs != (rhs as f64)),
+            Infix::LT => Object::Bool(lhs < (rhs as f64)),
+            Infix::LTE => Object::Bool(lhs <= (rhs as f64)),
+            Infix::GT => Object::Bool(lhs > (rhs as f64)),
+            Infix::GTE => Object::Bool(lhs >= (rhs as f64)),
+        }
+    }
+
+    fn eval_infix_float_float(&mut self, op: &Infix, lhs: f64, rhs: f64) -> Object {
+        match op {
+            Infix::Plus => Object::Float(lhs + rhs),
+            Infix::Minus => Object::Float(lhs - rhs),
+            Infix::Mul => Object::Float(lhs * rhs),
+            Infix::Div => Object::Float(lhs / rhs),
+            Infix::IntDiv => Object::Float((lhs / rhs).floor()),
+            Infix::Mod => Object::Float(lhs % rhs),
+            Infix::EQ => Object::Bool(lhs == rhs),
+            Infix::NEQ => Object::Bool(lhs != rhs),
+            Infix::LT => Object::Bool(lhs < rhs),
+            Infix::LTE => Object::Bool(lhs <= rhs),
+            Infix::GT => Object::Bool(lhs > rhs),
+            Infix::GTE => Object::Bool(lhs >= rhs),
+        }
+    }
+
+    fn eval_infix_str_str(&mut self, op: &Infix, lhs: &str, rhs: &str) -> Option<Object> {
+        match op {
+            Infix::Plus => Some(Object::Str(lhs.to_string() + rhs)),
+            Infix::EQ => Some(Object::Bool(lhs == rhs)),
+            Infix::NEQ => Some(Object::Bool(lhs != rhs)),
+            Infix::LT => Some(Object::Bool(lhs < rhs)),
+            Infix::LTE => Some(Object::Bool(lhs <= rhs)),
+            Infix::GT => Some(Object::Bool(lhs > rhs)),
+            Infix::GTE => Some(Object::Bool(lhs >= rhs)),
+            _ => Some(Object::Error(format!(
+                "unsupported operation: {t} {op} {t}",
+                t = Type::Str,
+            ))),
+        }
+    }
+
+    fn eval_infix_str_int(&mut self, op: &Infix, lhs: &str, rhs: &i64) -> Option<Object> {
+        match op {
+            Infix::Mul => Some(Object::Str(lhs.repeat(*rhs as usize))),
+            Infix::EQ | Infix::NEQ => Some(FALSE),
+            _ => Some(Object::Error(format!(
+                "unsupported operation: {t} {op} {t}",
+                t = Type::Str,
+            ))),
+        }
     }
 
     fn eval_str(&mut self, s: &str) -> Option<Object> {
@@ -126,7 +262,7 @@ impl Evaluator {
             return None;
         }
 
-        Some(Object::String(res))
+        Some(Object::Str(res))
     }
 }
 

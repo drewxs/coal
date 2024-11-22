@@ -62,7 +62,7 @@ fn test_let_statements_inference() {
         ),
         Stmt::Let(
             Ident(String::from("z")),
-            Type::String,
+            Type::Str,
             Expr::Literal(Literal::Str(String::from("hello"))),
         ),
     ];

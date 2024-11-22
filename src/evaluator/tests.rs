@@ -41,11 +41,41 @@ fn test_eval_str_interpolation() {
     let tests = vec![
         (
             r#""not {!false} or {!!false}""#,
-            Object::String(String::from("not true or false")),
+            Object::Str(String::from("not true or false")),
         ),
         (
             r#""(1 + \"{-false})""#,
-            Object::String(String::from(r#"(1 + "0)"#)),
+            Object::Str(String::from(r#"(1 + "0)"#)),
+        ),
+    ];
+
+    let mut evaluator = Evaluator::default();
+
+    for (expr, expected) in tests {
+        let actual = evaluator.eval(expr).unwrap();
+        assert_eq!(expected, actual);
+    }
+}
+
+#[test]
+fn test_eval_infix_expressions() {
+    let tests = vec![
+        (r#"(7 + 2 * 3 / 2) % 3"#, Object::Float(1.0)),
+        (r#"1 + 2 * 3 + 4 / 5"#, Object::Float(7.8)),
+        (r#"(1 + 2 * 3 + 4 / 5) * 2 + -10"#, Object::Float(5.6)),
+        (r#"8 // 3"#, Object::Int(2)),
+        (r#"10.4 // 2"#, Object::Float(5.0)),
+        (r#""foo" + "bar""#, Object::Str(String::from("foobar"))),
+        (r#""foo" == "foo""#, TRUE),
+        (r#""a" * 3"#, Object::Str(String::from("aaa"))),
+        (r#""a" < "b""#, TRUE),
+        (
+            r#""a" - "b""#,
+            Object::Error(String::from("unsupported operation: str - str")),
+        ),
+        (
+            r#""a" / 3.14"#,
+            Object::Error(String::from("unsupported operation: str / float")),
         ),
     ];
 

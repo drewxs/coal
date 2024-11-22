@@ -196,6 +196,7 @@ impl<'l> Parser<'l> {
                 | Token::Minus
                 | Token::Asterisk
                 | Token::Slash
+                | Token::DoubleSlash
                 | Token::Modulo
                 | Token::EQ
                 | Token::NEQ

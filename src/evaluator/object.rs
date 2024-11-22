@@ -11,7 +11,7 @@ use super::Env;
 pub enum Object {
     Int(i64),
     Float(f64),
-    String(String),
+    Str(String),
     Bool(bool),
     List {
         data: Vec<Object>,
@@ -43,7 +43,7 @@ impl Hash for Object {
         match self {
             Object::Int(i) => i.hash(state),
             Object::Float(f) => f.to_bits().hash(state),
-            Object::String(s) => s.hash(state),
+            Object::Str(s) => s.hash(state),
             Object::Bool(b) => b.hash(state),
             _ => "".hash(state),
         }
@@ -57,7 +57,7 @@ impl Object {
         match self {
             Object::Int(i) => write!(f, "{i}"),
             Object::Float(x) => write!(f, "{x}"),
-            Object::String(s) => write!(f, "{s}"),
+            Object::Str(s) => write!(f, "{s}"),
             Object::Bool(b) => write!(f, "{b}"),
             Object::List { data, .. } => write!(f, "{data:?}"),
             Object::Map { data, .. } => write!(f, "{data:?}"),
@@ -104,7 +104,7 @@ impl From<bool> for Object {
 impl From<&Literal> for Object {
     fn from(literal: &Literal) -> Self {
         match literal {
-            Literal::Str(s) => Object::String(s.clone()),
+            Literal::Str(s) => Object::Str(s.clone()),
             Literal::Int(i) => Object::Int(*i),
             Literal::Float(f) => Object::Float(*f),
             Literal::Bool(b) => Object::from(*b),

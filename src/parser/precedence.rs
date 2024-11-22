@@ -19,7 +19,9 @@ impl From<&Token> for Precedence {
             Token::EQ | Token::NEQ => Precedence::Eq,
             Token::LT | Token::LTE | Token::GT | Token::GTE => Precedence::Cmp,
             Token::Plus | Token::Minus => Precedence::Sum,
-            Token::Asterisk | Token::Slash | Token::Modulo => Precedence::Product,
+            Token::Asterisk | Token::Slash | Token::DoubleSlash | Token::Modulo => {
+                Precedence::Product
+            }
             Token::Lbracket => Precedence::Index,
             Token::Lparen => Precedence::Call,
             _ => Precedence::Lowest,

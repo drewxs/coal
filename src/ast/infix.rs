@@ -4,11 +4,15 @@ use crate::Token;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Infix {
+    // Operators
     Plus,
     Minus,
     Mul,
     Div,
+    IntDiv,
     Mod,
+
+    // Comparisons
     EQ,
     NEQ,
     LT,
@@ -26,6 +30,7 @@ impl TryFrom<&Token> for Infix {
             Token::Minus => Ok(Infix::Minus),
             Token::Asterisk => Ok(Infix::Mul),
             Token::Slash => Ok(Infix::Div),
+            Token::DoubleSlash => Ok(Infix::IntDiv),
             Token::Modulo => Ok(Infix::Mod),
             Token::EQ => Ok(Infix::EQ),
             Token::NEQ => Ok(Infix::NEQ),
@@ -45,6 +50,7 @@ impl fmt::Display for Infix {
             Infix::Minus => write!(f, "-"),
             Infix::Mul => write!(f, "*"),
             Infix::Div => write!(f, "/"),
+            Infix::IntDiv => write!(f, "//"),
             Infix::Mod => write!(f, "%"),
             Infix::EQ => write!(f, "=="),
             Infix::NEQ => write!(f, "!="),
