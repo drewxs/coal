@@ -25,7 +25,7 @@ impl Lexer<'_> {
             next_pos: 0,
             ch: '\0',
             line: 1,
-            col: 1,
+            col: 0,
         };
         lexer.read_char();
         lexer
@@ -33,7 +33,6 @@ impl Lexer<'_> {
 
     pub fn next_node(&mut self) -> Node {
         self.skip_whitespace();
-        self.skip_comments();
 
         let tok = match self.ch {
             '=' => match self.next_char() {
@@ -95,10 +94,20 @@ impl Lexer<'_> {
             }
             '/' => match self.next_char() {
                 '/' => {
-                    self.read_char();
-                    Token::DoubleSlash
+                    if self.col == 1 {
+                        let pos = self.pos + 3;
+                        while self.ch != '\n' && self.ch != '\0' {
+                            self.read_char();
+                        }
+                        let val = self.input[pos..self.pos].to_string();
+                        self.read_char();
+                        Token::Comment(val)
+                    } else {
+                        self.read_char();
+                        self.read_char();
+                        Token::DoubleSlash
+                    }
                 }
-
                 _ => {
                     self.read_char();
                     Token::Slash
@@ -230,18 +239,12 @@ impl Lexer<'_> {
         }
     }
 
-    fn read_line(&mut self) {
+    pub fn read_line(&mut self) {
         while self.ch != '\n' && self.ch != '\0' {
             self.read_char();
         }
         if self.ch == '\n' {
             self.read_char();
-        }
-    }
-
-    fn skip_comments(&mut self) {
-        while self.ch == '/' && self.next_char() == '/' {
-            self.read_line();
         }
     }
 

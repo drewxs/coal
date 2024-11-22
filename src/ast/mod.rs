@@ -1,3 +1,4 @@
+mod comment;
 mod expr;
 mod ident;
 mod infix;
@@ -8,6 +9,7 @@ mod stmt;
 mod types;
 mod var;
 
+pub use comment::*;
 pub use expr::*;
 pub use ident::*;
 pub use infix::*;

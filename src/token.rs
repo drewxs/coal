@@ -5,6 +5,7 @@ pub enum Token {
     #[default]
     Illegal,
     EOF,
+    Comment(String),
 
     // Identifiers + literals
     Ident(String),
@@ -97,6 +98,7 @@ impl From<&str> for Token {
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Token::Comment(s) => write!(f, "// {s}"),
             Token::Illegal => write!(f, "ILLEGAL"),
             Token::EOF => write!(f, "EOF"),
             Token::Ident(name) => write!(f, "{name}"),

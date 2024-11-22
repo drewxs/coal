@@ -29,6 +29,7 @@ if 5 < 10 {
     let mut lexer = Lexer::new(input);
 
     let expected = vec![
+        Token::Comment(String::from("comment")),
         Token::Let,
         Token::Ident(String::from("five")),
         Token::Colon,
