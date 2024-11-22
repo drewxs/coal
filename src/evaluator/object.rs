@@ -51,7 +51,7 @@ impl Hash for Object {
 }
 
 impl Object {
-    pub fn fmt_with_indent(&self, f: &mut fmt::Formatter<'_>, indent_level: usize) -> fmt::Result {
+    pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
         let indent = "    ".repeat(indent_level);
 
         match self {
@@ -86,7 +86,7 @@ impl Object {
 }
 
 impl fmt::Display for Object {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.fmt_with_indent(f, 0)
     }
 }

@@ -39,7 +39,7 @@ impl TryFrom<&Token> for Infix {
 }
 
 impl fmt::Display for Infix {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Infix::Plus => write!(f, "+"),
             Infix::Minus => write!(f, "-"),

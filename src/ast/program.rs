@@ -66,7 +66,7 @@ impl Iterator for Program {
 }
 
 impl fmt::Display for Program {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for stmt in &self.statements {
             write!(f, "{stmt}")?;
         }

@@ -19,7 +19,7 @@ pub enum Type {
 }
 
 impl fmt::Display for Type {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Type::String => write!(f, "str"),
             Type::Int => write!(f, "int"),

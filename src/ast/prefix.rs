@@ -21,7 +21,7 @@ impl TryFrom<&Token> for Prefix {
 }
 
 impl fmt::Display for Prefix {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Prefix::Minus => write!(f, "-"),
             Prefix::Not => write!(f, "!"),
