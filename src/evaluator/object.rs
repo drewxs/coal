@@ -26,6 +26,10 @@ pub enum Object {
     Error(String),
 }
 
+pub const NIL: Object = Object::Nil;
+pub const TRUE: Object = Object::Bool(true);
+pub const FALSE: Object = Object::Bool(false);
+
 impl Eq for Object {}
 
 impl Hash for Object {
@@ -81,13 +85,23 @@ impl fmt::Display for Object {
     }
 }
 
+impl From<bool> for Object {
+    fn from(b: bool) -> Self {
+        if b {
+            TRUE
+        } else {
+            FALSE
+        }
+    }
+}
+
 impl From<&Literal> for Object {
     fn from(literal: &Literal) -> Self {
         match literal {
             Literal::Str(s) => Object::String(s.clone()),
             Literal::Int(i) => Object::Int(*i),
             Literal::Float(f) => Object::Float(*f),
-            Literal::Bool(b) => Object::Bool(*b),
+            Literal::Bool(b) => Object::from(*b),
             Literal::Nil => Object::Nil,
         }
     }
