@@ -13,14 +13,20 @@ pub enum Object {
     Float(f64),
     String(String),
     Bool(bool),
-    Vec(Vec<Object>),
-    Map(HashMap<Object, Object>),
+    List {
+        data: Vec<Object>,
+        t: Type,
+    },
+    Map {
+        data: HashMap<Object, Object>,
+        t: (Type, Type),
+    },
     Fn {
         name: String,
         args: Vec<Expr>,
-        ret_t: Type,
         body: Vec<Stmt>,
         env: Rc<RefCell<Env>>,
+        t: Type,
     },
     Nil,
     Error(String),
@@ -53,13 +59,13 @@ impl Object {
             Object::Float(x) => write!(f, "{x}"),
             Object::String(s) => write!(f, "{s}"),
             Object::Bool(b) => write!(f, "{b}"),
-            Object::Vec(v) => write!(f, "{v:?}"),
-            Object::Map(m) => write!(f, "{m:?}"),
+            Object::List { data, .. } => write!(f, "{data:?}"),
+            Object::Map { data, .. } => write!(f, "{data:?}"),
             Object::Fn {
                 name,
                 args,
                 body,
-                ret_t,
+                t,
                 ..
             } => {
                 let args_str = args
@@ -67,7 +73,7 @@ impl Object {
                     .map(|arg| format!("{arg}"))
                     .collect::<Vec<String>>()
                     .join(", ");
-                write!(f, "{name}({args_str}) -> {ret_t} {{")?;
+                write!(f, "{name}({args_str}) -> {t} {{")?;
                 for stmt in body {
                     writeln!(f, "{indent}    {stmt}")?;
                 }

@@ -9,7 +9,7 @@ use std::{cell::RefCell, rc::Rc};
 pub use env::*;
 pub use object::*;
 
-use crate::{Expr, Ident, Program, Stmt};
+use crate::{Expr, Ident, Prefix, Program, Stmt, Type};
 
 #[derive(Clone, Debug)]
 pub struct Evaluator {
@@ -56,8 +56,31 @@ impl Evaluator {
         match expr {
             Expr::Ident(Ident(name)) => self.env.borrow().get(name),
             Expr::Literal(literal) => Some(Object::from(literal)),
+            Expr::Prefix(prefix, rhs) => self.eval_prefix_expr(prefix, rhs),
             _ => None,
         }
+    }
+
+    fn eval_prefix_expr(&mut self, prefix: &Prefix, rhs: &Expr) -> Option<Object> {
+        let rhs = self.eval_expr(rhs)?;
+        let obj = match prefix {
+            Prefix::Not => match rhs {
+                FALSE | NIL => TRUE,
+                _ => FALSE,
+            },
+            Prefix::Minus => match rhs {
+                Object::Int(i) => Object::Int(-i),
+                Object::Float(f) => Object::Float(-f),
+                TRUE => Object::Int(-1),
+                FALSE => Object::Int(0),
+                _ => Object::Error(format!(
+                    "bad operand type for unary -: '{}'",
+                    Type::from(&rhs)
+                )),
+            },
+        };
+
+        Some(obj)
     }
 }
 

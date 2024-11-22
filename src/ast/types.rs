@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::Token;
+use crate::{Object, Token};
 
 use super::{Expr, Ident, Literal, Stmt};
 
@@ -65,6 +65,21 @@ impl TryFrom<&Expr> for Type {
             Expr::Literal(Literal::Bool(_)) => Ok(Type::Bool),
             Expr::Ident(ident) => Ok(Type::UserDefined(ident.name())),
             _ => Err(String::from("invaild literal")),
+        }
+    }
+}
+
+impl From<&Object> for Type {
+    fn from(obj: &Object) -> Self {
+        match obj {
+            Object::Int(_) => Type::Int,
+            Object::Float(_) => Type::Float,
+            Object::String(_) => Type::String,
+            Object::Bool(_) => Type::Bool,
+            Object::List { t, .. } => Type::List(Box::new(t.clone())),
+            Object::Map { t, .. } => Type::Map(Box::new(t.clone())),
+            Object::Fn { t: ret_t, .. } => ret_t.clone(),
+            _ => Type::Nil,
         }
     }
 }
