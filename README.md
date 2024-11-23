@@ -1,6 +1,11 @@
 # Coal
 
-General-purpose, strongly-typed, procedural programming language.
+A simple type-safe programming language.
+
+Examples [here](/docs/examples.md).
+
+> [!IMPORTANT]
+> WIP; No 0.1.0 release yet, check back later!
 
 ## Installation
 
@@ -10,7 +15,9 @@ Install using [Cargo](https://www.rust-lang.org/tools/install):
 cargo install --git https://github.com/drewxs/coal.git
 ```
 
-### Neovim support
+## IDE support
+
+### Neovim 
 
 Register the filetype:
 
@@ -28,6 +35,10 @@ Using Rust grammar (for now) as it's the closest thing to Coal's syntax.
 ```lua
 vim.treesitter.language.register("rust", "coal")
 ```
+
+### VSCode
+
+> ¯\_(ツ)_/¯
 
 ## Development
 
