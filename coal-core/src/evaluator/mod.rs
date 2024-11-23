@@ -218,7 +218,8 @@ impl Evaluator {
     fn eval_infix_str_int(&mut self, op: &Infix, lhs: &str, rhs: &i64) -> Option<Object> {
         match op {
             Infix::Mul => Some(Object::Str(lhs.repeat(*rhs as usize))),
-            Infix::EQ | Infix::NEQ => Some(FALSE),
+            Infix::EQ => Some(FALSE),
+            Infix::NEQ => Some(TRUE),
             _ => Some(Object::Error(format!(
                 "unsupported operation: {t} {op} {t}",
                 t = Type::Str,
