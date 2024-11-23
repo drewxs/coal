@@ -60,11 +60,17 @@ fn test_eval_str_interpolation() {
 #[test]
 fn test_eval_infix_expressions() {
     let tests = vec![
-        (r#"(7 + 2 * 3 / 2) % 3"#, Object::Float(1.0)),
-        (r#"1 + 2 * 3 + 4 / 5"#, Object::Float(7.8)),
-        (r#"(1 + 2 * 3 + 4 / 5) * 2 + -10"#, Object::Float(5.6)),
-        (r#"8 // 3"#, Object::Int(2)),
-        (r#"10.4 // 2"#, Object::Float(5.0)),
+        ("(7 + 2 * 3 / 2) % 3", Object::Float(1.0)),
+        ("1 + 2 * 3 + 4 / 5", Object::Float(7.8)),
+        ("(1 + 2 * 3 + 4 / 5) * 2 + -10", Object::Float(5.6)),
+        ("8 // 3", Object::Int(2)),
+        ("10.4 // 2", Object::Float(5.0)),
+        ("true == true", TRUE),
+        ("false == false", TRUE),
+        ("true == false", FALSE),
+        ("true != false", TRUE),
+        ("(1 < 2) == true", TRUE),
+        ("(1 > 2) != false", FALSE),
         (r#""foo" + "bar""#, Object::Str(String::from("foobar"))),
         (r#""foo" == "foo""#, TRUE),
         (r#""a" * 3"#, Object::Str(String::from("aaa"))),

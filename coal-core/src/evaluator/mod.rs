@@ -28,15 +28,12 @@ impl Evaluator {
 
     fn eval_program(&mut self, program: Program) -> Option<Object> {
         let mut res = None;
-
         for stmt in program {
             if let Stmt::Void = stmt {
                 continue;
             }
-
             res = self.eval_stmt(stmt);
         }
-
         res
     }
 
@@ -122,6 +119,10 @@ impl Evaluator {
                     Type::Str,
                     Type::from(&rhs)
                 ))),
+            },
+            Object::Bool(lhs) => match rhs {
+                Object::Bool(rhs) => Some(self.eval_infix_bool_bool(op, &lhs, &rhs)),
+                _ => Some(FALSE),
             },
             _ => Some(Object::Error(format!(
                 "unsupported operation: {} {op} {}",
@@ -224,6 +225,17 @@ impl Evaluator {
                 "unsupported operation: {t} {op} {t}",
                 t = Type::Str,
             ))),
+        }
+    }
+
+    fn eval_infix_bool_bool(&mut self, op: &Infix, lhs: &bool, rhs: &bool) -> Object {
+        match op {
+            Infix::EQ => Object::Bool(lhs == rhs),
+            Infix::NEQ => Object::Bool(lhs != rhs),
+            _ => Object::Error(format!(
+                "unsupported operation: {t} {op} {t}",
+                t = Type::Bool
+            )),
         }
     }
 
