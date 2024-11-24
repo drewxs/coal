@@ -26,6 +26,12 @@ impl Evaluator {
         self.eval_program(program)
     }
 
+    pub fn print_eval(&mut self, input: &str) {
+        if let Some(obj) = self.eval(input) {
+            println!("{obj}");
+        }
+    }
+
     fn eval_program(&mut self, program: Program) -> Option<Object> {
         let mut res = None;
         for stmt in program {

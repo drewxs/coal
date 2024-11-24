@@ -37,6 +37,9 @@ pub enum Command {
         #[command(subcommand)]
         cmd: CacheCommand,
     },
+
+    #[command(about = "Execute program from string")]
+    Exec { input: String },
 }
 
 #[derive(Subcommand)]

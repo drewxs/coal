@@ -27,6 +27,7 @@ fn main() {
                 Err(err) => eprintln!("{err}"),
             },
         },
+        Some(Command::Exec { input }) => coal::exec(&input),
         None => match args.file {
             Some(path) => coal::run(&path),
             None => coal::repl().unwrap(),

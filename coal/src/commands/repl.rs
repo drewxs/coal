@@ -18,9 +18,7 @@ pub fn repl() -> Result<()> {
                 "exit" | "quit" => break,
                 "clear" => println!("\x1B[2J\x1B[1;1H"),
                 _ => {
-                    if let Some(evaluated) = evaluator.eval(&line) {
-                        println!("{evaluated}");
-                    }
+                    evaluator.print_eval(&line);
                     let _ = rl.add_history_entry(line);
                 }
             },

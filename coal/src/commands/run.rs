@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read, process};
 
-use coal_core::Program;
+use coal_core::Evaluator;
 
 pub fn run(path: &str) {
     let mut file = File::open(path).unwrap_or_else(|_| {
@@ -14,5 +14,9 @@ pub fn run(path: &str) {
         process::exit(1);
     });
 
-    println!("{:#?}", Program::parse(&input).statements);
+    exec(&input);
+}
+
+pub fn exec(input: &str) {
+    Evaluator::default().print_eval(input);
 }
