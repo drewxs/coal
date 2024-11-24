@@ -15,7 +15,7 @@ impl Stmt {
         let indent = " ".repeat(indent_level * 4);
 
         match self {
-            Stmt::Void => write!(f, "{indent}"),
+            Stmt::Void => Ok(()),
             Stmt::Let(ident, t, expr) => {
                 write!(f, "{}let {ident}: {t} = ", indent)?;
                 expr.fmt_with_indent(f, indent_level)?;
@@ -23,7 +23,7 @@ impl Stmt {
             }
             Stmt::Expr(expr) => expr.fmt_with_indent(f, indent_level),
             Stmt::Return(expr) => {
-                write!(f, "{}return ", { indent })?;
+                write!(f, "{}return ", indent)?;
                 expr.fmt_with_indent(f, indent_level)?;
                 writeln!(f, ";")
             }
