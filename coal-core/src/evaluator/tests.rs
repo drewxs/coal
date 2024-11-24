@@ -119,6 +119,15 @@ fn test_eval_if_else_expressions() {
 }",
             Some(Object::Int(10)),
         ),
+        (
+            "if 1 > 2 {
+    return 1;
+} else {
+    return 2;
+    return 3;
+}",
+            Some(Object::Int(2)),
+        ),
     ];
 
     let mut evaluator = Evaluator::default();

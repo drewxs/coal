@@ -48,10 +48,15 @@ impl Evaluator {
     fn eval_stmts(&mut self, stmts: Vec<Stmt>) -> Option<Object> {
         let mut res = None;
         for stmt in stmts {
-            if stmt == Stmt::Void {
-                continue;
+            match stmt {
+                Stmt::Void => {}
+                Stmt::Return(expr) => {
+                    return self.eval_expr(&expr);
+                }
+                _ => {
+                    res = self.eval_stmt(stmt);
+                }
             }
-            res = self.eval_stmt(stmt);
         }
         res
     }
