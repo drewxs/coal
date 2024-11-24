@@ -3,6 +3,16 @@ use std::{
     path::{Path, PathBuf},
 };
 
+pub fn main_program(path: Option<String>) -> Result<String, String> {
+    path.or_else(|| {
+        ["main.coal", "src/main.coal"]
+            .iter()
+            .find(|&p| Path::new(p).exists())
+            .map(|&p| p.to_string())
+    })
+    .ok_or(String::from("no 'main.coal' or 'src/main.coal' found"))
+}
+
 pub fn data() -> PathBuf {
     let data_dir = dirs::data_dir().unwrap_or_default();
     let path = resolve_program_dir(&data_dir);

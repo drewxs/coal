@@ -2,21 +2,23 @@ use std::fs;
 
 use clap::Parser;
 
-use coal::{CacheCommand, Cli, Command, DataCommand};
+use coal::{path, CacheCommand, Cli, Command, DataCommand};
 
 fn main() {
     let args = Cli::parse();
 
-    if let Some(path) = args.file {
-        return coal::run(&path);
-    }
-
-    if let Some(input) = args.eval {
-        return coal::eval(&input);
-    }
-
     if let Some(cmd) = args.cmd {
         return match cmd {
+            Command::Run { path, tokens } => match path::main_program(path) {
+                Ok(path) => {
+                    if tokens {
+                        return coal::print_file_tokens(&path);
+                    }
+                    coal::run_file(&path);
+                }
+                Err(err) => eprintln!("{err}"),
+            },
+            Command::Eval { input } => coal::eval(&input),
             Command::Fmt { path, dry_run } => {
                 let path = path.unwrap_or(String::from("."));
                 match coal::fmt_path(&path, dry_run) {

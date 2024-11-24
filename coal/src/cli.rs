@@ -8,20 +8,29 @@ use clap::{Parser, Subcommand};
     about = "Run without arguments to start the REPL"
 )]
 pub struct Cli {
-    #[arg(help = "File to run", required = false)]
-    pub file: Option<String>,
-
-    #[arg(short = 'e', long)]
-    #[arg(help = "Evaluate script")]
-    pub eval: Option<String>,
-
     #[command(subcommand)]
     pub cmd: Option<Command>,
 }
 
 #[derive(Subcommand)]
 pub enum Command {
+    #[command(about = "Compile and run programs")]
+    #[command(long_about = "Compile and run the current project or a given program")]
+    #[command(short_flag = 'r')]
+    Run {
+        path: Option<String>,
+
+        #[arg(short = 't', long, action)]
+        tokens: bool,
+    },
+
+    #[command(about = "Evaluate scripts")]
+    #[command(short_flag = 'e')]
+    Eval { input: String },
+
     #[command(about = "Format files")]
+    #[command(long_about = "Format all files in the current project or from a given path")]
+    #[command(short_flag = 'f')]
     Fmt {
         path: Option<String>,
 

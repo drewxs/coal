@@ -22,10 +22,10 @@ cargo install --git https://github.com/drewxs/coal.git
 coal
 
 # Run from file
-coal FILE
+coal run FILE
 
 # Run from string
-coal -e STRING
+coal eval STRING
 
 # Format a file
 coal fmt FILE
