@@ -11,6 +11,10 @@ pub struct Cli {
     #[arg(help = "File to run", required = false)]
     pub file: Option<String>,
 
+    #[arg(short = 'e', long)]
+    #[arg(help = "Evaluate script")]
+    pub eval: Option<String>,
+
     #[command(subcommand)]
     pub cmd: Option<Command>,
 }
@@ -37,9 +41,6 @@ pub enum Command {
         #[command(subcommand)]
         cmd: CacheCommand,
     },
-
-    #[command(about = "Execute program from string")]
-    Exec { input: String },
 }
 
 #[derive(Subcommand)]

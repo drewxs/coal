@@ -25,7 +25,7 @@ coal
 coal FILE
 
 # Run from string
-coal exec STRING
+coal -e STRING
 
 # Format a file
 coal fmt FILE

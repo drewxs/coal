@@ -14,9 +14,9 @@ pub fn run(path: &str) {
         process::exit(1);
     });
 
-    exec(&input);
+    eval(&input);
 }
 
-pub fn exec(input: &str) {
+pub fn eval(input: &str) {
     Evaluator::default().print_eval(input);
 }

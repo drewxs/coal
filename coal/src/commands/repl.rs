@@ -1,14 +1,14 @@
 use coal_core::Evaluator;
-use rustyline::{error::ReadlineError, DefaultEditor, Result};
+use rustyline::{error::ReadlineError, DefaultEditor};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub fn repl() -> Result<()> {
+pub fn repl() {
     println!("Coal {VERSION}");
 
     let history_path = crate::path::history();
 
-    let mut rl = DefaultEditor::new()?;
+    let mut rl = DefaultEditor::new().unwrap();
     let _ = rl.load_history(&history_path);
     let mut evaluator = Evaluator::default();
 
@@ -38,6 +38,4 @@ pub fn repl() -> Result<()> {
     }
 
     let _ = rl.save_history(&history_path);
-
-    Ok(())
 }
