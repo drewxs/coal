@@ -23,24 +23,13 @@ impl Evaluator {
 
     pub fn eval(&mut self, input: &str) -> Option<Object> {
         let program = Program::parse(input);
-        self.eval_program(program)
+        self.eval_stmts(program.statements)
     }
 
     pub fn print_eval(&mut self, input: &str) {
         if let Some(obj) = self.eval(input) {
             println!("{obj}");
         }
-    }
-
-    fn eval_program(&mut self, program: Program) -> Option<Object> {
-        let mut res = None;
-        for stmt in program {
-            if let Stmt::Void = stmt {
-                continue;
-            }
-            res = self.eval_stmt(stmt);
-        }
-        res
     }
 
     fn eval_stmt(&mut self, stmt: Stmt) -> Option<Object> {
