@@ -29,12 +29,18 @@ pub enum Object {
         t: Type,
     },
     Nil,
+    Return(Box<Object>),
     Error(String),
 }
 
-pub const NIL: Object = Object::Nil;
 pub const TRUE: Object = Object::Bool(true);
 pub const FALSE: Object = Object::Bool(false);
+
+impl Object {
+    pub fn is_truthy(&self) -> bool {
+        !matches!(self, Object::Bool(false) | Object::Nil)
+    }
+}
 
 impl Eq for Object {}
 
@@ -80,6 +86,7 @@ impl Object {
                 write!(f, "}}")
             }
             Object::Nil => write!(f, "nil"),
+            Object::Return(v) => write!(f, "return {v};"),
             Object::Error(e) => write!(f, "{e}"),
         }
     }

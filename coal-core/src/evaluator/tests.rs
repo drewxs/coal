@@ -3,16 +3,16 @@ use super::{Evaluator, Object, FALSE, TRUE};
 #[test]
 fn test_eval_int_expressions() {
     let tests = vec![
-        ("5", Object::Int(5)),
-        ("10", Object::Int(10)),
-        ("-5", Object::Int(-5)),
-        ("-10", Object::Int(-10)),
+        ("5", Some(Object::Int(5))),
+        ("10", Some(Object::Int(10))),
+        ("-5", Some(Object::Int(-5))),
+        ("-10", Some(Object::Int(-10))),
     ];
 
     let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
-        let actual = evaluator.eval(expr).unwrap();
+        let actual = evaluator.eval(expr);
         assert_eq!(expected, actual);
     }
 }
@@ -20,18 +20,18 @@ fn test_eval_int_expressions() {
 #[test]
 fn test_eval_not_expressions() {
     let tests = vec![
-        ("!true", FALSE),
-        ("!!true", TRUE),
-        ("!false", TRUE),
-        ("!!false", FALSE),
-        ("!5", FALSE),
-        ("!!5", TRUE),
+        ("!true", Some(FALSE)),
+        ("!!true", Some(TRUE)),
+        ("!false", Some(TRUE)),
+        ("!!false", Some(FALSE)),
+        ("!5", Some(FALSE)),
+        ("!!5", Some(TRUE)),
     ];
 
     let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
-        let actual = evaluator.eval(expr).unwrap();
+        let actual = evaluator.eval(expr);
         assert_eq!(expected, actual);
     }
 }
@@ -41,18 +41,18 @@ fn test_eval_str_interpolation() {
     let tests = vec![
         (
             r#""not {!false} or {!!false}""#,
-            Object::Str(String::from("not true or false")),
+            Some(Object::Str(String::from("not true or false"))),
         ),
         (
             r#""(1 + \"{-false})""#,
-            Object::Str(String::from(r#"(1 + "0)"#)),
+            Some(Object::Str(String::from(r#"(1 + "0)"#))),
         ),
     ];
 
     let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
-        let actual = evaluator.eval(expr).unwrap();
+        let actual = evaluator.eval(expr);
         assert_eq!(expected, actual);
     }
 }
@@ -60,35 +60,62 @@ fn test_eval_str_interpolation() {
 #[test]
 fn test_eval_infix_expressions() {
     let tests = vec![
-        ("(7 + 2 * 3 / 2) % 3", Object::Float(1.0)),
-        ("1 + 2 * 3 + 4 / 5", Object::Float(7.8)),
-        ("(1 + 2 * 3 + 4 / 5) * 2 + -10", Object::Float(5.6)),
-        ("8 // 3", Object::Int(2)),
-        ("10.4 // 2", Object::Float(5.0)),
-        ("true == true", TRUE),
-        ("false == false", TRUE),
-        ("true == false", FALSE),
-        ("true != false", TRUE),
-        ("(1 < 2) == true", TRUE),
-        ("(1 > 2) != false", FALSE),
-        (r#""foo" + "bar""#, Object::Str(String::from("foobar"))),
-        (r#""foo" == "foo""#, TRUE),
-        (r#""a" * 3"#, Object::Str(String::from("aaa"))),
-        (r#""a" < "b""#, TRUE),
+        ("(7 + 2 * 3 / 2) % 3", Some(Object::Float(1.0))),
+        ("1 + 2 * 3 + 4 / 5", Some(Object::Float(7.8))),
+        ("(1 + 2 * 3 + 4 / 5) * 2 + -10", Some(Object::Float(5.6))),
+        ("8 // 3", Some(Object::Int(2))),
+        ("10.4 // 2", Some(Object::Float(5.0))),
+        ("true == true", Some(TRUE)),
+        ("false == false", Some(TRUE)),
+        ("true == false", Some(FALSE)),
+        ("true != false", Some(TRUE)),
+        ("(1 < 2) == true", Some(TRUE)),
+        ("(1 > 2) != false", Some(FALSE)),
+        (
+            r#""foo" + "bar""#,
+            Some(Object::Str(String::from("foobar"))),
+        ),
+        (r#""foo" == "foo""#, Some(TRUE)),
+        (r#""a" * 3"#, Some(Object::Str(String::from("aaa")))),
+        (r#""a" < "b""#, Some(TRUE)),
         (
             r#""a" - "b""#,
-            Object::Error(String::from("unsupported operation: str - str")),
+            Some(Object::Error(String::from(
+                "unsupported operation: str - str",
+            ))),
         ),
         (
             r#""a" / 3.14"#,
-            Object::Error(String::from("unsupported operation: str / float")),
+            Some(Object::Error(String::from(
+                "unsupported operation: str / float",
+            ))),
         ),
     ];
 
     let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
-        let actual = evaluator.eval(expr).unwrap();
+        let actual = evaluator.eval(expr);
+        assert_eq!(expected, actual);
+    }
+}
+
+#[test]
+fn test_eval_if_else_expressions() {
+    let tests = vec![
+        ("if true { 10 }", Some(Object::Int(10))),
+        ("if false { 10 }", None),
+        ("if 1 { 10 }", Some(Object::Int(10))),
+        ("if 1 < 2 { 10 }", Some(Object::Int(10))),
+        ("if 1 > 2 { 10 }", None),
+        ("if 1 > 2 { 10 } else { 20 }", Some(Object::Int(20))),
+        ("if 1 < 2 { 10 } else { 20 }", Some(Object::Int(10))),
+    ];
+
+    let mut evaluator = Evaluator::default();
+
+    for (expr, expected) in tests {
+        let actual = evaluator.eval(expr);
         assert_eq!(expected, actual);
     }
 }

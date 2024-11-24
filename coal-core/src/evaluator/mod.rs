@@ -9,7 +9,7 @@ use std::{cell::RefCell, rc::Rc};
 pub use env::*;
 pub use object::*;
 
-use crate::{Expr, Ident, Infix, Literal, Prefix, Program, Stmt, Type};
+use crate::{Expr, Ident, IfExpr, Infix, Literal, Prefix, Program, Stmt, Type};
 
 #[derive(Clone, Debug)]
 pub struct Evaluator {
@@ -49,12 +49,29 @@ impl Evaluator {
         }
     }
 
+    fn eval_stmts(&mut self, stmts: Vec<Stmt>) -> Option<Object> {
+        let mut res = None;
+        for stmt in stmts {
+            if stmt == Stmt::Void {
+                continue;
+            }
+            res = self.eval_stmt(stmt);
+        }
+        res
+    }
+
     fn eval_expr(&mut self, expr: &Expr) -> Option<Object> {
         match expr {
             Expr::Ident(Ident(name)) => self.env.borrow().get(name),
             Expr::Literal(literal) => self.eval_literal_expr(literal),
             Expr::Prefix(prefix, rhs) => self.eval_prefix_expr(prefix, rhs),
             Expr::Infix(op, lhs, rhs) => self.eval_infix_expr(op, lhs, rhs),
+            Expr::If {
+                cond,
+                then,
+                elifs,
+                alt,
+            } => self.eval_if_expr(cond, then, elifs, alt),
             _ => None,
         }
     }
@@ -66,11 +83,50 @@ impl Evaluator {
         }
     }
 
+    fn eval_str(&mut self, s: &str) -> Option<Object> {
+        let mut res = String::new();
+        let mut expr = String::new();
+        let mut in_expr = false;
+
+        let mut chars = s.chars().peekable();
+
+        while let Some(c) = chars.next() {
+            if c == '\\' {
+                if let Some(next_c) = chars.peek() {
+                    res.push(*next_c);
+                    chars.next();
+                }
+                continue;
+            }
+
+            if c == '{' && !in_expr {
+                in_expr = true;
+                expr.clear();
+            } else if c == '}' && in_expr {
+                if let Some(obj) = self.eval(&expr) {
+                    res.push_str(&obj.to_string());
+                }
+
+                in_expr = false;
+            } else if in_expr {
+                expr.push(c);
+            } else {
+                res.push(c);
+            }
+        }
+
+        if in_expr {
+            return None;
+        }
+
+        Some(Object::Str(res))
+    }
+
     fn eval_prefix_expr(&mut self, prefix: &Prefix, rhs: &Expr) -> Option<Object> {
         let rhs = self.eval_expr(rhs)?;
         let obj = match prefix {
             Prefix::Not => match rhs {
-                FALSE | NIL => TRUE,
+                Object::Nil | FALSE => TRUE,
                 _ => FALSE,
             },
             Prefix::Minus => match rhs {
@@ -240,43 +296,22 @@ impl Evaluator {
         }
     }
 
-    fn eval_str(&mut self, s: &str) -> Option<Object> {
-        let mut res = String::new();
-        let mut expr = String::new();
-        let mut in_expr = false;
-
-        let mut chars = s.chars().peekable();
-
-        while let Some(c) = chars.next() {
-            if c == '\\' {
-                if let Some(next_c) = chars.peek() {
-                    res.push(*next_c);
-                    chars.next();
-                }
-                continue;
-            }
-
-            if c == '{' && !in_expr {
-                in_expr = true;
-                expr.clear();
-            } else if c == '}' && in_expr {
-                if let Some(obj) = self.eval(&expr) {
-                    res.push_str(&obj.to_string());
-                }
-
-                in_expr = false;
-            } else if in_expr {
-                expr.push(c);
-            } else {
-                res.push(c);
+    fn eval_if_expr(
+        &mut self,
+        cond: &Expr,
+        then: &Vec<Stmt>,
+        elifs: &Vec<IfExpr>,
+        alt: &Option<Vec<Stmt>>,
+    ) -> Option<Object> {
+        if self.eval_expr(cond)?.is_truthy() {
+            return self.eval_stmts(then.to_owned());
+        }
+        for elif in elifs {
+            if self.eval_expr(&elif.cond)?.is_truthy() {
+                return self.eval_stmts(elif.then.to_owned());
             }
         }
-
-        if in_expr {
-            return None;
-        }
-
-        Some(Object::Str(res))
+        self.eval_stmts(alt.to_owned()?)
     }
 }
 
