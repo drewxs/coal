@@ -222,8 +222,9 @@ impl Evaluator {
             Infix::EQ => Some(FALSE),
             Infix::NEQ => Some(TRUE),
             _ => Some(Object::Error(format!(
-                "unsupported operation: {t} {op} {t}",
-                t = Type::Str,
+                "unsupported operation: {} {op} {}",
+                Type::Str,
+                Type::Int
             ))),
         }
     }
