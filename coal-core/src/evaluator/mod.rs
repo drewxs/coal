@@ -40,6 +40,7 @@ impl Evaluator {
                 None
             }
             Stmt::Expr(expr) => self.eval_expr(&expr),
+            Stmt::Return(expr) => self.eval_expr(&expr),
             _ => None,
         }
     }

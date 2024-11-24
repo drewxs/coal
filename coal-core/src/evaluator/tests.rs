@@ -110,6 +110,15 @@ fn test_eval_if_else_expressions() {
         ("if 1 > 2 { 10 }", None),
         ("if 1 > 2 { 10 } else { 20 }", Some(Object::Int(20))),
         ("if 1 < 2 { 10 } else { 20 }", Some(Object::Int(10))),
+        (
+            "if 1 < 2 {
+    let x = 999;
+    return 10;
+} else {
+    return 20;
+}",
+            Some(Object::Int(10)),
+        ),
     ];
 
     let mut evaluator = Evaluator::default();
