@@ -15,9 +15,27 @@ Install using [Cargo](https://www.rust-lang.org/tools/install):
 cargo install --git https://github.com/drewxs/coal.git
 ```
 
+## Usage
+
+```sh
+# Start the REPL
+coal
+
+# Run from file
+coal FILE
+
+# Run from string
+coal exec STRING
+
+# Format a file
+coal fmt FILE
+```
+
+Run `coal --help` for more information.
+
 ## IDE support
 
-### Neovim 
+### Neovim
 
 Register the filetype:
 
@@ -38,7 +56,7 @@ vim.treesitter.language.register("rust", "coal")
 
 ### VSCode
 
-> ¯\_(ツ)_/¯
+¯\\\_(ツ)\_/¯
 
 ## Development
 
@@ -47,8 +65,8 @@ Prerequisites:
 - [Rust](https://www.rust-lang.org/tools/install)
 - [GNU Make](https://www.gnu.org/software/make)
 
-Run `make` to print a list of available commands:
+Run `make help` to print a list of available commands:
 
 ---
 
-[License](https://github.com/drewxs/coal/blob/main/LICENSE)
+[Apache License 2.0](https://github.com/drewxs/coal/blob/main/LICENSE)

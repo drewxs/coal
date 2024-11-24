@@ -13,13 +13,13 @@ endif
 
 .PHONY: help build clean run test install
 
+# all: Default target, build/install binary
+all: install
+
 # help: Print help
 help: Makefile
 	@printf "\033[1mUsage: make <TARGETS> ...\033[0m\n\n\033[1mTargets:\033[0m\n"
 	@sed -n 's/^# //p' $< | awk -F':' '{printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' | sort | sed -e 's/^/  /'
-
-# all: Default target, show help
-all: help
 
 # build: Build binary
 build:
@@ -39,4 +39,4 @@ test:
 
 # install: Install the program
 install: 
-	@cargo install --path .
+	@cargo install --path ./$(program)
