@@ -31,6 +31,6 @@
 - [ ] Treesitter grammar
 - [ ] Linter
 - [ ] Formatter
-- [ ] REPL
-  - [ ] History
+- [x] REPL
+  - [x] History
   - [ ] Autocomplete
