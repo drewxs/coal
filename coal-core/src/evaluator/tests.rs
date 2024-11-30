@@ -101,7 +101,7 @@ fn test_eval_infix_expressions() {
 }
 
 #[test]
-fn test_eval_if_else_expressions() {
+fn test_eval_if_expressions() {
     let tests = vec![
         ("if true { 10 }", Some(Object::Int(10))),
         ("if false { 10 }", None),
@@ -111,21 +111,56 @@ fn test_eval_if_else_expressions() {
         ("if 1 > 2 { 10 } else { 20 }", Some(Object::Int(20))),
         ("if 1 < 2 { 10 } else { 20 }", Some(Object::Int(10))),
         (
-            "if 1 < 2 {
-    let x = 999;
-    return 10;
-} else {
-    return 20;
-}",
+            r#"if 1 < 2 {
+                let x = 999;
+                return 10;
+            } else {
+                return 20;
+            }"#,
             Some(Object::Int(10)),
         ),
         (
-            "if 1 > 2 {
-    return 1;
-} else {
-    return 2;
-    return 3;
-}",
+            r#"if 1 > 2 {
+                return 1;
+            } else {
+                return 2;
+                return 3;
+            }"#,
+            Some(Object::Int(2)),
+        ),
+    ];
+
+    let mut evaluator = Evaluator::default();
+
+    for (expr, expected) in tests {
+        let actual = evaluator.eval(expr);
+        assert_eq!(expected, actual);
+    }
+}
+
+#[test]
+fn test_eval_nested_if_expressions() {
+    let tests = vec![
+        (
+            r#"if true {
+            if true {
+                return 1;
+            } 
+            return 2;
+        } else {
+            return 3;
+        }"#,
+            Some(Object::Int(1)),
+        ),
+        (
+            r#"if true {
+            if false {
+                return 1;
+            } 
+            return 2;
+        } else {
+            return 3;
+        }"#,
             Some(Object::Int(2)),
         ),
     ];

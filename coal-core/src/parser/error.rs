@@ -1,23 +1,23 @@
 use std::fmt;
 
-use crate::Token;
+use crate::{Span, Token};
 
 #[derive(Clone, Debug)]
 pub struct ParserError {
     pub kind: ParserErrorKind,
-    pub line: usize,
-    pub col: usize,
+    pub span: Span,
 }
 
 impl ParserError {
-    pub fn new(kind: ParserErrorKind, line: usize, col: usize) -> Self {
-        ParserError { kind, line, col }
+    pub fn new(kind: ParserErrorKind, span: Span) -> Self {
+        ParserError { kind, span }
     }
 }
 
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{} {}", self.line, self.col, self.kind)
+        let ((l1, c1), (l2, c2)) = self.span;
+        write!(f, "{l1}:{c1}-{l2}:{c2} {}", self.kind)
     }
 }
 

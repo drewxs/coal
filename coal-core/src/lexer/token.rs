@@ -6,6 +6,7 @@ pub enum Token {
     Illegal,
     EOF,
     Comment(String),
+    NewLine,
 
     // Identifiers + literals
     Ident(String),
@@ -98,9 +99,10 @@ impl From<&str> for Token {
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Token::Comment(s) => write!(f, "// {s}"),
             Token::Illegal => write!(f, "ILLEGAL"),
             Token::EOF => write!(f, "EOF"),
+            Token::Comment(s) => writeln!(f, "// {s}"),
+            Token::NewLine => writeln!(f),
             Token::Ident(name) => write!(f, "{name}"),
             Token::Str(s) => write!(f, "{s}"),
             Token::Int(i) => write!(f, "{i}"),
@@ -137,5 +139,20 @@ impl fmt::Display for Token {
             Token::Else => write!(f, "else"),
             Token::Return => write!(f, "return"),
         }
+    }
+}
+
+pub type Position = (usize, usize);
+pub type Span = (Position, Position);
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct LexicalToken {
+    pub token: Token,
+    pub span: Span,
+}
+
+impl LexicalToken {
+    pub fn new(token: Token, span: Span) -> Self {
+        LexicalToken { token, span }
     }
 }

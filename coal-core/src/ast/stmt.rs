@@ -1,10 +1,12 @@
 use std::fmt;
 
-use super::{Expr, Ident, Type};
+use super::{Comment, Expr, Ident, Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
     Void,
+    Newline,
+    Comment(Comment),
     Let(Ident, Type, Expr),
     Expr(Expr),
     Return(Expr),
@@ -16,6 +18,8 @@ impl Stmt {
 
         match self {
             Stmt::Void => Ok(()),
+            Stmt::Newline => writeln!(f),
+            Stmt::Comment(comment) => write!(f, "{comment}"),
             Stmt::Let(ident, t, expr) => {
                 write!(f, "{}let {ident}: {t} = ", indent)?;
                 expr.fmt_with_indent(f, indent_level)?;

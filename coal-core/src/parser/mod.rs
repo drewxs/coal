@@ -8,23 +8,24 @@ pub use error::{ParserError, ParserErrorKind};
 pub use precedence::Precedence;
 
 use crate::{
-    Expr, Ident, IfExpr, Infix, Lexer, Literal, Node, Prefix, Program, Stmt, Token, Type, Var,
+    Comment, Expr, Ident, IfExpr, Infix, Lexer, LexicalToken, Literal, Prefix, Program, Stmt,
+    Token, Type, Var,
 };
 
 #[derive(Clone, Debug)]
-pub struct Parser<'l> {
-    pub lexer: Lexer<'l>,
-    pub curr_node: Node,
-    pub next_node: Node,
+pub struct Parser {
+    pub lexer: Lexer,
+    pub curr_node: LexicalToken,
+    pub next_node: LexicalToken,
     pub errors: Vec<ParserError>,
 }
 
-impl<'l> Parser<'l> {
-    pub fn new(lexer: Lexer<'l>) -> Self {
+impl Parser {
+    pub fn new(lexer: Lexer) -> Self {
         let mut parser = Parser {
             lexer,
-            curr_node: Node::default(),
-            next_node: Node::default(),
+            curr_node: LexicalToken::default(),
+            next_node: LexicalToken::default(),
             errors: vec![],
         };
         parser.advance_n(2);
@@ -35,7 +36,7 @@ impl<'l> Parser<'l> {
         let mut program = Program::default();
         while !matches!(
             self.curr_node,
-            Node {
+            LexicalToken {
                 token: Token::EOF,
                 ..
             }
@@ -77,13 +78,15 @@ impl<'l> Parser<'l> {
 
     fn advance(&mut self) {
         self.curr_node = self.next_node.clone();
-        self.next_node = self.lexer.next_node();
+        self.next_node = self
+            .lexer
+            .next()
+            .unwrap_or(LexicalToken::new(Token::EOF, self.next_node.span));
     }
 
     fn advance_n(&mut self, n: usize) {
         for _ in 0..n {
-            self.curr_node = self.next_node.clone();
-            self.next_node = self.lexer.next_node();
+            self.advance();
         }
     }
 
@@ -94,10 +97,8 @@ impl<'l> Parser<'l> {
     }
 
     fn error(&mut self, kind: ParserErrorKind) {
-        let Node {
-            pos: (line, col), ..
-        } = self.curr_node;
-        self.errors.push(ParserError::new(kind, line, col));
+        self.errors
+            .push(ParserError::new(kind, self.curr_node.span));
     }
 
     fn expect_next(&mut self, token: Token) -> bool {
@@ -113,9 +114,11 @@ impl<'l> Parser<'l> {
     }
 
     fn parse_stmt(&mut self) -> Option<Stmt> {
-        match self.curr_node.token {
+        match &self.curr_node.token {
             Token::Let => self.parse_let_stmt(),
             Token::Return => self.parse_ret_stmt(),
+            Token::Comment(c) => Some(Stmt::Comment(Comment(c.clone()))),
+            Token::NewLine => Some(Stmt::Newline),
             _ => self.parse_expr_stmt(),
         }
     }
@@ -371,14 +374,14 @@ impl<'l> Parser<'l> {
     }
 }
 
-impl<'l> From<&'l str> for Parser<'l> {
-    fn from(input: &'l str) -> Self {
+impl From<&str> for Parser {
+    fn from(input: &str) -> Self {
         Self::new(Lexer::new(input))
     }
 }
 
-impl<'l> From<&'l String> for Parser<'l> {
-    fn from(input: &'l String) -> Self {
+impl From<&String> for Parser {
+    fn from(input: &String) -> Self {
         Self::from(input.as_str())
     }
 }

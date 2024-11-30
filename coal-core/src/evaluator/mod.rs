@@ -23,7 +23,21 @@ impl Evaluator {
 
     pub fn eval(&mut self, input: &str) -> Option<Object> {
         let program = Program::parse(input);
-        self.eval_stmts(program.statements)
+        let mut res = None;
+
+        for stmt in program.statements {
+            if stmt == Stmt::Void {
+                continue;
+            }
+
+            match self.eval_stmt(stmt) {
+                Some(Object::Return(val)) => return Some(*val),
+                Some(Object::Error(msg)) => return Some(Object::Error(msg)),
+                obj => res = obj,
+            }
+        }
+
+        res
     }
 
     pub fn print_eval(&mut self, input: &str) {
@@ -40,24 +54,32 @@ impl Evaluator {
                 None
             }
             Stmt::Expr(expr) => self.eval_expr(&expr),
-            Stmt::Return(expr) => self.eval_expr(&expr),
+            Stmt::Return(expr) => {
+                let val = self.eval_expr(&expr)?;
+                match val {
+                    Object::Error(_) => Some(val),
+                    _ => Some(Object::Return(Box::new(val))),
+                }
+            }
             _ => None,
         }
     }
 
     fn eval_stmts(&mut self, stmts: Vec<Stmt>) -> Option<Object> {
         let mut res = None;
+
         for stmt in stmts {
-            match stmt {
-                Stmt::Void => {}
-                Stmt::Return(expr) => {
-                    return self.eval_expr(&expr);
-                }
-                _ => {
-                    res = self.eval_stmt(stmt);
-                }
+            if stmt == Stmt::Void {
+                continue;
+            }
+
+            match self.eval_stmt(stmt) {
+                Some(Object::Return(val)) => return Some(Object::Return(val)),
+                Some(Object::Error(msg)) => return Some(Object::Error(msg)),
+                obj => res = obj,
             }
         }
+
         res
     }
 

@@ -545,8 +545,9 @@ fn test_nested_if_expression() {
             if x > 1 {
                 return x;
             }
-        } else {
             return y;
+        } else {
+            return z;
         }"#;
     let program = Program::parse(input);
     let expected = Stmt::Expr(Expr::If {
@@ -555,18 +556,21 @@ fn test_nested_if_expression() {
             Box::new(Expr::Ident(Ident::from("x"))),
             Box::new(Expr::Ident(Ident::from("y"))),
         )),
-        then: vec![Stmt::Expr(Expr::If {
-            cond: Box::new(Expr::Infix(
-                Infix::GT,
-                Box::new(Expr::Ident(Ident::from("x"))),
-                Box::new(Expr::Literal(Literal::Int(1))),
-            )),
-            then: vec![Stmt::Return(Expr::Ident(Ident::from("x")))],
-            elifs: vec![],
-            alt: None,
-        })],
+        then: vec![
+            Stmt::Expr(Expr::If {
+                cond: Box::new(Expr::Infix(
+                    Infix::GT,
+                    Box::new(Expr::Ident(Ident::from("x"))),
+                    Box::new(Expr::Literal(Literal::Int(1))),
+                )),
+                then: vec![Stmt::Return(Expr::Ident(Ident::from("x")))],
+                elifs: vec![],
+                alt: None,
+            }),
+            Stmt::Return(Expr::Ident(Ident::from("y"))),
+        ],
         elifs: vec![],
-        alt: Some(vec![Stmt::Return(Expr::Ident(Ident::from("y")))]),
+        alt: Some(vec![Stmt::Return(Expr::Ident(Ident::from("z")))]),
     });
 
     assert_eq!(expected, program.statements[0]);
