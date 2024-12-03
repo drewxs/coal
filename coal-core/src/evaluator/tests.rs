@@ -1,3 +1,5 @@
+use test::Bencher;
+
 use super::{Evaluator, Object, FALSE, TRUE};
 
 #[test]
@@ -171,4 +173,13 @@ fn test_eval_nested_if_expressions() {
         let actual = evaluator.eval(expr);
         assert_eq!(expected, actual);
     }
+}
+
+#[bench]
+fn bench_eval_math_expression(b: &mut Bencher) {
+    let mut evaluator = Evaluator::default();
+    let test =
+        "(((9876 * 5432) // 123 + (8765 % 34) * (4321 // 2)) * 1987) % 567 + (3456 * 7890) // 234";
+
+    b.iter(|| evaluator.eval(test))
 }

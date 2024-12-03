@@ -1,3 +1,7 @@
+#![feature(test)]
+
+extern crate test;
+
 mod ast;
 mod evaluator;
 mod lexer;
