@@ -57,6 +57,14 @@ impl From<&Vec<&str>> for Program {
     }
 }
 
+impl Index<usize> for Program {
+    type Output = Stmt;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.statements[index]
+    }
+}
+
 impl Iterator for Program {
     type Item = Stmt;
 
@@ -85,19 +93,11 @@ impl<'a> Iterator for ProgramIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.program.statements.len() {
-            let stmt = &self.program.statements[self.index];
+            let stmt = &self.program[self.index];
             self.index += 1;
             Some(stmt)
         } else {
             None
         }
-    }
-}
-
-impl Index<usize> for Program {
-    type Output = Stmt;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.statements[index]
     }
 }
