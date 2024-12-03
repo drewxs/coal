@@ -21,8 +21,8 @@ impl Env {
         })
     }
 
-    pub fn set(&mut self, name: String, value: &Object) {
-        self.store.insert(name, value.clone());
+    pub fn set(&mut self, name: String, value: Object) {
+        self.store.insert(name, value);
     }
 }
 

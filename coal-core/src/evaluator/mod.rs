@@ -50,7 +50,7 @@ impl Evaluator {
         match stmt {
             Stmt::Let(Ident(name), _, expr) => {
                 let val = self.eval_expr(&expr)?;
-                self.env.borrow_mut().set(name, &val);
+                self.env.borrow_mut().set(name, val);
                 None
             }
             Stmt::Expr(expr) => self.eval_expr(&expr),
