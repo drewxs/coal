@@ -13,4 +13,4 @@ coal-core = { path = "../coal-core" }
 clap = { version = "4.5.21", features = ["derive"] }
 dirs = "5.0.1"
 ignore = "0.4.23"
-rustyline = "15.0.0"
+rustyline = { version = "15.0.0", features = ["derive", "rustyline-derive"] }
