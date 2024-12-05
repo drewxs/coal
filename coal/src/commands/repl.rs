@@ -1,19 +1,22 @@
-use std::{borrow::Cow, collections::HashSet};
+use std::{borrow::Cow, cell::Cell};
 
 use rustyline::{
-    completion::FilenameCompleter,
+    completion::{Completer, Pair},
     error::ReadlineError,
-    highlight::{CmdKind, Highlighter, MatchingBracketHighlighter},
+    highlight::{CmdKind, Highlighter},
     hint::{Hint, Hinter},
-    history::FileHistory,
+    history::{FileHistory, SearchDirection},
     validate::MatchingBracketValidator,
     Completer, CompletionType, Config, Context, EditMode, Editor, Helper, Highlighter, Hinter,
-    Validator,
+    Result, Validator,
 };
 
 use coal_core::Evaluator;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const KEYWORDS_BUILTINS: &[&str] = &[
+    "let", "fn", "if", "else", "elif", "then", "return", "true", "false", "print",
+];
 
 pub fn repl() {
     println!("Coal {VERSION}");
@@ -50,36 +53,30 @@ pub fn repl() {
 }
 
 #[derive(Completer, Helper, Validator, Highlighter)]
-struct ReplHinter {
-    hints: HashSet<ReplHint>,
-}
+struct ReplHinter;
 
-impl Default for ReplHinter {
-    fn default() -> Self {
-        let mut hints = HashSet::new();
-        hints.insert(ReplHint::new("print", "print"));
-        Self { hints }
+impl ReplHinter {
+    pub fn new() -> Self {
+        Self
     }
 }
 
 impl Hinter for ReplHinter {
     type Hint = ReplHint;
 
-    fn hint(&self, line: &str, pos: usize, _ctx: &Context<'_>) -> Option<ReplHint> {
+    fn hint(&self, line: &str, pos: usize, ctx: &Context<'_>) -> Option<ReplHint> {
         if line.is_empty() || pos < line.len() {
             return None;
         }
 
-        self.hints
-            .iter()
-            .filter_map(|hint| {
-                if hint.display.starts_with(line) {
-                    Some(hint.suffix(pos))
-                } else {
-                    None
-                }
+        if let Ok(Some(s)) = ctx.history().search(line, pos, SearchDirection::Forward) {
+            Some(ReplHint {
+                display: s.entry[pos..].to_string(),
+                complete_up_to: s.entry.len() - pos,
             })
-            .next()
+        } else {
+            None
+        }
     }
 }
 
@@ -103,27 +100,181 @@ impl Hint for ReplHint {
     }
 }
 
-impl ReplHint {
-    fn new(text: &str, complete_up_to: &str) -> Self {
-        assert!(text.starts_with(complete_up_to));
+struct ReplCompleter;
+
+impl ReplCompleter {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Completer for ReplCompleter {
+    type Candidate = Pair;
+
+    fn complete(&self, line: &str, pos: usize, _ctx: &Context<'_>) -> Result<(usize, Vec<Pair>)> {
+        let mut matches = vec![];
+
+        for &kw in KEYWORDS_BUILTINS {
+            if kw.starts_with(line) {
+                matches.push(Pair {
+                    display: kw.to_string(),
+                    replacement: kw[pos..].to_string(),
+                });
+            }
+        }
+
+        Ok((pos, matches))
+    }
+}
+
+struct MatchingBracketHighlighter {
+    bracket: Cell<Option<(u8, usize)>>,
+}
+
+impl MatchingBracketHighlighter {
+    pub fn new() -> Self {
         Self {
-            display: text.into(),
-            complete_up_to: complete_up_to.len(),
+            bracket: Cell::new(None),
+        }
+    }
+}
+
+impl Highlighter for MatchingBracketHighlighter {
+    fn highlight<'l>(&self, line: &'l str, _pos: usize) -> Cow<'l, str> {
+        if line.len() <= 1 {
+            return Cow::Borrowed(line);
+        }
+
+        if let Some((bracket, pos)) = self.bracket.get() {
+            if let Some((matching, idx)) = find_matching_bracket(line, pos, bracket) {
+                let mut copy = line.to_owned();
+                copy.replace_range(
+                    idx..=pos,
+                    &format!(
+                        "\x1b[1;34m{}\x1b[0m{}\x1b[1;34m{}\x1b[0m",
+                        matching as char,
+                        &line[idx + 1..pos],
+                        line.chars().nth(pos).unwrap()
+                    ),
+                );
+                return Cow::Owned(copy);
+            }
+        }
+
+        Cow::Borrowed(line)
+    }
+
+    fn highlight_char(&self, line: &str, pos: usize, kind: CmdKind) -> bool {
+        if kind == CmdKind::ForcedRefresh {
+            self.bracket.set(None);
+            return false;
+        }
+
+        self.bracket.set(check_bracket(line, pos));
+        self.bracket.get().is_some()
+    }
+}
+
+fn find_matching_bracket(line: &str, pos: usize, bracket: u8) -> Option<(u8, usize)> {
+    let matching = matching_bracket(bracket);
+    let mut idx;
+    let mut unmatched = 1;
+
+    if is_open_bracket(bracket) {
+        idx = pos + 1;
+        let bytes = &line.as_bytes()[idx..];
+        for b in bytes {
+            if *b == matching {
+                unmatched -= 1;
+                if unmatched == 0 {
+                    debug_assert_eq!(matching, line.as_bytes()[idx]);
+                    return Some((matching, idx));
+                }
+            } else if *b == bracket {
+                unmatched += 1;
+            }
+            idx += 1;
+        }
+    } else {
+        idx = pos;
+        let bytes = &line.as_bytes()[..idx];
+        for b in bytes.iter().rev() {
+            if *b == matching {
+                unmatched -= 1;
+                if unmatched == 0 {
+                    debug_assert_eq!(matching, line.as_bytes()[idx - 1]);
+                    return Some((matching, idx - 1));
+                }
+            } else if *b == bracket {
+                unmatched += 1;
+            }
+            idx -= 1;
         }
     }
 
-    fn suffix(&self, strip_chars: usize) -> Self {
-        Self {
-            display: self.display[strip_chars..].to_owned(),
-            complete_up_to: self.complete_up_to.saturating_sub(strip_chars),
+    None
+}
+
+const fn check_bracket(line: &str, pos: usize) -> Option<(u8, usize)> {
+    if line.is_empty() {
+        return None;
+    }
+
+    let mut pos = pos;
+    if pos >= line.len() {
+        pos = line.len() - 1;
+        let b = line.as_bytes()[pos];
+        if is_close_bracket(b) {
+            Some((b, pos))
+        } else {
+            None
+        }
+    } else {
+        let mut under_cursor = true;
+        loop {
+            let b = line.as_bytes()[pos];
+            if is_close_bracket(b) {
+                return if pos == 0 { None } else { Some((b, pos)) };
+            } else if is_open_bracket(b) {
+                return if pos + 1 == line.len() {
+                    None
+                } else {
+                    Some((b, pos))
+                };
+            } else if under_cursor && pos > 0 {
+                under_cursor = false;
+                pos -= 1;
+            } else {
+                return None;
+            }
         }
     }
+}
+
+const fn matching_bracket(bracket: u8) -> u8 {
+    match bracket {
+        b'{' => b'}',
+        b'}' => b'{',
+        b'[' => b']',
+        b']' => b'[',
+        b'(' => b')',
+        b')' => b'(',
+        b => b,
+    }
+}
+
+const fn is_open_bracket(bracket: u8) -> bool {
+    matches!(bracket, b'{' | b'[' | b'(')
+}
+
+const fn is_close_bracket(bracket: u8) -> bool {
+    matches!(bracket, b'}' | b']' | b')')
 }
 
 #[derive(Helper, Completer, Hinter, Validator)]
 struct ReplHelper {
     #[rustyline(Completer)]
-    completer: FilenameCompleter,
+    completer: ReplCompleter,
     highlighter: MatchingBracketHighlighter,
     #[rustyline(Validator)]
     validator: MatchingBracketValidator,
@@ -161,9 +312,9 @@ fn editor() -> Editor<ReplHelper, FileHistory> {
         .build();
 
     let helper = ReplHelper {
-        completer: FilenameCompleter::new(),
+        completer: ReplCompleter::new(),
         highlighter: MatchingBracketHighlighter::new(),
-        hinter: ReplHinter::default(),
+        hinter: ReplHinter::new(),
         validator: MatchingBracketValidator::new(),
     };
 
