@@ -44,7 +44,19 @@ impl Evaluator {
 
     pub fn print_eval(&mut self, input: &str) {
         if let Some(obj) = self.eval(input) {
-            println!("{obj}");
+            match obj {
+                Object::Error {
+                    message,
+                    span: ((l1, c1), (l2, c2)),
+                } if l1 == 1 && l2 == 1 => {
+                    println!(
+                        "\x1b[31m{}\x1b[0m\n{}",
+                        " ".repeat(c1 + 2) + &"^".repeat(c2 - c1),
+                        message
+                    );
+                }
+                _ => println!("{obj}"),
+            }
         }
     }
 
