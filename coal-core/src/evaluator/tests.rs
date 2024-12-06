@@ -14,8 +14,7 @@ fn test_eval_int_expressions() {
     let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
-        let actual = evaluator.eval(expr);
-        assert_eq!(expected, actual);
+        assert_eq!(expected, evaluator.eval(expr));
     }
 }
 
@@ -33,8 +32,7 @@ fn test_eval_not_expressions() {
     let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
-        let actual = evaluator.eval(expr);
-        assert_eq!(expected, actual);
+        assert_eq!(expected, evaluator.eval(expr));
     }
 }
 
@@ -54,8 +52,7 @@ fn test_eval_str_interpolation() {
     let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
-        let actual = evaluator.eval(expr);
-        assert_eq!(expected, actual);
+        assert_eq!(expected, evaluator.eval(expr));
     }
 }
 
@@ -97,8 +94,7 @@ fn test_eval_infix_expressions() {
     let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
-        let actual = evaluator.eval(expr);
-        assert_eq!(expected, actual);
+        assert_eq!(expected, evaluator.eval(expr));
     }
 }
 
@@ -135,8 +131,7 @@ fn test_eval_if_expressions() {
     let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
-        let actual = evaluator.eval(expr);
-        assert_eq!(expected, actual);
+        assert_eq!(expected, evaluator.eval(expr));
     }
 }
 
@@ -145,24 +140,24 @@ fn test_eval_nested_if_expressions() {
     let tests = vec![
         (
             r#"if true {
-            if true {
-                return 1;
-            } 
-            return 2;
-        } else {
-            return 3;
-        }"#,
+                if true {
+                    return 1;
+                } 
+                return 2;
+            } else {
+                return 3;
+            }"#,
             Some(Object::Int(1)),
         ),
         (
             r#"if true {
-            if false {
-                return 1;
-            } 
-            return 2;
-        } else {
-            return 3;
-        }"#,
+                if false {
+                    return 1;
+                } 
+                return 2;
+            } else {
+                return 3;
+            }"#,
             Some(Object::Int(2)),
         ),
     ];
@@ -170,8 +165,7 @@ fn test_eval_nested_if_expressions() {
     let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
-        let actual = evaluator.eval(expr);
-        assert_eq!(expected, actual);
+        assert_eq!(expected, evaluator.eval(expr));
     }
 }
 

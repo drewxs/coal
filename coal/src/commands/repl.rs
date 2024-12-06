@@ -282,6 +282,17 @@ struct ReplHelper {
     hinter: ReplHinter,
 }
 
+impl ReplHelper {
+    pub fn new() -> Self {
+        Self {
+            completer: ReplCompleter::new(),
+            highlighter: MatchingBracketHighlighter::new(),
+            hinter: ReplHinter::new(),
+            validator: MatchingBracketValidator::new(),
+        }
+    }
+}
+
 impl Highlighter for ReplHelper {
     fn highlight_prompt<'b, 's: 'b, 'p: 'b>(
         &'s self,
@@ -305,22 +316,16 @@ impl Highlighter for ReplHelper {
 }
 
 fn editor() -> Editor<ReplHelper, FileHistory> {
-    let config = Config::builder()
+    let mut rl = Editor::with_config(editor_config()).unwrap();
+    rl.set_helper(Some(ReplHelper::new()));
+    let _ = rl.load_history(&crate::path::history());
+    rl
+}
+
+fn editor_config() -> Config {
+    Config::builder()
         .history_ignore_space(true)
         .completion_type(CompletionType::List)
         .edit_mode(EditMode::Emacs)
-        .build();
-
-    let helper = ReplHelper {
-        completer: ReplCompleter::new(),
-        highlighter: MatchingBracketHighlighter::new(),
-        hinter: ReplHinter::new(),
-        validator: MatchingBracketValidator::new(),
-    };
-
-    let mut rl = Editor::with_config(config).unwrap();
-    rl.set_helper(Some(helper));
-    let _ = rl.load_history(&crate::path::history());
-
-    rl
+        .build()
 }

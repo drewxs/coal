@@ -1,5 +1,4 @@
-use std::fmt;
-use std::ops::Index;
+use std::{fmt, ops::Index};
 
 use crate::Parser;
 

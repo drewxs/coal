@@ -1,7 +1,10 @@
-use core::fmt;
-use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    fmt,
+    hash::{Hash, Hasher},
+    rc::Rc,
+};
 
 use crate::{Expr, Literal, Stmt, Type};
 

@@ -49,9 +49,7 @@ fn test_lex_comments() {
         Token::Semicolon,
     ];
 
-    let actual = lexer.tokens();
-
-    assert_eq!(expected, actual);
+    assert_eq!(expected, lexer.tokens());
 }
 
 // #[test]
