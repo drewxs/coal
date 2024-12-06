@@ -9,7 +9,7 @@ use std::{cell::RefCell, rc::Rc};
 pub use env::*;
 pub use object::*;
 
-use crate::{Expr, Ident, IfExpr, Infix, Literal, Prefix, Program, Stmt, Type};
+use crate::{Expr, Ident, IfExpr, Infix, Literal, Prefix, Program, Span, Stmt, Type};
 
 #[derive(Clone, Debug)]
 pub struct Evaluator {
@@ -32,7 +32,9 @@ impl Evaluator {
 
             match self.eval_stmt(stmt) {
                 Some(Object::Return(val)) => return Some(*val),
-                Some(Object::Error(msg)) => return Some(Object::Error(msg)),
+                Some(Object::Error { message, span }) => {
+                    return Some(Object::Error { message, span })
+                }
                 obj => res = obj,
             }
         }
@@ -57,7 +59,7 @@ impl Evaluator {
             Stmt::Return(expr) => {
                 let val = self.eval_expr(&expr)?;
                 match val {
-                    Object::Error(_) => Some(val),
+                    Object::Error { message, span } => Some(Object::Error { message, span }),
                     _ => Some(Object::Return(Box::new(val))),
                 }
             }
@@ -75,7 +77,9 @@ impl Evaluator {
 
             match self.eval_stmt(stmt) {
                 Some(Object::Return(val)) => return Some(Object::Return(val)),
-                Some(Object::Error(msg)) => return Some(Object::Error(msg)),
+                Some(Object::Error { message, span }) => {
+                    return Some(Object::Error { message, span })
+                }
                 obj => res = obj,
             }
         }
@@ -85,15 +89,16 @@ impl Evaluator {
 
     fn eval_expr(&mut self, expr: &Expr) -> Option<Object> {
         match expr {
-            Expr::Ident(Ident(name)) => self.env.borrow().get(name),
-            Expr::Literal(literal) => self.eval_literal_expr(literal),
-            Expr::Prefix(prefix, rhs) => self.eval_prefix_expr(prefix, rhs),
-            Expr::Infix(op, lhs, rhs) => self.eval_infix_expr(op, lhs, rhs),
+            Expr::Ident(Ident(name), _) => self.env.borrow().get(name),
+            Expr::Literal(literal, _) => self.eval_literal_expr(literal),
+            Expr::Prefix(prefix, rhs, span) => self.eval_prefix_expr(prefix, rhs, span),
+            Expr::Infix(op, lhs, rhs, span) => self.eval_infix_expr(op, lhs, rhs, span),
             Expr::If {
                 cond,
                 then,
                 elifs,
                 alt,
+                ..
             } => self.eval_if_expr(cond, then, elifs, alt),
             _ => None,
         }
@@ -145,7 +150,7 @@ impl Evaluator {
         Some(Object::Str(res))
     }
 
-    fn eval_prefix_expr(&mut self, prefix: &Prefix, rhs: &Expr) -> Option<Object> {
+    fn eval_prefix_expr(&mut self, prefix: &Prefix, rhs: &Expr, span: &Span) -> Option<Object> {
         let rhs = self.eval_expr(rhs)?;
         let obj = match prefix {
             Prefix::Not => match rhs {
@@ -157,17 +162,23 @@ impl Evaluator {
                 Object::Float(f) => Object::Float(-f),
                 TRUE => Object::Int(-1),
                 FALSE => Object::Int(0),
-                _ => Object::Error(format!(
-                    "bad operand type for unary -: '{}'",
-                    Type::from(&rhs)
-                )),
+                _ => Object::Error {
+                    message: format!("bad operand type for unary -: '{}'", Type::from(&rhs)),
+                    span: *span,
+                },
             },
         };
 
         Some(obj)
     }
 
-    fn eval_infix_expr(&mut self, op: &Infix, lhs: &Expr, rhs: &Expr) -> Option<Object> {
+    fn eval_infix_expr(
+        &mut self,
+        op: &Infix,
+        lhs: &Expr,
+        rhs: &Expr,
+        span: &Span,
+    ) -> Option<Object> {
         let lhs = self.eval_expr(lhs)?;
         let rhs = self.eval_expr(rhs)?;
 
@@ -175,39 +186,51 @@ impl Evaluator {
             Object::Int(lhs) => match rhs {
                 Object::Int(rhs) => Some(self.eval_infix_int_int(op, lhs, rhs)),
                 Object::Float(rhs) => Some(self.eval_infix_int_float(op, lhs, rhs)),
-                _ => Some(Object::Error(format!(
-                    "unsupported operation: {} {op} {}",
-                    Type::Int,
-                    Type::from(&rhs)
-                ))),
+                _ => Some(Object::Error {
+                    message: format!(
+                        "unsupported operation: {} {op} {}",
+                        Type::Int,
+                        Type::from(&rhs)
+                    ),
+                    span: *span,
+                }),
             },
             Object::Float(lhs) => match rhs {
                 Object::Int(rhs) => Some(self.eval_infix_float_int(op, lhs, rhs)),
                 Object::Float(rhs) => Some(self.eval_infix_float_float(op, lhs, rhs)),
-                _ => Some(Object::Error(format!(
-                    "unsupported operation: {} {op} {}",
-                    Type::Float,
-                    Type::from(&rhs)
-                ))),
+                _ => Some(Object::Error {
+                    message: format!(
+                        "unsupported operation: {} {op} {}",
+                        Type::Float,
+                        Type::from(&rhs)
+                    ),
+                    span: *span,
+                }),
             },
             Object::Str(lhs) => match rhs {
-                Object::Str(rhs) => self.eval_infix_str_str(op, &lhs, &rhs),
-                Object::Int(rhs) => self.eval_infix_str_int(op, &lhs, &rhs),
-                _ => Some(Object::Error(format!(
-                    "unsupported operation: {} {op} {}",
-                    Type::Str,
-                    Type::from(&rhs)
-                ))),
+                Object::Str(rhs) => self.eval_infix_str_str(op, &lhs, &rhs, span),
+                Object::Int(rhs) => self.eval_infix_str_int(op, &lhs, &rhs, span),
+                _ => Some(Object::Error {
+                    message: format!(
+                        "unsupported operation: {} {op} {}",
+                        Type::Str,
+                        Type::from(&rhs)
+                    ),
+                    span: *span,
+                }),
             },
             Object::Bool(lhs) => match rhs {
-                Object::Bool(rhs) => Some(self.eval_infix_bool_bool(op, &lhs, &rhs)),
+                Object::Bool(rhs) => Some(self.eval_infix_bool_bool(op, &lhs, &rhs, span)),
                 _ => Some(FALSE),
             },
-            _ => Some(Object::Error(format!(
-                "unsupported operation: {} {op} {}",
-                Type::from(&lhs),
-                Type::from(&rhs)
-            ))),
+            _ => Some(Object::Error {
+                message: format!(
+                    "unsupported operation: {} {op} {}",
+                    Type::from(&lhs),
+                    Type::from(&rhs)
+                ),
+                span: *span,
+            }),
         }
     }
 
@@ -279,7 +302,13 @@ impl Evaluator {
         }
     }
 
-    fn eval_infix_str_str(&mut self, op: &Infix, lhs: &str, rhs: &str) -> Option<Object> {
+    fn eval_infix_str_str(
+        &mut self,
+        op: &Infix,
+        lhs: &str,
+        rhs: &str,
+        span: &Span,
+    ) -> Option<Object> {
         match op {
             Infix::Plus => Some(Object::Str(lhs.to_string() + rhs)),
             Infix::EQ => Some(Object::Bool(lhs == rhs)),
@@ -288,34 +317,39 @@ impl Evaluator {
             Infix::LTE => Some(Object::Bool(lhs <= rhs)),
             Infix::GT => Some(Object::Bool(lhs > rhs)),
             Infix::GTE => Some(Object::Bool(lhs >= rhs)),
-            _ => Some(Object::Error(format!(
-                "unsupported operation: {t} {op} {t}",
-                t = Type::Str,
-            ))),
+            _ => Some(Object::Error {
+                message: format!("unsupported operation: {t} {op} {t}", t = Type::Str),
+                span: *span,
+            }),
         }
     }
 
-    fn eval_infix_str_int(&mut self, op: &Infix, lhs: &str, rhs: &i64) -> Option<Object> {
+    fn eval_infix_str_int(
+        &mut self,
+        op: &Infix,
+        lhs: &str,
+        rhs: &i64,
+        span: &Span,
+    ) -> Option<Object> {
         match op {
             Infix::Mul => Some(Object::Str(lhs.repeat(*rhs as usize))),
             Infix::EQ => Some(FALSE),
             Infix::NEQ => Some(TRUE),
-            _ => Some(Object::Error(format!(
-                "unsupported operation: {} {op} {}",
-                Type::Str,
-                Type::Int
-            ))),
+            _ => Some(Object::Error {
+                message: format!("unsupported operation: {} {op} {}", Type::Str, Type::Int),
+                span: *span,
+            }),
         }
     }
 
-    fn eval_infix_bool_bool(&mut self, op: &Infix, lhs: &bool, rhs: &bool) -> Object {
+    fn eval_infix_bool_bool(&mut self, op: &Infix, lhs: &bool, rhs: &bool, span: &Span) -> Object {
         match op {
             Infix::EQ => Object::Bool(lhs == rhs),
             Infix::NEQ => Object::Bool(lhs != rhs),
-            _ => Object::Error(format!(
-                "unsupported operation: {t} {op} {t}",
-                t = Type::Bool
-            )),
+            _ => Object::Error {
+                message: format!("unsupported operation: {t} {op} {t}", t = Type::Bool),
+                span: *span,
+            },
         }
     }
 

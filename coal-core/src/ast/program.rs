@@ -81,7 +81,6 @@ impl fmt::Display for Program {
     }
 }
 
-/// An iterator over the statements in a program.
 pub struct ProgramIter<'a> {
     program: &'a Program,
     index: usize,

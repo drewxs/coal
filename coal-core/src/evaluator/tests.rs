@@ -79,15 +79,17 @@ fn test_eval_infix_expressions() {
         (r#""a" < "b""#, Some(TRUE)),
         (
             r#""a" - "b""#,
-            Some(Object::Error(String::from(
-                "unsupported operation: str - str",
-            ))),
+            Some(Object::Error {
+                message: String::from("unsupported operation: str - str"),
+                span: ((1, 1), (1, 10)),
+            }),
         ),
         (
             r#""a" / 3.14"#,
-            Some(Object::Error(String::from(
-                "unsupported operation: str / float",
-            ))),
+            Some(Object::Error {
+                message: String::from("unsupported operation: str / float"),
+                span: ((1, 1), (1, 11)),
+            }),
         ),
     ];
 
@@ -142,7 +144,7 @@ fn test_eval_nested_if_expressions() {
             r#"if true {
                 if true {
                     return 1;
-                } 
+                }
                 return 2;
             } else {
                 return 3;
@@ -153,7 +155,7 @@ fn test_eval_nested_if_expressions() {
             r#"if true {
                 if false {
                     return 1;
-                } 
+                }
                 return 2;
             } else {
                 return 3;

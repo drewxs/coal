@@ -55,11 +55,11 @@ impl TryFrom<&Expr> for Type {
 
     fn try_from(literal: &Expr) -> Result<Self, Self::Error> {
         match literal {
-            Expr::Literal(Literal::Str(_)) => Ok(Type::Str),
-            Expr::Literal(Literal::Int(_)) => Ok(Type::Int),
-            Expr::Literal(Literal::Float(_)) => Ok(Type::Float),
-            Expr::Literal(Literal::Bool(_)) => Ok(Type::Bool),
-            Expr::Ident(ident) => Ok(Type::UserDefined(ident.name())),
+            Expr::Literal(Literal::Str(_), _) => Ok(Type::Str),
+            Expr::Literal(Literal::Int(_), _) => Ok(Type::Int),
+            Expr::Literal(Literal::Float(_), _) => Ok(Type::Float),
+            Expr::Literal(Literal::Bool(_), _) => Ok(Type::Bool),
+            Expr::Ident(ident, _) => Ok(Type::UserDefined(ident.name())),
             _ => Err(String::from("invaild literal")),
         }
     }

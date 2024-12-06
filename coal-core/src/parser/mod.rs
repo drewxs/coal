@@ -175,12 +175,15 @@ impl Parser {
     }
 
     fn parse_expr(&mut self, precedence: Precedence) -> Option<Expr> {
-        let mut lhs = match &self.curr_node.token {
-            Token::Ident(_) => Ident::try_from(&self.curr_node.token).map(Expr::Ident).ok(),
-            Token::Int(i) => Some(Expr::Literal(Literal::Int(*i))),
-            Token::Float(f) => Some(Expr::Literal(Literal::Float(*f))),
-            Token::Str(s) => Some(Expr::Literal(Literal::Str(s.clone()))),
-            Token::Bool(b) => Some(Expr::Literal(Literal::Bool(*b))),
+        let LexicalToken { token, span } = &self.curr_node;
+        let mut lhs = match token {
+            Token::Ident(_) => Ident::try_from(&self.curr_node.token)
+                .map(|ident| Expr::Ident(ident, *span))
+                .ok(),
+            Token::Int(i) => Some(Expr::Literal(Literal::Int(*i), *span)),
+            Token::Float(f) => Some(Expr::Literal(Literal::Float(*f), *span)),
+            Token::Str(s) => Some(Expr::Literal(Literal::Str(s.clone()), *span)),
+            Token::Bool(b) => Some(Expr::Literal(Literal::Bool(*b), *span)),
             Token::Bang | Token::Plus | Token::Minus => self.parse_prefix_expr(),
             Token::Lparen => self.parse_grouped_expr(),
             Token::If => self.parse_if_expr(),
@@ -207,11 +210,9 @@ impl Parser {
                 | Token::GTE
                 | Token::LT
                 | Token::LTE => {
-                    self.advance();
                     lhs = self.parse_infix_expr(&lhs?);
                 }
                 Token::Lparen => {
-                    self.advance();
                     lhs = self.parse_call_expr(&lhs?);
                 }
                 Token::Lbracket => {
@@ -232,24 +233,48 @@ impl Parser {
     }
 
     fn parse_prefix_expr(&mut self) -> Option<Expr> {
+        let (start, _) = self.curr_node.span;
+
         let prefix = Prefix::try_from(&self.curr_node.token).ok()?;
         self.advance();
-        self.parse_expr(Precedence::Prefix)
-            .map(|expr| Expr::Prefix(prefix, Box::new(expr)))
+
+        self.parse_expr(Precedence::Prefix).map(|expr| {
+            let (_, end) = expr.span();
+            Expr::Prefix(prefix, Box::new(expr.clone()), (start, end))
+        })
     }
 
     fn parse_infix_expr(&mut self, lhs: &Expr) -> Option<Expr> {
+        self.advance();
+
         let infix = Infix::try_from(&self.curr_node.token).ok()?;
         let prec = Precedence::from(&self.curr_node.token);
         self.advance();
+
         let rhs = self.parse_expr(prec)?;
-        Some(Expr::Infix(infix, Box::new(lhs.clone()), Box::new(rhs)))
+
+        let (start, _) = lhs.span();
+        let (_, end) = rhs.span();
+
+        Some(Expr::Infix(
+            infix,
+            Box::new(lhs.clone()),
+            Box::new(rhs),
+            (start, end),
+        ))
     }
 
     fn parse_call_expr(&mut self, func: &Expr) -> Option<Expr> {
+        let (start, _) = self.curr_node.span;
+        self.advance();
+
+        let args = self.parse_expr_list(Token::Rparen)?;
+        let (_, end) = self.curr_node.span;
+
         Some(Expr::Call {
             func: Box::new(func.clone()),
-            args: self.parse_expr_list(Token::Rparen)?,
+            args,
+            span: (start, end),
         })
     }
 
@@ -263,6 +288,8 @@ impl Parser {
     }
 
     fn parse_if_expr(&mut self) -> Option<Expr> {
+        let (start, _) = self.curr_node.span;
+
         self.advance();
         let cond = self.parse_expr(Precedence::Lowest)?;
 
@@ -298,15 +325,20 @@ impl Parser {
             alt = Some(self.parse_block_stmt());
         }
 
+        let (_, end) = self.curr_node.span;
+
         Some(Expr::If {
             cond: Box::new(cond),
             then,
             elifs,
             alt,
+            span: (start, end),
         })
     }
 
     fn parse_fn_expr(&mut self) -> Option<Expr> {
+        let (start, _) = self.curr_node.span;
+
         self.advance();
 
         let ident = Ident::try_from(&self.curr_node.token).ok()?;
@@ -322,11 +354,14 @@ impl Parser {
 
         let body = self.parse_block_stmt();
 
+        let (_, end) = self.curr_node.span;
+
         Some(Expr::Fn {
             name: ident.name(),
             args,
             ret_t,
             body,
+            span: (start, end),
         })
     }
 

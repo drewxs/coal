@@ -6,7 +6,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{Expr, Literal, Stmt, Type};
+use crate::{Expr, Literal, Span, Stmt, Type};
 
 use super::Env;
 
@@ -33,7 +33,10 @@ pub enum Object {
     },
     Nil,
     Return(Box<Object>),
-    Error(String),
+    Error {
+        message: String,
+        span: Span,
+    },
 }
 
 pub const TRUE: Object = Object::Bool(true);
@@ -90,7 +93,13 @@ impl Object {
             }
             Object::Nil => write!(f, "nil"),
             Object::Return(v) => write!(f, "return {v};"),
-            Object::Error(e) => write!(f, "{e}"),
+            Object::Error {
+                message,
+                span: trace,
+            } => {
+                let ((l1, c1), (l2, c2)) = trace;
+                write!(f, "{l1}:{c1}-{l2}:{c2} {}", message)
+            }
         }
     }
 }
