@@ -22,11 +22,22 @@ pub enum Command {
 
         #[arg(short = 't', long, action)]
         tokens: bool,
+
+        #[arg(short = 'a', long, action)]
+        ast: bool,
     },
 
     #[command(about = "Evaluate scripts")]
     #[command(short_flag = 'e')]
-    Eval { input: String },
+    Eval {
+        input: String,
+
+        #[arg(short = 't', long, action)]
+        tokens: bool,
+
+        #[arg(short = 'a', long, action)]
+        ast: bool,
+    },
 
     #[command(about = "Format files")]
     #[command(long_about = "Format all files in the current project or from a given path")]

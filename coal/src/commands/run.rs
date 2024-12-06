@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read, process};
 
-use coal_core::{Evaluator, Lexer};
+use coal_core::{Evaluator, Lexer, Program};
 
 pub fn run_file(path: &str) {
     eval(&contents(path));
@@ -14,8 +14,18 @@ pub fn print_tokens(input: &str) {
     Lexer::new(input).print_tokens();
 }
 
+pub fn print_ast(input: &str) {
+    for stmt in Program::parse(input).iter() {
+        println!("{stmt:?}");
+    }
+}
+
 pub fn print_file_tokens(path: &str) {
     print_tokens(&contents(path));
+}
+
+pub fn print_file_ast(path: &str) {
+    print_ast(&contents(path));
 }
 
 fn contents(path: &str) -> String {

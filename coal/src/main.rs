@@ -9,16 +9,27 @@ fn main() {
 
     if let Some(cmd) = args.cmd {
         return match cmd {
-            Command::Run { path, tokens } => match path::main_program(path) {
+            Command::Run { path, tokens, ast } => match path::main_program(path) {
                 Ok(path) => {
                     if tokens {
-                        return coal::print_file_tokens(&path);
+                        coal::print_file_tokens(&path);
+                    } else if ast {
+                        coal::print_file_ast(&path);
+                    } else {
+                        coal::run_file(&path);
                     }
-                    coal::run_file(&path);
                 }
                 Err(err) => eprintln!("{err}"),
             },
-            Command::Eval { input } => coal::eval(&input),
+            Command::Eval { input, tokens, ast } => {
+                if tokens {
+                    coal::print_tokens(&input);
+                } else if ast {
+                    coal::print_ast(&input);
+                } else {
+                    coal::eval(&input);
+                }
+            }
             Command::Fmt { path, dry_run } => {
                 let path = path.unwrap_or(String::from("."));
                 match coal::fmt_path(&path, dry_run) {
