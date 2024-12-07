@@ -1,8 +1,8 @@
-use std::fmt;
+use std::{borrow::Borrow, fmt};
 
 use crate::{Object, Token};
 
-use super::{Expr, Ident, Literal, Stmt};
+use super::{Expr, Ident, Infix, Literal, Stmt};
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub enum Type {
@@ -59,7 +59,17 @@ impl TryFrom<&Expr> for Type {
             Expr::Literal(Literal::Int(_), _) => Ok(Type::Int),
             Expr::Literal(Literal::Float(_), _) => Ok(Type::Float),
             Expr::Literal(Literal::Bool(_), _) => Ok(Type::Bool),
+            Expr::Infix(op, lhs, _, _) => {
+                if *op == Infix::Div {
+                    Ok(Type::Float)
+                } else {
+                    Type::try_from(Borrow::<Expr>::borrow(lhs))
+                }
+            }
+            Expr::Prefix(_, rhs, _) => Type::try_from(Borrow::<Expr>::borrow(rhs)),
             Expr::Ident(ident, _) => Ok(Type::UserDefined(ident.name())),
+            Expr::Fn { ret_t, .. } => Ok(ret_t.clone()),
+            Expr::Call { func, .. } => Type::try_from(Borrow::<Expr>::borrow(func)),
             _ => Err(String::from("invaild literal")),
         }
     }
