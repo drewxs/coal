@@ -62,8 +62,18 @@ impl Evaluator {
 
     fn eval_stmt(&mut self, stmt: Stmt) -> Option<Object> {
         match stmt {
-            Stmt::Let(Ident(name), _, expr) => {
+            Stmt::Let(Ident(name), t, expr) => {
                 let val = self.eval_expr(&expr)?;
+                if let Object::Error { .. } = val {
+                    return Some(val);
+                }
+                let resolved_t = Type::from(&val);
+                if t != resolved_t {
+                    return Some(Object::Error {
+                        message: format!("type mismatch: expected={t}, got={resolved_t}"),
+                        span: expr.span(),
+                    });
+                }
                 self.env.borrow_mut().set(name, val);
                 None
             }
