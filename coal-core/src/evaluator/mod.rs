@@ -382,7 +382,11 @@ impl Evaluator {
         elifs: &Vec<IfExpr>,
         alt: &Option<Vec<Stmt>>,
     ) -> Option<Object> {
-        if self.eval_expr(cond)?.is_truthy() {
+        let cond = self.eval_expr(cond)?;
+        if let Object::Error { .. } = cond {
+            return Some(cond);
+        }
+        if cond.is_truthy() {
             return self.eval_stmts(then.to_owned());
         }
         for elif in elifs {
