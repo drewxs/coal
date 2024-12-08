@@ -148,15 +148,17 @@ impl Highlighter for MatchingBracketHighlighter {
         if let Some((bracket, pos)) = self.bracket.get() {
             if let Some((matching, idx)) = find_matching_bracket(line, pos, bracket) {
                 let mut copy = line.to_owned();
-                copy.replace_range(
-                    idx..=pos,
-                    &format!(
-                        "\x1b[1;34m{}\x1b[0m{}\x1b[1;34m{}\x1b[0m",
-                        matching as char,
-                        &line[idx + 1..pos],
-                        line.chars().nth(pos).unwrap()
-                    ),
-                );
+                if idx + 1 < pos {
+                    copy.replace_range(
+                        idx..=pos,
+                        &format!(
+                            "\x1b[1;34m{}\x1b[0m{}\x1b[1;34m{}\x1b[0m",
+                            matching as char,
+                            &line[idx + 1..pos],
+                            line.chars().nth(pos).unwrap()
+                        ),
+                    );
+                }
                 return Cow::Owned(copy);
             }
         }
