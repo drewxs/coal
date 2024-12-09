@@ -62,6 +62,7 @@ impl Lexer {
         input = RE_NEWLINE_SPACES
             .replace_all(&input, "\n")
             .replace(" ;", ";")
+            .replace("\t", "")
             .to_string();
 
         input
