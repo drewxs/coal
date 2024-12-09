@@ -38,7 +38,8 @@ fn test_parse_let_statements() {
     ];
 
     for (input, expected) in tests {
-        assert_eq!(expected, Program::parse(input).statements[0]);
+        let actual = Parser::from(input).parse();
+        assert_eq!(expected, actual[0]);
     }
 }
 
@@ -48,7 +49,6 @@ fn test_parse_let_statements_inference() {
         let x = 5;
         let y = 5.0;
         let z = "hello";"#;
-    let program = Program::parse(input);
     let expected = vec![
         Stmt::Let(
             Ident(String::from("x")),
@@ -66,8 +66,9 @@ fn test_parse_let_statements_inference() {
             Expr::Literal(Literal::Str(String::from("hello")), ((3, 10), (3, 17))),
         ),
     ];
+    let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, program.statements);
+    assert_eq!(expected, actual);
 }
 
 #[test]
@@ -75,7 +76,7 @@ fn test_parse_return_statements() {
     let tests = vec!["return 7;", "return 100;", "return 999999;"];
 
     for input in tests {
-        let stmt = &Program::parse(input).statements[0];
+        let stmt = &Parser::from(input).parse()[0];
         if !matches!(stmt, Stmt::Return(_)) {
             panic!("[{input}] expected=Stmt::Return, got={stmt:?}");
         }
@@ -85,20 +86,19 @@ fn test_parse_return_statements() {
 #[test]
 fn test_parse_identifier_expressions() {
     let input = "foo; bar; foobar;";
-    let program = Program::parse(input);
     let expected = vec![
         Stmt::Expr(Expr::Ident(Ident::from("foo"), ((1, 1), (1, 4)))),
         Stmt::Expr(Expr::Ident(Ident::from("bar"), ((1, 6), (1, 9)))),
         Stmt::Expr(Expr::Ident(Ident::from("foobar"), ((1, 11), (1, 17)))),
     ];
+    let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, program.statements);
+    assert_eq!(expected, actual);
 }
 
 #[test]
 fn test_parse_literal_expressions() {
     let input = r#"5; 10.0; false; "foo";"#;
-    let program = Program::parse(input);
     let expected = vec![
         Stmt::Expr(Expr::Literal(Literal::Int(5), ((1, 1), (1, 2)))),
         Stmt::Expr(Expr::Literal(Literal::Float(10.0), ((1, 4), (1, 8)))),
@@ -108,14 +108,14 @@ fn test_parse_literal_expressions() {
             ((1, 17), (1, 22)),
         )),
     ];
+    let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, program.statements);
+    assert_eq!(expected, actual);
 }
 
 #[test]
 fn test_parse_prefix_expressions() {
     let input = "!5; -5; !true; !false;";
-    let program = Program::parse(input);
     let expected = vec![
         Stmt::Expr(Expr::Prefix(
             Prefix::Not,
@@ -138,8 +138,9 @@ fn test_parse_prefix_expressions() {
             ((1, 16), (1, 22)),
         )),
     ];
+    let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, program.statements);
+    assert_eq!(expected, actual);
 }
 
 #[test]
@@ -274,7 +275,8 @@ fn test_parse_infix_expressions() {
     ];
 
     for (input, expected) in tests {
-        assert_eq!(expected, Program::parse(input).statements[0]);
+        let actual = Parser::from(input).parse();
+        assert_eq!(expected, actual[0]);
     }
 }
 
@@ -590,14 +592,14 @@ fn test_parse_operator_precedence() {
 
     for (input, expected) in tests {
         dbg!(input);
-        assert_eq!(expected, Program::parse(input).statements[0]);
+        let actual = Parser::from(input).parse();
+        assert_eq!(expected, actual[0]);
     }
 }
 
 #[test]
 fn test_parse_if_expression() {
     let input = "if x < y { return x }";
-    let program = Program::parse(input);
     let expected = Stmt::Expr(Expr::If {
         cond: Box::new(Expr::Infix(
             Infix::LT,
@@ -613,8 +615,9 @@ fn test_parse_if_expression() {
         alt: None,
         span: ((1, 1), (1, 22)),
     });
+    let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, program.statements[0]);
+    assert_eq!(expected, actual[0]);
 }
 
 #[test]
@@ -628,7 +631,6 @@ fn test_parse_nested_if_expression() {
         } else {
             return z;
         }"#;
-    let program = Program::parse(input);
     let expected = Stmt::Expr(Expr::If {
         cond: Box::new(Expr::Infix(
             Infix::LT,
@@ -661,8 +663,9 @@ fn test_parse_nested_if_expression() {
         ))]),
         span: ((1, 1), (8, 3)),
     });
+    let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, program.statements[0]);
+    assert_eq!(expected, actual[0]);
 }
 
 #[test]
@@ -720,9 +723,9 @@ fn test_parse_elif_expression() {
         ))]),
         span: ((1, 1), (9, 3)),
     });
-    let program = Program::parse(input);
+    let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, program.statements[0]);
+    assert_eq!(expected, actual[0]);
 }
 
 #[test]
@@ -767,14 +770,14 @@ fn test_parse_function_expressions() {
 
     for (input, expected) in tests {
         dbg!(input);
-        assert_eq!(expected, Program::parse(input).statements[0]);
+        let actual = Parser::from(input).parse();
+        assert_eq!(expected, actual[0]);
     }
 }
 
 #[test]
 fn test_parse_call_expression() {
     let input = "add(1, 2 * 3, 4 + 5);";
-    let program = Program::from(input);
     let expected = Stmt::Expr(Expr::Call {
         func: Box::new(Expr::Ident(Ident::from("add"), ((1, 1), (1, 4)))),
         args: vec![
@@ -794,6 +797,7 @@ fn test_parse_call_expression() {
         ],
         span: ((1, 1), (1, 21)),
     });
+    let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, program.statements[0]);
+    assert_eq!(expected, actual[0]);
 }
