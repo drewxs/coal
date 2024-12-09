@@ -81,14 +81,14 @@ fn test_eval_infix_expressions() {
             r#""a" - "b""#,
             Some(Object::Error {
                 message: String::from("unsupported operation: str - str"),
-                span: ((1, 1), (1, 10)),
+                span: ((1, 1), (1, 9)),
             }),
         ),
         (
             r#""a" / 3.14"#,
             Some(Object::Error {
                 message: String::from("unsupported operation: str / float"),
-                span: ((1, 1), (1, 11)),
+                span: ((1, 1), (1, 10)),
             }),
         ),
     ];

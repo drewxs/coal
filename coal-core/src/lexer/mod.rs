@@ -68,7 +68,7 @@ impl Lexer {
 
         if self.ch == '\n' {
             self.line += 1;
-            self.col = 1;
+            self.col = 0;
         } else {
             self.col += 1;
         }
@@ -104,24 +104,24 @@ impl Iterator for Lexer {
                 }
                 _ => {
                     self.read_char();
-                    LexicalToken::new(Token::Assign, (cursor, (self.line, self.col)))
+                    LexicalToken::new(Token::Assign, (cursor, cursor))
                 }
             },
             ';' => {
                 self.read_char();
-                LexicalToken::new(Token::Semicolon, (cursor, (cursor.0, cursor.1 + 1)))
+                LexicalToken::new(Token::Semicolon, (cursor, cursor))
             }
             '(' => {
                 self.read_char();
-                LexicalToken::new(Token::Lparen, (cursor, (self.line, self.col)))
+                LexicalToken::new(Token::Lparen, (cursor, cursor))
             }
             ')' => {
                 self.read_char();
-                LexicalToken::new(Token::Rparen, (cursor, (self.line, self.col)))
+                LexicalToken::new(Token::Rparen, (cursor, cursor))
             }
             ',' => {
                 self.read_char();
-                LexicalToken::new(Token::Comma, (cursor, (self.line, self.col)))
+                LexicalToken::new(Token::Comma, (cursor, cursor))
             }
             '!' => match self.next_char() {
                 '=' => {
@@ -131,12 +131,12 @@ impl Iterator for Lexer {
                 }
                 _ => {
                     self.read_char();
-                    LexicalToken::new(Token::Bang, (cursor, (self.line, self.col)))
+                    LexicalToken::new(Token::Bang, (cursor, cursor))
                 }
             },
             '+' => {
                 self.read_char();
-                LexicalToken::new(Token::Plus, (cursor, (self.line, self.col)))
+                LexicalToken::new(Token::Plus, (cursor, cursor))
             }
             '-' => match self.next_char() {
                 '>' => {
@@ -146,12 +146,12 @@ impl Iterator for Lexer {
                 }
                 _ => {
                     self.read_char();
-                    LexicalToken::new(Token::Minus, (cursor, (self.line, self.col)))
+                    LexicalToken::new(Token::Minus, (cursor, cursor))
                 }
             },
             '*' => {
                 self.read_char();
-                LexicalToken::new(Token::Asterisk, (cursor, (self.line, self.col)))
+                LexicalToken::new(Token::Asterisk, (cursor, cursor))
             }
             '/' => match self.next_char() {
                 '/' => {
@@ -170,12 +170,12 @@ impl Iterator for Lexer {
                 }
                 _ => {
                     self.read_char();
-                    LexicalToken::new(Token::Slash, (cursor, (self.line, self.col)))
+                    LexicalToken::new(Token::Slash, (cursor, cursor))
                 }
             },
             '%' => {
                 self.read_char();
-                LexicalToken::new(Token::Modulo, (cursor, (self.line, self.col)))
+                LexicalToken::new(Token::Modulo, (cursor, cursor))
             }
             '<' => match self.next_char() {
                 '=' => {
@@ -185,7 +185,7 @@ impl Iterator for Lexer {
                 }
                 _ => {
                     self.read_char();
-                    LexicalToken::new(Token::LT, (cursor, (self.line, self.col)))
+                    LexicalToken::new(Token::LT, (cursor, cursor))
                 }
             },
             '>' => match self.next_char() {
@@ -196,36 +196,36 @@ impl Iterator for Lexer {
                 }
                 _ => {
                     self.read_char();
-                    LexicalToken::new(Token::GT, (cursor, (self.line, self.col)))
+                    LexicalToken::new(Token::GT, (cursor, cursor))
                 }
             },
             '{' => {
                 self.read_char();
-                LexicalToken::new(Token::Lbrace, (cursor, (self.line, self.col)))
+                LexicalToken::new(Token::Lbrace, (cursor, cursor))
             }
             '}' => {
                 self.read_char();
-                LexicalToken::new(Token::Rbrace, (cursor, (self.line, self.col)))
+                LexicalToken::new(Token::Rbrace, (cursor, cursor))
             }
             ':' => {
                 self.read_char();
-                LexicalToken::new(Token::Colon, (cursor, (self.line, self.col)))
+                LexicalToken::new(Token::Colon, (cursor, cursor))
             }
             '"' => {
-                let pos = self.pos + 1;
-                loop {
-                    self.read_char();
+                self.read_char();
+                let pos = self.pos;
+                while self.ch != '"' && self.ch != '\0' {
                     if self.ch == '\\' && self.next_char() != '\0' {
                         self.read_char();
-                        continue;
-                    }
-                    if self.ch == '"' || self.ch == '\0' {
-                        break;
+                        self.read_char();
+                    } else {
+                        self.read_char();
                     }
                 }
                 let val = self.input[pos..self.pos].to_string();
-                self.read_char();
-                LexicalToken::new(Token::Str(val), (cursor, (self.line, self.col)))
+                let cursor_end = (self.line, self.col);
+                self.consume('"');
+                LexicalToken::new(Token::Str(val), (cursor, cursor_end))
             }
             'a'..='z' | 'A'..='Z' | '_' => {
                 let pos = self.pos;
@@ -234,11 +234,12 @@ impl Iterator for Lexer {
                 }
                 LexicalToken::new(
                     Token::from(&self.input[pos..self.pos]),
-                    (cursor, (self.line, self.col)),
+                    (cursor, (self.line, self.col.saturating_sub(1))),
                 )
             }
             '0'..='9' | '.' => {
                 let pos = self.pos;
+                let (line, col) = cursor;
 
                 while self.ch.is_ascii_digit() || self.ch == '.' {
                     self.read_char();
@@ -248,18 +249,21 @@ impl Iterator for Lexer {
                 if num_str.contains('.') {
                     LexicalToken::new(
                         Token::Float(num_str.parse::<f64>().expect("invalid float literal")),
-                        (cursor, (self.line, self.col)),
+                        (cursor, (line, col + num_str.len() - 1)),
                     )
                 } else {
                     LexicalToken::new(
                         Token::Int(num_str.parse::<i64>().expect("invalid int literal")),
-                        (cursor, (self.line, self.col)),
+                        (cursor, (line, col + num_str.len() - 1)),
                     )
                 }
             }
             '\n' => {
                 self.read_char();
-                LexicalToken::new(Token::NewLine, (cursor, (self.line, self.col)))
+                LexicalToken::new(
+                    Token::NewLine,
+                    ((self.line - 1, self.col), (self.line - 1, self.col)),
+                )
             }
             '\0' => {
                 return None;
