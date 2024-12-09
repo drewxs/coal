@@ -349,6 +349,10 @@ fn editor() -> Editor<ReplHelper, FileHistory> {
         Event::KeySeq(vec![KeyEvent(KeyCode::Enter, Modifiers::NONE)]),
         EventHandler::Conditional(Box::new(EnterHandler)),
     );
+    rl.bind_sequence(
+        Event::KeySeq(vec![KeyEvent(KeyCode::Char('e'), Modifiers::CTRL)]),
+        EventHandler::Simple(Cmd::CompleteHint),
+    );
 
     let _ = rl.load_history(&crate::path::history());
 
