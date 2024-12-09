@@ -30,9 +30,9 @@ pub fn repl() {
             Ok(line) => match line.trim() {
                 "exit" | "quit" => break,
                 "clear" => println!("\x1B[2J\x1B[1;1H"),
-                _ => {
-                    evaluator.print_eval(&line);
-                    let _ = rl.add_history_entry(line);
+                input => {
+                    evaluator.print_eval(input);
+                    let _ = rl.add_history_entry(input);
                 }
             },
             Err(ReadlineError::Interrupted) => {
