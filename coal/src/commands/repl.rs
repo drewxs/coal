@@ -7,8 +7,9 @@ use rustyline::{
     hint::{Hint, Hinter},
     history::FileHistory,
     validate::MatchingBracketValidator,
-    Completer, CompletionType, Config, Context, EditMode, Editor, Helper, Highlighter, Hinter,
-    Result, Validator,
+    Cmd, Completer, CompletionType, ConditionalEventHandler, Config, Context, EditMode, Editor,
+    Event, EventContext, EventHandler, Helper, Highlighter, Hinter, KeyCode, KeyEvent, Modifiers,
+    RepeatCount, Result, Validator,
 };
 
 use coal_core::Evaluator;
@@ -319,16 +320,44 @@ impl Highlighter for ReplHelper {
     }
 }
 
+struct EnterHandler;
+
+impl ConditionalEventHandler for EnterHandler {
+    fn handle(
+        &self,
+        _evt: &Event,
+        _n: RepeatCount,
+        _positive: bool,
+        ctx: &EventContext,
+    ) -> Option<Cmd> {
+        if ctx.line().len() > ctx.pos() {
+            return Some(Cmd::Insert(1, String::from("\n")));
+        }
+        None
+    }
+}
+
 fn editor() -> Editor<ReplHelper, FileHistory> {
     let mut rl = Editor::with_config(editor_config()).unwrap();
+
     rl.set_helper(Some(ReplHelper::new()));
+
+    rl.bind_sequence(
+        Event::KeySeq(vec![KeyEvent(KeyCode::Tab, Modifiers::NONE)]),
+        EventHandler::Simple(Cmd::Insert(1, String::from("\t"))),
+    );
+    rl.bind_sequence(
+        Event::KeySeq(vec![KeyEvent(KeyCode::Enter, Modifiers::NONE)]),
+        EventHandler::Conditional(Box::new(EnterHandler)),
+    );
+
     let _ = rl.load_history(&crate::path::history());
+
     rl
 }
 
 fn editor_config() -> Config {
     Config::builder()
-        .history_ignore_space(true)
         .completion_type(CompletionType::List)
         .edit_mode(EditMode::Emacs)
         .build()
