@@ -6,7 +6,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{Expr, Literal, Span, Stmt, Type};
+use crate::{Expr, Literal, ParserError, Span, Stmt, Type};
 
 use super::Env;
 
@@ -128,6 +128,15 @@ impl From<&Literal> for Object {
             Literal::Float(f) => Object::Float(*f),
             Literal::Bool(b) => Object::from(*b),
             Literal::Nil => Object::Nil,
+        }
+    }
+}
+
+impl From<&ParserError> for Object {
+    fn from(value: &ParserError) -> Self {
+        Object::Error {
+            message: value.kind.to_string(),
+            span: value.span,
         }
     }
 }

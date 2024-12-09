@@ -9,7 +9,7 @@ use std::{cell::RefCell, rc::Rc};
 pub use env::*;
 pub use object::*;
 
-use crate::{Expr, Ident, IfExpr, Infix, Literal, Prefix, Program, Span, Stmt, Type};
+use crate::{Expr, Ident, IfExpr, Infix, Literal, Parser, Prefix, Span, Stmt, Type};
 
 #[derive(Clone, Debug)]
 pub struct Evaluator {
@@ -22,10 +22,16 @@ impl Evaluator {
     }
 
     pub fn eval(&mut self, input: &str) -> Option<Object> {
-        let program = Program::parse(input);
+        let mut parser = Parser::from(input);
+        let stmts = parser.parse();
+
+        if !parser.errors.is_empty() {
+            return Some(Object::from(&parser.errors[0]));
+        }
+
         let mut res = None;
 
-        for stmt in program.statements {
+        for stmt in stmts {
             if stmt == Stmt::Void {
                 continue;
             }
