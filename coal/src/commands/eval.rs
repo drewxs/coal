@@ -1,4 +1,4 @@
-use coal_core::{Evaluator, Object};
+use coal_core::{clean_input, Evaluator, Object};
 
 pub fn eval(input: &str) {
     eval_with(&mut Evaluator::default(), input);
@@ -13,18 +13,21 @@ pub fn eval_with(evaluator: &mut Evaluator, input: &str) {
             } => {
                 if input.lines().count() > 1 {
                     let line = input.lines().nth(l1 - 1).unwrap();
-                    println!("\n{line}");
+                    println!("\x1b[31m{}\x1b[0m", "-".repeat(75));
+                    println!("{}", clean_input(line));
                     println!(
                         "\x1b[31m{}\x1b[0m",
-                        " ".repeat(c1 - 1) + &"^".repeat(c2 - c1),
+                        " ".repeat(c1 - 1) + &"^".repeat(c2 - c1 + 1),
                     );
-                    println!("{l1}:{c1}-{l2}:{c2} {message}");
+                    println!("{l1}:{c1}-{l2}:{c2} {message}\n");
                 } else {
+                    println!("\x1b[31m{}\x1b[0m", "-".repeat(75));
+                    println!("{}", clean_input(input));
                     println!(
-                        "\x1b[31m{}\x1b[0m\n",
-                        " ".repeat(c1 + 2) + &"^".repeat(c2 - c1),
+                        "\x1b[31m{}\x1b[0m",
+                        " ".repeat(c1 - 1) + &"^".repeat(c2 - c1 + 1),
                     );
-                    println!("{message}");
+                    println!("{message}\n");
                 }
             }
             _ => println!("{obj}"),
