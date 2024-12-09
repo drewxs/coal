@@ -8,8 +8,8 @@ pub use error::{ParserError, ParserErrorKind};
 pub use precedence::Precedence;
 
 use crate::{
-    Comment, Expr, Ident, IfExpr, Infix, Lexer, LexicalToken, Literal, Prefix, Program, Stmt,
-    Token, Type, Var,
+    Comment, Expr, Ident, IfExpr, Infix, Lexer, LexicalToken, Literal, Prefix, Stmt, Token, Type,
+    Var,
 };
 
 #[derive(Clone, Debug)]
@@ -32,8 +32,8 @@ impl Parser {
         parser
     }
 
-    pub fn parse(&mut self) -> Program {
-        let mut program = Program::default();
+    pub fn parse(&mut self) -> Vec<Stmt> {
+        let mut stmts = vec![];
         while !matches!(
             self.curr_node,
             LexicalToken {
@@ -42,11 +42,11 @@ impl Parser {
             }
         ) {
             if let Some(stmt) = self.parse_stmt() {
-                program.statements.push(stmt);
+                stmts.push(stmt);
             }
             self.advance();
         }
-        program
+        stmts
     }
 
     /// Checks for parser errors and returns `Ok(())` if none, or an `Err` with error details if present.

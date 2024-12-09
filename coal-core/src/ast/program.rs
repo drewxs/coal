@@ -16,14 +16,14 @@ impl Program {
 
     pub fn parse(input: &str) -> Self {
         let mut parser = Parser::from(input);
-        parser.parse()
+        Self::new(parser.parse())
     }
 
     pub fn parse_validate(input: &str) -> Self {
         let mut parser = Parser::from(input);
-        let program = parser.parse();
+        let stmts = parser.parse();
         parser.validate();
-        program
+        Self::new(stmts)
     }
 
     pub fn read_line(input: &str) -> String {
@@ -40,19 +40,19 @@ impl Program {
 
 impl From<&str> for Program {
     fn from(input: &str) -> Self {
-        Parser::from(input).parse()
+        Self::new(Parser::from(input).parse())
     }
 }
 
 impl From<&String> for Program {
     fn from(input: &String) -> Self {
-        Parser::from(input).parse()
+        Self::new(Parser::from(input).parse())
     }
 }
 
 impl From<&Vec<&str>> for Program {
     fn from(input: &Vec<&str>) -> Self {
-        Parser::from(&input.join("\n")).parse()
+        Self::new(Parser::from(&input.join("\n")).parse())
     }
 }
 
