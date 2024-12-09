@@ -17,9 +17,6 @@ use coal_core::Evaluator;
 use crate::eval_with;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const KEYWORDS_BUILTINS: &[&str] = &[
-    "let", "fn", "if", "else", "elif", "then", "return", "true", "false", "print",
-];
 
 pub fn repl() {
     println!("Coal {VERSION}");
@@ -111,6 +108,10 @@ impl ReplCompleter {
         Self
     }
 }
+
+const KEYWORDS_BUILTINS: &[&str] = &[
+    "let", "fn", "if", "else", "elif", "then", "return", "true", "false", "print",
+];
 
 impl Completer for ReplCompleter {
     type Candidate = Pair;
