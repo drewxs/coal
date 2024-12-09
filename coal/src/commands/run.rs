@@ -1,13 +1,11 @@
 use std::{fs::File, io::Read, process};
 
-use coal_core::{Evaluator, Lexer, Program};
+use coal_core::{Lexer, Program};
 
-pub fn run_file(path: &str) {
+use super::eval;
+
+pub fn run(path: &str) {
     eval(&contents(path));
-}
-
-pub fn eval(input: &str) {
-    Evaluator::default().print_eval(input);
 }
 
 pub fn print_tokens(input: &str) {

@@ -16,7 +16,7 @@ fn main() {
                     } else if ast {
                         coal::print_file_ast(&path);
                     } else {
-                        coal::run_file(&path);
+                        coal::run(&path);
                     }
                 }
                 Err(err) => eprintln!("{err}"),

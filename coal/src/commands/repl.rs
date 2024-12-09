@@ -12,7 +12,9 @@ use rustyline::{
     RepeatCount, Result, Validator,
 };
 
-use coal_core::{Evaluator, Object};
+use coal_core::Evaluator;
+
+use crate::eval_with;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const KEYWORDS_BUILTINS: &[&str] = &[
@@ -31,7 +33,7 @@ pub fn repl() {
                 "exit" | "quit" => break,
                 "clear" => println!("\x1B[2J\x1B[1;1H"),
                 input => {
-                    eval(&mut evaluator, input);
+                    eval_with(&mut evaluator, input);
                     let _ = rl.add_history_entry(input);
                 }
             },
@@ -51,34 +53,6 @@ pub fn repl() {
     }
 
     let _ = rl.save_history(&crate::path::history());
-}
-
-fn eval(evaluator: &mut Evaluator, input: &str) {
-    if let Some(obj) = evaluator.eval(input) {
-        match obj {
-            Object::Error {
-                message,
-                span: ((l1, c1), (l2, c2)),
-            } => {
-                if input.lines().count() > 1 {
-                    let line = input.lines().nth(l1 - 1).unwrap();
-                    println!("\n{line}");
-                    println!(
-                        "\x1b[31m{}\x1b[0m",
-                        " ".repeat(c1 - 1) + &"^".repeat(c2 - c1),
-                    );
-                    println!("{l1}:{c1}-{l2}:{c2} {message}");
-                } else {
-                    println!(
-                        "\x1b[31m{}\x1b[0m\n",
-                        " ".repeat(c1 + 2) + &"^".repeat(c2 - c1),
-                    );
-                    println!("{message}");
-                }
-            }
-            _ => println!("{obj}"),
-        }
-    }
 }
 
 #[derive(Completer, Helper, Validator, Highlighter)]
