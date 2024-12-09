@@ -70,18 +70,15 @@ impl Hinter for ReplHinter {
             return None;
         }
 
-        if let Ok(Some(s)) = ctx.history().search(line, pos, SearchDirection::Forward) {
-            if s.entry.starts_with(line) {
-                Some(ReplHint {
-                    display: s.entry[pos..].to_string(),
-                    complete_up_to: s.entry.len() - pos,
-                })
-            } else {
-                None
-            }
-        } else {
-            None
-        }
+        ctx.history()
+            .search(line, pos, SearchDirection::Forward)
+            .ok()
+            .flatten()
+            .filter(|s| s.entry.starts_with(line))
+            .map(|s| ReplHint {
+                display: s.entry[pos..].to_string(),
+                complete_up_to: s.entry.len() - pos,
+            })
     }
 }
 
