@@ -5,7 +5,7 @@ use rustyline::{
     error::ReadlineError,
     highlight::{CmdKind, Highlighter},
     hint::{Hint, Hinter},
-    history::FileHistory,
+    history::{FileHistory, SearchDirection},
     validate::MatchingBracketValidator,
     Cmd, Completer, CompletionType, ConditionalEventHandler, Config, Context, EditMode, Editor,
     Event, EventContext, EventHandler, Helper, Highlighter, Hinter, KeyCode, KeyEvent, Modifiers,
@@ -65,21 +65,19 @@ impl ReplHinter {
 impl Hinter for ReplHinter {
     type Hint = ReplHint;
 
-    fn hint(&self, line: &str, pos: usize, _ctx: &Context<'_>) -> Option<ReplHint> {
+    fn hint(&self, line: &str, pos: usize, ctx: &Context<'_>) -> Option<ReplHint> {
         if line.is_empty() || pos < line.len() {
             return None;
         }
 
-        for &kw in KEYWORDS_BUILTINS {
-            if kw.starts_with(line) {
-                return Some(ReplHint {
-                    display: kw[pos..].to_string(),
-                    complete_up_to: kw.len() - pos,
-                });
-            }
+        if let Ok(Some(s)) = ctx.history().search(line, pos, SearchDirection::Forward) {
+            Some(ReplHint {
+                display: s.entry[pos..].to_string(),
+                complete_up_to: s.entry.len() - pos,
+            })
+        } else {
+            None
         }
-
-        None
     }
 }
 
