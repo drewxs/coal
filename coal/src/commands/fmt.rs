@@ -1,4 +1,8 @@
-use std::{fs, time::Instant};
+use std::{
+    fs,
+    io::{self, Read},
+    time::Instant,
+};
 
 use coal_core::Program;
 
@@ -49,6 +53,18 @@ pub fn fmt_path(path: &str, dry_run: bool) -> Result<String, String> {
     }
 
     Ok(out)
+}
+
+pub fn fmt_stdin() -> Result<String, String> {
+    let mut input = String::new();
+
+    io::stdin()
+        .read_to_string(&mut input)
+        .map_err(|_| String::from("Failed to read from stdin"))?;
+
+    let formatted = fmt(&input);
+
+    Ok(formatted)
 }
 
 #[cfg(test)]

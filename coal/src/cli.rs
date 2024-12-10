@@ -45,9 +45,15 @@ pub enum Command {
     Fmt {
         path: Option<String>,
 
+        #[arg(long = "input", help = "Directly pass input string to format")]
+        input: Option<String>,
+
         #[arg(short = 'n', long)]
         #[arg(help = "Print formatted code to stdout")]
         dry_run: bool,
+
+        #[arg(long = "stdin", help = "Format input from stdin")]
+        stdin: bool,
     },
 
     #[command(about = "Data management")]

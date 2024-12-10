@@ -30,11 +30,24 @@ fn main() {
                     coal::eval(&input);
                 }
             }
-            Command::Fmt { path, dry_run } => {
-                let path = path.unwrap_or(String::from("."));
-                match coal::fmt_path(&path, dry_run) {
-                    Ok(output) => println!("{output}"),
-                    Err(err) => eprintln!("{err}"),
+            Command::Fmt {
+                path,
+                input,
+                dry_run,
+                stdin,
+            } => {
+                if let Some(path) = path {
+                    match coal::fmt_path(&path, dry_run) {
+                        Ok(output) => println!("{output}"),
+                        Err(err) => eprintln!("{err}"),
+                    }
+                } else if let Some(input) = input {
+                    println!("{}", coal::fmt(&input));
+                } else if stdin {
+                    match coal::fmt_stdin() {
+                        Ok(output) => println!("{output}"),
+                        Err(err) => eprintln!("{err}"),
+                    }
                 }
             }
             Command::Data { cmd } => match cmd {
