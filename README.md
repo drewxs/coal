@@ -54,6 +54,19 @@ Using Rust grammar (for now) as it's the closest thing to Coal's syntax.
 vim.treesitter.language.register("rust", "coal")
 ```
 
+Format on save:
+
+```lua
+vim.api.nvim_create_autocmd("BufWritePre", {
+  pattern = "*.coal",
+  callback = function()
+    local view = vim.fn.winsaveview()
+    vim.cmd("%!coal fmt --stdin")
+    vim.fn.winrestview(view)
+  end,
+})
+```
+
 ### VSCode
 
 ¯\\\_(ツ)\_/¯
