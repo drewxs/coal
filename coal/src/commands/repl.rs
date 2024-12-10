@@ -17,6 +17,7 @@ use coal_core::Evaluator;
 use crate::eval_with;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const TAB: &str = "    ";
 
 pub fn repl() {
     println!("Coal {VERSION}");
@@ -332,10 +333,16 @@ impl ConditionalEventHandler for EnterHandler {
         _positive: bool,
         ctx: &EventContext,
     ) -> Option<Cmd> {
-        if ctx.line().len() > ctx.pos() {
-            return Some(Cmd::Insert(1, String::from("\n")));
+        let line = ctx.line();
+        let pos = ctx.pos();
+
+        if line.chars().nth(pos - 1).unwrap() == '{' {
+            Some(Cmd::Insert(1, format!("\n{TAB}")))
+        } else if line.len() > pos {
+            Some(Cmd::Insert(1, String::from("\n")))
+        } else {
+            None
         }
-        None
     }
 }
 
@@ -346,7 +353,7 @@ fn editor() -> Editor<ReplHelper, FileHistory> {
 
     rl.bind_sequence(
         Event::KeySeq(vec![KeyEvent(KeyCode::Tab, Modifiers::NONE)]),
-        EventHandler::Simple(Cmd::Insert(1, String::from("\t"))),
+        EventHandler::Simple(Cmd::Insert(1, String::from("    "))),
     );
     rl.bind_sequence(
         Event::KeySeq(vec![KeyEvent(KeyCode::Enter, Modifiers::NONE)]),
