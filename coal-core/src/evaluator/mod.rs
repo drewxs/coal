@@ -100,7 +100,7 @@ impl Evaluator {
     fn eval_expr(&mut self, expr: &Expr) -> Option<Object> {
         match expr {
             Expr::Ident(Ident(name), _) => self.env.borrow().get(name),
-            Expr::Literal(literal, _) => self.eval_literal_expr(literal),
+            Expr::Literal(literal, _) => self.eval_literal_expr(literal, &expr.span()),
             Expr::Prefix(prefix, rhs, span) => self.eval_prefix_expr(prefix, rhs, span),
             Expr::Infix(op, lhs, rhs, span) => self.eval_infix_expr(op, lhs, rhs, span),
             Expr::If {
@@ -114,14 +114,14 @@ impl Evaluator {
         }
     }
 
-    fn eval_literal_expr(&mut self, literal: &Literal) -> Option<Object> {
+    fn eval_literal_expr(&mut self, literal: &Literal, span: &Span) -> Option<Object> {
         match literal {
-            Literal::Str(s) => self.eval_str(s),
+            Literal::Str(s) => self.eval_str(s, span),
             _ => Some(Object::from(literal)),
         }
     }
 
-    fn eval_str(&mut self, s: &str) -> Option<Object> {
+    fn eval_str(&mut self, s: &str, span: &Span) -> Option<Object> {
         let mut res = String::new();
         let mut expr = String::new();
         let mut in_expr = false;
@@ -141,8 +141,22 @@ impl Evaluator {
                 in_expr = true;
                 expr.clear();
             } else if c == '}' && in_expr {
-                if let Some(obj) = self.eval(&expr) {
-                    res.push_str(&obj.to_string());
+                match self.eval(&expr) {
+                    Some(Object::Error {
+                        message,
+                        span: err_span,
+                    }) => {
+                        let ((l1, c1), (l2, c2)) = err_span;
+                        let ((_, offset), (_, _)) = *span;
+                        return Some(Object::Error {
+                            message,
+                            span: ((l1, c1 + offset + 1), (l2, c2 + offset + 1)),
+                        });
+                    }
+                    Some(obj) => {
+                        res.push_str(&obj.to_string());
+                    }
+                    _ => {}
                 }
 
                 in_expr = false;
