@@ -27,7 +27,45 @@ impl From<&str> for Literal {
 impl fmt::Display for Literal {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Literal::Str(s) => write!(f, "\"{s}\""),
+            Literal::Str(s) => {
+                let mut result = String::new();
+                let mut inside_braces = false;
+                let mut brace_content = String::new();
+
+                for c in s.chars() {
+                    match c {
+                        '{' if !inside_braces => {
+                            inside_braces = true;
+                            result.push('{');
+                        }
+                        '}' if inside_braces => {
+                            inside_braces = false;
+                            let trimmed = brace_content.trim();
+                            let processed = if trimmed.is_empty() {
+                                String::new()
+                            } else {
+                                trimmed.split_whitespace().collect::<Vec<_>>().join(" ")
+                            };
+                            result.push_str(&processed);
+                            result.push('}');
+                            brace_content.clear();
+                        }
+                        _ if inside_braces => {
+                            brace_content.push(c);
+                        }
+                        _ => {
+                            result.push(c);
+                        }
+                    }
+                }
+
+                // Unclosed braces, just add what we have
+                if inside_braces {
+                    result.push_str(&brace_content);
+                }
+
+                write!(f, "\"{result}\"")
+            }
             Literal::Int(i) => write!(f, "{i}"),
             Literal::Float(x) => write!(f, "{x:?}"),
             Literal::Bool(b) => write!(f, "{b}"),
