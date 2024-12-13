@@ -28,7 +28,8 @@ impl Parser {
             next_node: LexicalToken::default(),
             errors: vec![],
         };
-        parser.advance_n(2);
+        parser.advance();
+        parser.advance();
         parser
     }
 
@@ -82,12 +83,6 @@ impl Parser {
             .lexer
             .next()
             .unwrap_or(LexicalToken::new(Token::EOF, self.next_node.span));
-    }
-
-    fn advance_n(&mut self, n: usize) {
-        for _ in 0..n {
-            self.advance();
-        }
     }
 
     fn consume(&mut self, token: Token) {
@@ -409,7 +404,8 @@ impl Parser {
         list.push(expr);
 
         while self.next_node.token == Token::Comma {
-            self.advance_n(2);
+            self.advance();
+            self.advance();
             let expr = self.parse_expr(Precedence::Lowest)?;
             list.push(expr);
         }
