@@ -25,7 +25,10 @@ impl Stmt {
                 expr.fmt_with_indent(f, indent_level)?;
                 writeln!(f, ";")
             }
-            Stmt::Expr(expr) => expr.fmt_with_indent(f, indent_level),
+            Stmt::Expr(expr) => {
+                expr.fmt_with_indent(f, indent_level)?;
+                writeln!(f, ";")
+            }
             Stmt::Return(expr) => {
                 write!(f, "{}return ", indent)?;
                 expr.fmt_with_indent(f, indent_level)?;
