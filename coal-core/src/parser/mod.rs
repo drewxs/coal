@@ -143,9 +143,16 @@ impl Parser {
         }
 
         let ident = Ident::try_from(&self.curr_node.token).ok()?;
+        let ident_span = self.curr_node.span;
+
         let mut t = if self.next_node.token == Token::Colon {
-            self.advance_n(2);
-            Type::try_from(&self.curr_node.token).ok()
+            self.advance();
+            if let Token::Ident(_) = self.next_node.token {
+                self.advance();
+                Type::try_from(&self.curr_node.token).ok()
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -161,10 +168,16 @@ impl Parser {
             t = Type::try_from(&expr).ok();
         }
 
-        t.map(|t| {
+        if let Some(t) = t {
             self.consume(Token::Semicolon);
-            Stmt::Let(ident, t, expr)
-        })
+            Some(Stmt::Let(ident, t, expr))
+        } else {
+            self.errors.push(ParserError::new(
+                ParserErrorKind::TypeAnnotationsNeeded,
+                ident_span,
+            ));
+            Some(Stmt::Let(ident, Type::Unknown, expr))
+        }
     }
 
     fn parse_ret_stmt(&mut self) -> Option<Stmt> {

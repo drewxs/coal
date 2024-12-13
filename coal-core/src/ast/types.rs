@@ -16,6 +16,7 @@ pub enum Type {
     UserDefined(String),
     #[default]
     Nil,
+    Unknown,
 }
 
 impl From<&Object> for Type {
@@ -59,7 +60,9 @@ impl TryFrom<&Expr> for Type {
             Expr::Literal(Literal::Int(_), _) => Ok(Type::Int),
             Expr::Literal(Literal::Float(_), _) => Ok(Type::Float),
             Expr::Literal(Literal::Bool(_), _) => Ok(Type::Bool),
-            Expr::Infix(op, lhs, rhs, span) => Ok(infer_infix_type(op, lhs, rhs, span)),
+            Expr::Infix(op, lhs, rhs, span) => {
+                infer_infix_type(op, lhs, rhs, span).ok_or(String::from("unable to infer type"))
+            }
             Expr::Prefix(_, rhs, _) => Type::try_from(Borrow::<Expr>::borrow(rhs)),
             Expr::Ident(ident, _) => Ok(Type::UserDefined(ident.name())),
             Expr::Fn { ret_t, .. } => Ok(ret_t.clone()),
@@ -69,44 +72,38 @@ impl TryFrom<&Expr> for Type {
     }
 }
 
-fn infer_infix_type(op: &Infix, lhs: &Expr, rhs: &Expr, _span: &Span) -> Type {
-    if op == &Infix::Div {
-        return Type::Float;
+fn infer_infix_type(op: &Infix, lhs: &Expr, rhs: &Expr, _span: &Span) -> Option<Type> {
+    let lhs_t = infer_expr_type(lhs)?;
+    let rhs_t = infer_expr_type(rhs)?;
+
+    match lhs_t {
+        Type::Int => match rhs_t {
+            Type::Int => match op {
+                Infix::Div => Some(Type::Float),
+                _ => Some(Type::Int),
+            },
+            Type::Float => Some(Type::Float),
+            _ => None,
+        },
+        Type::Float => match rhs_t {
+            Type::Int | Type::Float => Some(Type::Float),
+            _ => None,
+        },
+        _ => None,
     }
-
-    let lhs_t = infer_expr_type(lhs);
-    let rhs_t = infer_expr_type(rhs);
-
-    if lhs_t == Type::Int && rhs_t == Type::Int {
-        return Type::Int;
-    }
-
-    Type::Float
 }
 
-fn infer_expr_type(expr: &Expr) -> Type {
+fn infer_expr_type(expr: &Expr) -> Option<Type> {
     match expr {
-        Expr::Infix(op, lhs, rhs, span) => {
-            let t = infer_infix_type(op, lhs, rhs, span);
-            if t == Type::Int {
-                return Type::Int;
-            }
-        }
+        Expr::Infix(op, lhs, rhs, span) => infer_infix_type(op, lhs, rhs, span),
         Expr::Prefix(_, rhs, _) => match rhs.borrow() {
-            Expr::Infix(i_op, i_lhs, i_rhs, i_span) => {
-                let t = infer_infix_type(i_op, i_lhs, i_rhs, i_span);
-                if t == Type::Int {
-                    return Type::Int;
-                }
-            }
-            Expr::Literal(Literal::Int(_), _) => return Type::Int,
-            _ => {}
+            Expr::Infix(i_op, i_lhs, i_rhs, i_span) => infer_infix_type(i_op, i_lhs, i_rhs, i_span),
+            Expr::Literal(Literal::Int(_), _) => Some(Type::Int),
+            _ => None,
         },
-        Expr::Literal(Literal::Int(_), _) => return Type::Int,
-        _ => {}
+        Expr::Literal(Literal::Int(_), _) => Some(Type::Int),
+        _ => None,
     }
-
-    Type::Float
 }
 
 impl fmt::Display for Type {
@@ -124,6 +121,7 @@ impl fmt::Display for Type {
             Type::Function(idents, stmts) => write!(f, "fn({idents:?}) {{{stmts:?}}}"),
             Type::UserDefined(name) => write!(f, "{}", name),
             Type::Nil => write!(f, "nil"),
+            Type::Unknown => write!(f, "unknown"),
         }
     }
 }

@@ -25,6 +25,7 @@ impl fmt::Display for ParserError {
 pub enum ParserErrorKind {
     SyntaxError(Token),
     UnexpectedToken { expected: Token, got: Token },
+    TypeAnnotationsNeeded,
 }
 
 impl fmt::Display for ParserErrorKind {
@@ -34,6 +35,7 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::UnexpectedToken { expected, got } => {
                 write!(f, "unexpected token: '{got}', expected: '{expected}'")
             }
+            ParserErrorKind::TypeAnnotationsNeeded => write!(f, "type annotations needed"),
         }
     }
 }
