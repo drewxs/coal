@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read, process};
 
-use coal_core::{Lexer, Program};
+use coal_core::{Lexer, Parser};
 
 use super::eval;
 
@@ -13,7 +13,7 @@ pub fn print_tokens(input: &str) {
 }
 
 pub fn print_ast(input: &str) {
-    for stmt in Program::parse(input).iter() {
+    for stmt in Parser::from(input).parse() {
         println!("{stmt:?}");
     }
 }

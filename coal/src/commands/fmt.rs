@@ -4,12 +4,16 @@ use std::{
     time::Instant,
 };
 
-use coal_core::Program;
+use coal_core::Parser;
 
 use crate::path::program_files;
 
 pub fn fmt(input: &str) -> String {
-    Program::from(input).to_string()
+    let mut out = vec![];
+    for stmt in Parser::from(input).parse() {
+        out.push(stmt.to_string());
+    }
+    out.join("\n")
 }
 
 pub fn fmt_timed(input: &str) -> (String, u128) {
