@@ -45,7 +45,10 @@ fn main() {
                 } else {
                     match coal::fmt_stdin() {
                         Ok(output) => println!("{output}"),
-                        Err(err) => eprintln!("{err}"),
+                        Err(_) => match coal::fmt_path(".", dry_run) {
+                            Ok(output) => println!("{output}"),
+                            Err(err) => eprintln!("{err}"),
+                        },
                     }
                 }
             }
