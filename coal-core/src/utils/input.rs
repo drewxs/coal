@@ -6,6 +6,8 @@ lazy_static! {
     static ref RE_NEWLINES: Regex = Regex::new(r"\n{3,}").unwrap();
     static ref RE_NEWLINE_SPACES: Regex = Regex::new(r"\n\ +").unwrap();
     static ref RE_STRINGS: Regex = Regex::new(r#""[^"]*""#).unwrap();
+    static ref RE_NEWLINES_AFTER_BRACE: Regex = Regex::new(r"\{\n{2,}").unwrap();
+    static ref RE_NEWLINES_BEFORE_BRACE: Regex = Regex::new(r"\n{2,}\}").unwrap();
 }
 
 pub fn clean_input(input: &str) -> String {
@@ -37,6 +39,10 @@ fn clean(input: &str) -> String {
         .replace_all(&input, "\n")
         .replace(" ;", ";")
         .replace("\t", "")
+        .to_string();
+    input = RE_NEWLINES_AFTER_BRACE.replace_all(&input, "{").to_string();
+    input = RE_NEWLINES_BEFORE_BRACE
+        .replace_all(&input, "}")
         .to_string();
 
     input

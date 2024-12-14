@@ -1,9 +1,9 @@
-let x = 5;
-let y = 10;
+let x: int = 5;
+let y: int = 10;
 
 if x > y {
     if x > 1 {
-        let z = 1.;
+        let z: float = 1.0;
         return z;
     } else {
         return 1;
@@ -13,3 +13,4 @@ if x > y {
 } else {
     return 0;
 }
+
