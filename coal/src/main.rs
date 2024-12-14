@@ -31,10 +31,9 @@ fn main() {
                 }
             }
             Command::Fmt {
-                path,
                 input,
+                path,
                 dry_run,
-                stdin,
             } => {
                 if let Some(path) = path {
                     match coal::fmt_path(&path, dry_run) {
@@ -43,7 +42,7 @@ fn main() {
                     }
                 } else if let Some(input) = input {
                     println!("{}", coal::fmt(&input));
-                } else if stdin {
+                } else {
                     match coal::fmt_stdin() {
                         Ok(output) => println!("{output}"),
                         Err(err) => eprintln!("{err}"),

@@ -1,4 +1,5 @@
 use std::{
+    fmt::Write,
     fs,
     io::{self, Read},
     time::Instant,
@@ -9,11 +10,11 @@ use coal_core::Parser;
 use crate::path::program_files;
 
 pub fn fmt(input: &str) -> String {
-    let mut out = vec![];
+    let mut out = String::new();
     for stmt in Parser::from(input).parse() {
-        out.push(stmt.to_string());
+        let _ = write!(&mut out, "{}", stmt);
     }
-    out.join("\n")
+    out
 }
 
 pub fn fmt_timed(input: &str) -> (String, u128) {
@@ -60,15 +61,13 @@ pub fn fmt_path(path: &str, dry_run: bool) -> Result<String, String> {
 }
 
 pub fn fmt_stdin() -> Result<String, String> {
-    let mut input = String::new();
-
+    let mut buf = String::new();
     io::stdin()
-        .read_to_string(&mut input)
+        .read_to_string(&mut buf)
         .map_err(|_| String::from("Failed to read from stdin"))?;
+    let out = fmt(&buf);
 
-    let formatted = fmt(&input);
-
-    Ok(formatted)
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -78,7 +77,7 @@ mod tests {
     #[test]
     fn test_fmt_call_expr() {
         let input = r#"   hello  ( "hello, world!"   )  ; "#;
-        let expected = r#"hello("hello, world!")"#;
+        let expected = "hello(\"hello, world!\");\n";
 
         assert_eq!(expected, fmt(input));
     }
