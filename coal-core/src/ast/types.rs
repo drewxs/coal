@@ -102,6 +102,8 @@ fn infer_expr_type(expr: &Expr) -> Option<Type> {
             _ => None,
         },
         Expr::Literal(Literal::Int(_), _) => Some(Type::Int),
+        Expr::Call { func, .. } => infer_expr_type(func),
+        Expr::Fn { ret_t, .. } => Some(ret_t.clone()),
         _ => None,
     }
 }

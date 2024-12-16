@@ -92,7 +92,7 @@ impl Object {
                 write!(f, "}}")
             }
             Object::Nil => write!(f, "nil"),
-            Object::Return(v) => write!(f, "return {v};"),
+            Object::Return(v) => write!(f, "{v}"),
             Object::Error {
                 message,
                 span: trace,

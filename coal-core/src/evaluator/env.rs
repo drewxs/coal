@@ -9,8 +9,11 @@ pub struct Env {
 }
 
 impl Env {
-    pub fn new(store: HashMap<String, Object>, outer: Option<Rc<RefCell<Env>>>) -> Self {
-        Env { store, outer }
+    pub fn new(outer: Rc<RefCell<Env>>) -> Self {
+        Env {
+            store: HashMap::new(),
+            outer: Some(outer),
+        }
     }
 
     pub fn get(&self, key: &str) -> Option<Object> {
@@ -25,8 +28,8 @@ impl Env {
         self.store.insert(name, value);
     }
 
-    pub fn extend(&mut self, other: Env) {
-        self.store.extend(other.store);
+    pub fn extend(&mut self, other: Rc<RefCell<Env>>) {
+        self.store.extend(other.borrow().store.clone());
     }
 }
 

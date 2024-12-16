@@ -4,10 +4,10 @@ pub mod object;
 #[cfg(test)]
 mod tests;
 
-use std::{cell::RefCell, rc::Rc};
-
 pub use env::*;
 pub use object::*;
+
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{Expr, Ident, IfExpr, Infix, Literal, Parser, Prefix, Span, Stmt, Type};
 
@@ -121,14 +121,18 @@ impl Evaluator {
                 ret_t,
                 body,
                 ..
-            } => Some(Object::Fn {
-                name: name.to_owned(),
-                args: args.to_owned(),
-                body: body.to_owned(),
-                env: Rc::clone(&self.env),
-                ret_t: ret_t.to_owned(),
-            }),
-            _ => None,
+            } => {
+                let func = Object::Fn {
+                    name: name.to_owned(),
+                    args: args.to_owned(),
+                    body: body.to_owned(),
+                    env: Rc::new(RefCell::new(Env::default())),
+                    ret_t: ret_t.to_owned(),
+                };
+                self.env.borrow_mut().set(name.to_owned(), func.to_owned());
+                Some(func)
+            }
+            Expr::Call { func, args, span } => self.eval_call_expr(func, args, span),
         }
     }
 
@@ -415,6 +419,57 @@ impl Evaluator {
             }
         }
         self.eval_stmts(alt.to_owned()?)
+    }
+
+    fn eval_call_expr(&mut self, func: &Expr, args: &Vec<Expr>, span: &Span) -> Option<Object> {
+        let mut resolved_args = vec![];
+        for arg in args {
+            if let Some(expr) = self.eval_expr(arg) {
+                resolved_args.push(expr);
+            }
+        }
+        let resolved_fn = self.eval_expr(func)?;
+        if let Object::Fn {
+            args: fn_args,
+            body: fn_body,
+            env: fn_env,
+            ..
+        } = resolved_fn
+        {
+            if fn_args.len() != resolved_args.len() {
+                return Some(Object::Error {
+                    message: format!(
+                        "expected {} arguments, got {}",
+                        fn_args.len(),
+                        resolved_args.len()
+                    ),
+                    span: *span,
+                });
+            }
+
+            let mut env = Env::new(Rc::clone(&self.env));
+            env.extend(Rc::clone(&fn_env));
+            for (arg, var) in resolved_args.iter().zip(fn_args.iter()) {
+                env.set(var.name.to_owned(), arg.to_owned());
+            }
+
+            let curr_env = Rc::clone(&self.env);
+            self.env = Rc::new(RefCell::new(env));
+
+            let mut res = self.eval_stmts(fn_body.to_owned());
+            if let Some(Object::Return(val)) = res {
+                res = Some(*val);
+            }
+
+            self.env = curr_env;
+
+            res
+        } else {
+            Some(Object::Error {
+                message: format!("expected function, got {resolved_fn}"),
+                span: *span,
+            })
+        }
     }
 }
 
