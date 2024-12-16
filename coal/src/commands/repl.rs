@@ -336,7 +336,7 @@ impl ConditionalEventHandler for EnterHandler {
         let line = ctx.line();
         let pos = ctx.pos();
 
-        if line.chars().nth(pos - 1).unwrap() == '{' {
+        if let Some('{') = line.chars().nth(pos.saturating_sub(1)) {
             Some(Cmd::Insert(1, format!("\n{TAB}")))
         } else if line.len() > pos {
             Some(Cmd::Insert(1, String::from("\n")))
