@@ -32,6 +32,10 @@ pub enum Object {
         message: String,
         span: Span,
     },
+    TailCall {
+        func: Box<Object>,
+        args: Vec<Object>,
+    },
 }
 
 pub const TRUE: Object = Object::Bool(true);
@@ -98,6 +102,7 @@ impl Hash for Object {
                 message.hash(state);
                 span.hash(state);
             }
+            Object::TailCall { func, .. } => func.hash(state),
         }
     }
 }
@@ -121,6 +126,7 @@ impl fmt::Display for Object {
                 let ((l1, c1), (l2, c2)) = trace;
                 write!(f, "{l1}:{c1}-{l2}:{c2} {}", message)
             }
+            _ => Ok(()),
         }
     }
 }
