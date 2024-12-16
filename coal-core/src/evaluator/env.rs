@@ -24,6 +24,10 @@ impl Env {
     pub fn set(&mut self, name: String, value: Object) {
         self.store.insert(name, value);
     }
+
+    pub fn extend(&mut self, other: Env) {
+        self.store.extend(other.store);
+    }
 }
 
 impl From<HashMap<String, Object>> for Env {
