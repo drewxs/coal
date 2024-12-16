@@ -171,6 +171,25 @@ fn test_eval_nested_if_expressions() {
     }
 }
 
+#[test]
+fn test_eval_let_statements() {
+    let tests = vec![
+        ("let x = 7; x;", Some(Object::Int(7))),
+        ("let x = 2 * 3; x;", Some(Object::Int(6))),
+        ("let x = 7; let y = 10; x;", Some(Object::Int(7))),
+        ("let x = 7; let y = 10; y;", Some(Object::Int(10))),
+        (
+            "let x = 7; let y = 10; let z: int = x + y + 3; z;",
+            Some(Object::Int(20)),
+        ),
+    ];
+    let mut evaluator = Evaluator::default();
+
+    for (expr, expected) in tests {
+        assert_eq!(expected, evaluator.eval(expr));
+    }
+}
+
 #[bench]
 fn bench_eval_math_expression(b: &mut Bencher) {
     let mut evaluator = Evaluator::default();
