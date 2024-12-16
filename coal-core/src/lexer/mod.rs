@@ -160,7 +160,7 @@ impl Iterator for Lexer {
                         while self.ch != '\n' && self.ch != '\0' {
                             self.read_char();
                         }
-                        let val = self.input[pos..self.pos].to_string();
+                        let val = self.input[pos..(self.pos.max(pos))].to_string();
                         LexicalToken::new(Token::Comment(val), (cursor, (self.line, self.col)))
                     } else {
                         self.read_char();
