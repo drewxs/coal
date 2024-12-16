@@ -19,7 +19,7 @@ impl Stmt {
         match self {
             Stmt::Void => Ok(()),
             Stmt::Newline => writeln!(f),
-            Stmt::Comment(comment) => write!(f, "{comment}"),
+            Stmt::Comment(comment) => write!(f, "{}{comment}", indent),
             Stmt::Let(ident, t, expr) => {
                 write!(f, "{}let {ident}: {t} = ", indent)?;
                 expr.fmt_with_indent(f, indent_level)?;
