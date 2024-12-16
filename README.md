@@ -37,7 +37,9 @@ Run `coal --help` for more information.
 
 ### Neovim
 
-Register the filetype:
+#### Filetype detection
+
+Add anywhere that's loaded by `init.lua`:
 
 ```lua
 vim.filetype.add({
@@ -47,14 +49,19 @@ vim.filetype.add({
 })
 ```
 
-For syntax highlighting, add the following to your treesitter config:
-Using Rust grammar (for now) as it's the closest thing to Coal's syntax.
+#### Syntax highlighting
+
+Add to your treesitter config:
 
 ```lua
 vim.treesitter.language.register("rust", "coal")
 ```
 
-Format on save:
+> Using Rust grammar (for now) as it's the closest thing to Coal's syntax.
+
+#### Formatting
+
+Using no plugins:
 
 ```lua
 vim.api.nvim_create_autocmd("BufWritePre", {
@@ -65,6 +72,28 @@ vim.api.nvim_create_autocmd("BufWritePre", {
     vim.fn.winrestview(view)
   end,
 })
+```
+
+> This is basic and won't handle things like preserving cursor positions when formatting extra newlines.
+> For a more robust solution, you can use a formatter plugin like [conform.nvim](https://github.com/stevearc/conform.nvim).
+
+Using [conform.nvim](https://github.com/stevearc/conform.nvim):
+
+Add the following to your conform config:
+
+```lua
+{
+  formatters = {
+    coal_fmt = {
+      command = "coal",
+      args = { "fmt" },
+      stdin = true,
+    },
+  },
+  formatters_by_ft = {
+    coal = { "coal_fmt" },
+  },
+}
 ```
 
 ### VSCode
