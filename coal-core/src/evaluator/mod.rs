@@ -99,7 +99,12 @@ impl Evaluator {
 
     fn eval_expr(&mut self, expr: &Expr) -> Option<Object> {
         match expr {
-            Expr::Ident(Ident(name), _) => self.env.borrow().get(name),
+            Expr::Ident(Ident(name), _) => self.env.borrow().get(name).or_else(|| {
+                Some(Object::Error {
+                    message: format!("identifier not found: {name}"),
+                    span: expr.span(),
+                })
+            }),
             Expr::Literal(literal, _) => self.eval_literal_expr(literal, &expr.span()),
             Expr::Prefix(prefix, rhs, span) => self.eval_prefix_expr(prefix, rhs, span),
             Expr::Infix(op, lhs, rhs, span) => self.eval_infix_expr(op, lhs, rhs, span),

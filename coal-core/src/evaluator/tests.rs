@@ -182,6 +182,13 @@ fn test_eval_let_statements() {
             "let x = 7; let y = 10; let z: int = x + y + 3; z;",
             Some(Object::Int(20)),
         ),
+        (
+            "foo;",
+            Some(Object::Error {
+                message: String::from("identifier not found: foo"),
+                span: ((1, 1), (1, 3)),
+            }),
+        ),
     ];
     let mut evaluator = Evaluator::default();
 
