@@ -126,7 +126,6 @@ impl Evaluator {
                     name: name.to_owned(),
                     args: args.to_owned(),
                     body: body.to_owned(),
-                    env: Rc::new(RefCell::new(Env::default())),
                     ret_t: ret_t.to_owned(),
                 };
                 self.env.borrow_mut().set(name.to_owned(), func.to_owned());
@@ -432,7 +431,6 @@ impl Evaluator {
         if let Object::Fn {
             args: fn_args,
             body: fn_body,
-            env: fn_env,
             ..
         } = resolved_fn
         {
@@ -447,14 +445,13 @@ impl Evaluator {
                 });
             }
 
-            let mut env = Env::new(Rc::clone(&self.env));
-            env.extend(Rc::clone(&fn_env));
+            let mut enclosed_env = Env::from(Rc::clone(&self.env));
             for (arg, var) in resolved_args.iter().zip(fn_args.iter()) {
-                env.set(var.name.to_owned(), arg.to_owned());
+                enclosed_env.set(var.name.to_owned(), arg.to_owned());
             }
 
             let curr_env = Rc::clone(&self.env);
-            self.env = Rc::new(RefCell::new(env));
+            self.env = Rc::new(RefCell::new(enclosed_env));
 
             let mut res = self.eval_stmts(fn_body.to_owned());
             if let Some(Object::Return(val)) = res {

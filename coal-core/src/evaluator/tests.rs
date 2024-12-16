@@ -1,10 +1,8 @@
-use std::{cell::RefCell, rc::Rc};
-
 use test::Bencher;
 
 use crate::{Expr, Ident, Infix, Stmt, Type, Var};
 
-use super::{Env, Evaluator, Object, FALSE, TRUE};
+use super::{Evaluator, Object, FALSE, TRUE};
 
 #[test]
 fn test_eval_int_expressions() {
@@ -236,7 +234,6 @@ fn test_eval_fn_expr() {
                 ))]),
                 span: ((2, 1), (6, 1)),
             })],
-            env: Rc::new(RefCell::new(Env::default())),
             ret_t: Type::Int,
         }),
     )];

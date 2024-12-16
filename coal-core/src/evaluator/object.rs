@@ -1,14 +1,10 @@
 use std::{
-    cell::RefCell,
     collections::HashMap,
     fmt,
     hash::{DefaultHasher, Hash, Hasher},
-    rc::Rc,
 };
 
 use crate::{Literal, ParserError, Span, Stmt, Type, Var};
-
-use super::Env;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Object {
@@ -28,7 +24,6 @@ pub enum Object {
         name: String,
         args: Vec<Var>,
         body: Vec<Stmt>,
-        env: Rc<RefCell<Env>>,
         ret_t: Type,
     },
     Nil,

@@ -9,9 +9,9 @@ pub struct Env {
 }
 
 impl Env {
-    pub fn new(outer: Rc<RefCell<Env>>) -> Self {
+    pub fn new(store: HashMap<String, Object>, outer: Rc<RefCell<Env>>) -> Self {
         Env {
-            store: HashMap::new(),
+            store,
             outer: Some(outer),
         }
     }
@@ -30,12 +30,6 @@ impl Env {
 
     pub fn extend(&mut self, other: Rc<RefCell<Env>>) {
         self.store.extend(other.borrow().store.clone());
-    }
-}
-
-impl From<HashMap<String, Object>> for Env {
-    fn from(store: HashMap<String, Object>) -> Self {
-        Self { store, outer: None }
     }
 }
 
