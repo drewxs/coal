@@ -9,8 +9,11 @@ pub struct Var {
 }
 
 impl Var {
-    pub fn new(name: String, t: Type) -> Var {
-        Var { name, t }
+    pub fn new(name: &str, t: Type) -> Var {
+        Var {
+            name: name.to_string(),
+            t,
+        }
     }
 }
 

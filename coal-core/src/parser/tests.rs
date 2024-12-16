@@ -752,10 +752,7 @@ fn test_parse_function_expressions() {
                }"#,
             Stmt::Expr(Expr::Fn {
                 name: String::from("add"),
-                args: vec![
-                    Var::new(String::from("x"), Type::Int),
-                    Var::new(String::from("y"), Type::Int),
-                ],
+                args: vec![Var::new("x", Type::Int), Var::new("y", Type::Int)],
                 ret_t: Type::Int,
                 body: vec![Stmt::Return(Expr::Infix(
                     Infix::Plus,

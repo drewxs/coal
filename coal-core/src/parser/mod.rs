@@ -4,13 +4,13 @@ pub mod precedence;
 #[cfg(test)]
 mod tests;
 
-pub use error::{ParserError, ParserErrorKind};
-pub use precedence::Precedence;
-
 use crate::{
     Comment, Expr, Ident, IfExpr, Infix, Lexer, LexicalToken, Literal, Prefix, Stmt, Token, Type,
     Var,
 };
+
+pub use error::{ParserError, ParserErrorKind};
+pub use precedence::Precedence;
 
 #[derive(Clone, Debug)]
 pub struct Parser {
@@ -297,10 +297,9 @@ impl Parser {
 
     fn parse_if_expr(&mut self) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
-
         self.advance();
-        let cond = self.parse_expr(Precedence::Lowest)?;
 
+        let cond = self.parse_expr(Precedence::Lowest)?;
         if !self.expect_next(Token::Lbrace) {
             return None;
         }
@@ -308,13 +307,11 @@ impl Parser {
         let then = self.parse_block_stmt();
 
         let mut elifs = vec![];
-        let mut alt = None;
-
         while self.next_node.token == Token::Elif {
             self.advance();
             self.advance();
-            let cond = self.parse_expr(Precedence::Lowest)?;
 
+            let cond = self.parse_expr(Precedence::Lowest)?;
             if !self.expect_next(Token::Lbrace) {
                 return None;
             }
@@ -325,6 +322,7 @@ impl Parser {
             });
         }
 
+        let mut alt = None;
         if self.next_node.token == Token::Else {
             self.advance();
             if !self.expect_next(Token::Lbrace) {
@@ -346,7 +344,6 @@ impl Parser {
 
     fn parse_fn_expr(&mut self) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
-
         self.advance();
 
         let ident = Ident::try_from(&self.curr_node.token).ok()?;
@@ -361,7 +358,6 @@ impl Parser {
         self.advance();
 
         let body = self.parse_block_stmt();
-
         let (_, end) = self.curr_node.span;
 
         Some(Expr::Fn {
@@ -384,7 +380,7 @@ impl Parser {
             self.consume(Token::Comma);
             self.advance();
 
-            args.push(Var::new(name, t));
+            args.push(Var { name, t });
         }
 
         Some(args)

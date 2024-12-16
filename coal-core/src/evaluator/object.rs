@@ -6,7 +6,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{Expr, Literal, ParserError, Span, Stmt, Type};
+use crate::{Literal, ParserError, Span, Stmt, Type, Var};
 
 use super::Env;
 
@@ -26,10 +26,10 @@ pub enum Object {
     },
     Fn {
         name: String,
-        args: Vec<Expr>,
+        args: Vec<Var>,
         body: Vec<Stmt>,
         env: Rc<RefCell<Env>>,
-        t: Type,
+        ret_t: Type,
     },
     Nil,
     Return(Box<Object>),
@@ -77,7 +77,7 @@ impl Object {
                 name,
                 args,
                 body,
-                t,
+                ret_t: t,
                 ..
             } => {
                 let args_str = args

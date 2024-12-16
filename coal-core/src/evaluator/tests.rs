@@ -1,6 +1,10 @@
+use std::{cell::RefCell, rc::Rc};
+
 use test::Bencher;
 
-use super::{Evaluator, Object, FALSE, TRUE};
+use crate::{Expr, Ident, Infix, Stmt, Type, Var};
+
+use super::{Env, Evaluator, Object, FALSE, TRUE};
 
 #[test]
 fn test_eval_int_expressions() {
@@ -190,6 +194,52 @@ fn test_eval_let_statements() {
             }),
         ),
     ];
+    let mut evaluator = Evaluator::default();
+
+    for (expr, expected) in tests {
+        assert_eq!(expected, evaluator.eval(expr));
+    }
+}
+
+#[test]
+fn test_eval_fn_expr() {
+    let tests = vec![(
+        r#"fn add(x: int, y: int) -> int {
+            if x > y {
+                return x - y;
+            } else {
+                return x + y;
+            }
+        }"#,
+        Some(Object::Fn {
+            name: String::from("add"),
+            args: vec![Var::new("x", Type::Int), Var::new("y", Type::Int)],
+            body: vec![Stmt::Expr(Expr::If {
+                cond: Box::new(Expr::Infix(
+                    Infix::GT,
+                    Box::new(Expr::Ident(Ident::from("x"), ((2, 4), (2, 4)))),
+                    Box::new(Expr::Ident(Ident::from("y"), ((2, 8), (2, 8)))),
+                    ((2, 4), (2, 8)),
+                )),
+                then: vec![Stmt::Return(Expr::Infix(
+                    Infix::Minus,
+                    Box::new(Expr::Ident(Ident::from("x"), ((3, 8), (3, 8)))),
+                    Box::new(Expr::Ident(Ident::from("y"), ((3, 12), (3, 12)))),
+                    ((3, 8), (3, 12)),
+                ))],
+                elifs: vec![],
+                alt: Some(vec![Stmt::Return(Expr::Infix(
+                    Infix::Plus,
+                    Box::new(Expr::Ident(Ident::from("x"), ((5, 8), (5, 8)))),
+                    Box::new(Expr::Ident(Ident::from("y"), ((5, 12), (5, 12)))),
+                    ((5, 8), (5, 12)),
+                ))]),
+                span: ((2, 1), (6, 1)),
+            })],
+            env: Rc::new(RefCell::new(Env::default())),
+            ret_t: Type::Int,
+        }),
+    )];
     let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {

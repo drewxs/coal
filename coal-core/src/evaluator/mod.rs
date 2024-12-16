@@ -115,6 +115,19 @@ impl Evaluator {
                 alt,
                 ..
             } => self.eval_if_expr(cond, then, elifs, alt),
+            Expr::Fn {
+                name,
+                args,
+                ret_t,
+                body,
+                ..
+            } => Some(Object::Fn {
+                name: name.to_owned(),
+                args: args.to_owned(),
+                body: body.to_owned(),
+                env: Rc::clone(&self.env),
+                ret_t: ret_t.to_owned(),
+            }),
             _ => None,
         }
     }

@@ -98,9 +98,9 @@ impl Expr {
                     .join(", ");
                 writeln!(f, "{args_str}) -> {ret_t} {{")?;
                 for stmt in body {
-                    writeln!(f, "{}    {stmt}", indent)?;
+                    stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
-                write!(f, "}}")
+                writeln!(f, "}}")
             }
             Expr::Call { func, args, .. } => match func.as_ref() {
                 Expr::Ident(name, _) => {

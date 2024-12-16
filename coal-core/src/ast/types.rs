@@ -28,7 +28,7 @@ impl From<&Object> for Type {
             Object::Bool(_) => Type::Bool,
             Object::List { t, .. } => Type::List(Box::new(t.clone())),
             Object::Map { t, .. } => Type::Map(Box::new(t.clone())),
-            Object::Fn { t: ret_t, .. } => ret_t.clone(),
+            Object::Fn { ret_t, .. } => ret_t.clone(),
             _ => Type::Nil,
         }
     }
