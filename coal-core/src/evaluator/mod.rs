@@ -420,14 +420,10 @@ impl Evaluator {
         self.eval_stmts(alt.to_owned()?)
     }
 
-    fn eval_call_expr(&mut self, func: &Expr, args: &Vec<Expr>, span: &Span) -> Option<Object> {
-        let mut resolved_args = vec![];
-        for arg in args {
-            if let Some(expr) = self.eval_expr(arg) {
-                resolved_args.push(expr);
-            }
-        }
+    fn eval_call_expr(&mut self, func: &Expr, args: &[Expr], span: &Span) -> Option<Object> {
+        let resolved_args: Vec<_> = args.iter().filter_map(|arg| self.eval_expr(arg)).collect();
         let resolved_fn = self.eval_expr(func)?;
+
         if let Object::Fn {
             args: fn_args,
             body: fn_body,
@@ -446,9 +442,12 @@ impl Evaluator {
             }
 
             let mut enclosed_env = Env::from(Rc::clone(&self.env));
-            for (arg, var) in resolved_args.iter().zip(fn_args.iter()) {
-                enclosed_env.set(var.name.to_owned(), arg.to_owned());
-            }
+            fn_args
+                .iter()
+                .zip(resolved_args.iter())
+                .for_each(|(var, value)| {
+                    enclosed_env.set(var.name.to_owned(), value.to_owned());
+                });
 
             let curr_env = Rc::clone(&self.env);
             self.env = Rc::new(RefCell::new(enclosed_env));
