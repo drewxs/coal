@@ -248,12 +248,12 @@ impl Iterator for Lexer {
                 let num_str = &self.input[pos..self.pos];
                 if num_str.contains('.') {
                     LexicalToken::new(
-                        Token::Float(num_str.parse::<f64>().expect("invalid float literal")),
+                        Token::F64(num_str.parse::<f64>().expect("invalid float literal")),
                         (cursor, (line, col + num_str.len() - 1)),
                     )
                 } else {
                     LexicalToken::new(
-                        Token::Int(num_str.parse::<i64>().expect("invalid int literal")),
+                        Token::I64(num_str.parse::<i64>().expect("invalid int literal")),
                         (cursor, (line, col + num_str.len() - 1)),
                     )
                 }

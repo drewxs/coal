@@ -4,27 +4,27 @@ use super::*;
 fn test_parse_let_statements() {
     let tests = vec![
         (
-            "let x: int = 5;",
+            "let x: i64 = 5;",
             Stmt::Let(
                 Ident(String::from("x")),
-                Type::Int,
-                Expr::Literal(Literal::Int(5), ((1, 14), (1, 14))),
+                Type::I64,
+                Expr::Literal(Literal::I64(5), ((1, 14), (1, 14))),
             ),
         ),
         (
-            "let y: int = 10;",
+            "let y: i64 = 10;",
             Stmt::Let(
                 Ident(String::from("y")),
-                Type::Int,
-                Expr::Literal(Literal::Int(10), ((1, 14), (1, 15))),
+                Type::I64,
+                Expr::Literal(Literal::I64(10), ((1, 14), (1, 15))),
             ),
         ),
         (
-            "let z: int = 99999;",
+            "let z: i64 = 99999;",
             Stmt::Let(
                 Ident(String::from("z")),
-                Type::Int,
-                Expr::Literal(Literal::Int(99999), ((1, 14), (1, 18))),
+                Type::I64,
+                Expr::Literal(Literal::I64(99999), ((1, 14), (1, 18))),
             ),
         ),
         (
@@ -32,7 +32,7 @@ fn test_parse_let_statements() {
             Stmt::Let(
                 Ident(String::from("foo")),
                 Type::UserDefined(String::from("Foo")),
-                Expr::Literal(Literal::Int(0), ((1, 16), (1, 16))),
+                Expr::Literal(Literal::I64(0), ((1, 16), (1, 16))),
             ),
         ),
     ];
@@ -52,13 +52,13 @@ fn test_parse_let_statements_inference() {
     let expected = vec![
         Stmt::Let(
             Ident(String::from("x")),
-            Type::Int,
-            Expr::Literal(Literal::Int(5), ((1, 9), (1, 9))),
+            Type::I64,
+            Expr::Literal(Literal::I64(5), ((1, 9), (1, 9))),
         ),
         Stmt::Let(
             Ident(String::from("y")),
-            Type::Float,
-            Expr::Literal(Literal::Float(5.0), ((2, 9), (2, 11))),
+            Type::F64,
+            Expr::Literal(Literal::F64(5.0), ((2, 9), (2, 11))),
         ),
         Stmt::Let(
             Ident(String::from("z")),
@@ -80,7 +80,7 @@ fn test_parse_assign_statements() {
     let expected = vec![
         Stmt::Assign(
             Ident(String::from("x")),
-            Expr::Literal(Literal::Int(1), ((1, 5), (1, 5))),
+            Expr::Literal(Literal::I64(1), ((1, 5), (1, 5))),
         ),
         Stmt::Assign(
             Ident(String::from("y")),
@@ -125,8 +125,8 @@ fn test_parse_identifier_expressions() {
 fn test_parse_literal_expressions() {
     let input = r#"5; 10.0; false; "foo";"#;
     let expected = vec![
-        Stmt::Expr(Expr::Literal(Literal::Int(5), ((1, 1), (1, 1)))),
-        Stmt::Expr(Expr::Literal(Literal::Float(10.0), ((1, 4), (1, 7)))),
+        Stmt::Expr(Expr::Literal(Literal::I64(5), ((1, 1), (1, 1)))),
+        Stmt::Expr(Expr::Literal(Literal::F64(10.0), ((1, 4), (1, 7)))),
         Stmt::Expr(Expr::Literal(Literal::Bool(false), ((1, 10), (1, 14)))),
         Stmt::Expr(Expr::Literal(
             Literal::Str(String::from("foo")),
@@ -144,12 +144,12 @@ fn test_parse_prefix_expressions() {
     let expected = vec![
         Stmt::Expr(Expr::Prefix(
             Prefix::Not,
-            Box::new(Expr::Literal(Literal::Int(5), ((1, 2), (1, 2)))),
+            Box::new(Expr::Literal(Literal::I64(5), ((1, 2), (1, 2)))),
             ((1, 1), (1, 2)),
         )),
         Stmt::Expr(Expr::Prefix(
             Prefix::Minus,
-            Box::new(Expr::Literal(Literal::Int(5), ((1, 6), (1, 6)))),
+            Box::new(Expr::Literal(Literal::I64(5), ((1, 6), (1, 6)))),
             ((1, 5), (1, 6)),
         )),
         Stmt::Expr(Expr::Prefix(
@@ -175,8 +175,8 @@ fn test_parse_infix_expressions() {
             "3 + 2",
             Stmt::Expr(Expr::Infix(
                 Infix::Plus,
-                Box::new(Expr::Literal(Literal::Int(3), ((1, 1), (1, 1)))),
-                Box::new(Expr::Literal(Literal::Int(2), ((1, 5), (1, 5)))),
+                Box::new(Expr::Literal(Literal::I64(3), ((1, 1), (1, 1)))),
+                Box::new(Expr::Literal(Literal::I64(2), ((1, 5), (1, 5)))),
                 ((1, 1), (1, 5)),
             )),
         ),
@@ -184,8 +184,8 @@ fn test_parse_infix_expressions() {
             "5 - 2",
             Stmt::Expr(Expr::Infix(
                 Infix::Minus,
-                Box::new(Expr::Literal(Literal::Int(5), ((1, 1), (1, 1)))),
-                Box::new(Expr::Literal(Literal::Int(2), ((1, 5), (1, 5)))),
+                Box::new(Expr::Literal(Literal::I64(5), ((1, 1), (1, 1)))),
+                Box::new(Expr::Literal(Literal::I64(2), ((1, 5), (1, 5)))),
                 ((1, 1), (1, 5)),
             )),
         ),
@@ -193,8 +193,8 @@ fn test_parse_infix_expressions() {
             "3 * 2",
             Stmt::Expr(Expr::Infix(
                 Infix::Mul,
-                Box::new(Expr::Literal(Literal::Int(3), ((1, 1), (1, 1)))),
-                Box::new(Expr::Literal(Literal::Int(2), ((1, 5), (1, 5)))),
+                Box::new(Expr::Literal(Literal::I64(3), ((1, 1), (1, 1)))),
+                Box::new(Expr::Literal(Literal::I64(2), ((1, 5), (1, 5)))),
                 ((1, 1), (1, 5)),
             )),
         ),
@@ -202,8 +202,8 @@ fn test_parse_infix_expressions() {
             "6 / 2",
             Stmt::Expr(Expr::Infix(
                 Infix::Div,
-                Box::new(Expr::Literal(Literal::Int(6), ((1, 1), (1, 1)))),
-                Box::new(Expr::Literal(Literal::Int(2), ((1, 5), (1, 5)))),
+                Box::new(Expr::Literal(Literal::I64(6), ((1, 1), (1, 1)))),
+                Box::new(Expr::Literal(Literal::I64(2), ((1, 5), (1, 5)))),
                 ((1, 1), (1, 5)),
             )),
         ),
@@ -211,8 +211,8 @@ fn test_parse_infix_expressions() {
             "7 % 2",
             Stmt::Expr(Expr::Infix(
                 Infix::Mod,
-                Box::new(Expr::Literal(Literal::Int(7), ((1, 1), (1, 1)))),
-                Box::new(Expr::Literal(Literal::Int(2), ((1, 5), (1, 5)))),
+                Box::new(Expr::Literal(Literal::I64(7), ((1, 1), (1, 1)))),
+                Box::new(Expr::Literal(Literal::I64(2), ((1, 5), (1, 5)))),
                 ((1, 1), (1, 5)),
             )),
         ),
@@ -220,8 +220,8 @@ fn test_parse_infix_expressions() {
             "3 > 2",
             Stmt::Expr(Expr::Infix(
                 Infix::GT,
-                Box::new(Expr::Literal(Literal::Int(3), ((1, 1), (1, 1)))),
-                Box::new(Expr::Literal(Literal::Int(2), ((1, 5), (1, 5)))),
+                Box::new(Expr::Literal(Literal::I64(3), ((1, 1), (1, 1)))),
+                Box::new(Expr::Literal(Literal::I64(2), ((1, 5), (1, 5)))),
                 ((1, 1), (1, 5)),
             )),
         ),
@@ -229,8 +229,8 @@ fn test_parse_infix_expressions() {
             "3 < 2",
             Stmt::Expr(Expr::Infix(
                 Infix::LT,
-                Box::new(Expr::Literal(Literal::Int(3), ((1, 1), (1, 1)))),
-                Box::new(Expr::Literal(Literal::Int(2), ((1, 5), (1, 5)))),
+                Box::new(Expr::Literal(Literal::I64(3), ((1, 1), (1, 1)))),
+                Box::new(Expr::Literal(Literal::I64(2), ((1, 5), (1, 5)))),
                 ((1, 1), (1, 5)),
             )),
         ),
@@ -238,8 +238,8 @@ fn test_parse_infix_expressions() {
             "4 >= 2",
             Stmt::Expr(Expr::Infix(
                 Infix::GTE,
-                Box::new(Expr::Literal(Literal::Int(4), ((1, 1), (1, 1)))),
-                Box::new(Expr::Literal(Literal::Int(2), ((1, 6), (1, 6)))),
+                Box::new(Expr::Literal(Literal::I64(4), ((1, 1), (1, 1)))),
+                Box::new(Expr::Literal(Literal::I64(2), ((1, 6), (1, 6)))),
                 ((1, 1), (1, 6)),
             )),
         ),
@@ -247,8 +247,8 @@ fn test_parse_infix_expressions() {
             "4 <= 2",
             Stmt::Expr(Expr::Infix(
                 Infix::LTE,
-                Box::new(Expr::Literal(Literal::Int(4), ((1, 1), (1, 1)))),
-                Box::new(Expr::Literal(Literal::Int(2), ((1, 6), (1, 6)))),
+                Box::new(Expr::Literal(Literal::I64(4), ((1, 1), (1, 1)))),
+                Box::new(Expr::Literal(Literal::I64(2), ((1, 6), (1, 6)))),
                 ((1, 1), (1, 6)),
             )),
         ),
@@ -256,8 +256,8 @@ fn test_parse_infix_expressions() {
             "4 == 4",
             Stmt::Expr(Expr::Infix(
                 Infix::EQ,
-                Box::new(Expr::Literal(Literal::Int(4), ((1, 1), (1, 1)))),
-                Box::new(Expr::Literal(Literal::Int(4), ((1, 6), (1, 6)))),
+                Box::new(Expr::Literal(Literal::I64(4), ((1, 1), (1, 1)))),
+                Box::new(Expr::Literal(Literal::I64(4), ((1, 6), (1, 6)))),
                 ((1, 1), (1, 6)),
             )),
         ),
@@ -265,8 +265,8 @@ fn test_parse_infix_expressions() {
             "4 != 4",
             Stmt::Expr(Expr::Infix(
                 Infix::NEQ,
-                Box::new(Expr::Literal(Literal::Int(4), ((1, 1), (1, 1)))),
-                Box::new(Expr::Literal(Literal::Int(4), ((1, 6), (1, 6)))),
+                Box::new(Expr::Literal(Literal::I64(4), ((1, 1), (1, 1)))),
+                Box::new(Expr::Literal(Literal::I64(4), ((1, 6), (1, 6)))),
                 ((1, 1), (1, 6)),
             )),
         ),
@@ -438,14 +438,14 @@ fn test_parse_operator_precedence() {
                 Infix::EQ,
                 Box::new(Expr::Infix(
                     Infix::GT,
-                    Box::new(Expr::Literal(Literal::Int(5), ((1, 1), (1, 1)))),
-                    Box::new(Expr::Literal(Literal::Int(4), ((1, 5), (1, 5)))),
+                    Box::new(Expr::Literal(Literal::I64(5), ((1, 1), (1, 1)))),
+                    Box::new(Expr::Literal(Literal::I64(4), ((1, 5), (1, 5)))),
                     ((1, 1), (1, 5)),
                 )),
                 Box::new(Expr::Infix(
                     Infix::LT,
-                    Box::new(Expr::Literal(Literal::Int(3), ((1, 10), (1, 10)))),
-                    Box::new(Expr::Literal(Literal::Int(4), ((1, 14), (1, 14)))),
+                    Box::new(Expr::Literal(Literal::I64(3), ((1, 10), (1, 10)))),
+                    Box::new(Expr::Literal(Literal::I64(4), ((1, 14), (1, 14)))),
                     ((1, 10), (1, 14)),
                 )),
                 ((1, 1), (1, 14)),
@@ -457,14 +457,14 @@ fn test_parse_operator_precedence() {
                 Infix::NEQ,
                 Box::new(Expr::Infix(
                     Infix::LT,
-                    Box::new(Expr::Literal(Literal::Int(5), ((1, 1), (1, 1)))),
-                    Box::new(Expr::Literal(Literal::Int(4), ((1, 5), (1, 5)))),
+                    Box::new(Expr::Literal(Literal::I64(5), ((1, 1), (1, 1)))),
+                    Box::new(Expr::Literal(Literal::I64(4), ((1, 5), (1, 5)))),
                     ((1, 1), (1, 5)),
                 )),
                 Box::new(Expr::Infix(
                     Infix::GT,
-                    Box::new(Expr::Literal(Literal::Int(3), ((1, 10), (1, 10)))),
-                    Box::new(Expr::Literal(Literal::Int(4), ((1, 14), (1, 14)))),
+                    Box::new(Expr::Literal(Literal::I64(3), ((1, 10), (1, 10)))),
+                    Box::new(Expr::Literal(Literal::I64(4), ((1, 14), (1, 14)))),
                     ((1, 10), (1, 14)),
                 )),
                 ((1, 1), (1, 14)),
@@ -476,11 +476,11 @@ fn test_parse_operator_precedence() {
                 Infix::EQ,
                 Box::new(Expr::Infix(
                     Infix::Plus,
-                    Box::new(Expr::Literal(Literal::Int(3), ((1, 1), (1, 1)))),
+                    Box::new(Expr::Literal(Literal::I64(3), ((1, 1), (1, 1)))),
                     Box::new(Expr::Infix(
                         Infix::Mul,
-                        Box::new(Expr::Literal(Literal::Int(4), ((1, 5), (1, 5)))),
-                        Box::new(Expr::Literal(Literal::Int(5), ((1, 9), (1, 9)))),
+                        Box::new(Expr::Literal(Literal::I64(4), ((1, 5), (1, 5)))),
+                        Box::new(Expr::Literal(Literal::I64(5), ((1, 9), (1, 9)))),
                         ((1, 5), (1, 9)),
                     )),
                     ((1, 1), (1, 9)),
@@ -489,14 +489,14 @@ fn test_parse_operator_precedence() {
                     Infix::Plus,
                     Box::new(Expr::Infix(
                         Infix::Mul,
-                        Box::new(Expr::Literal(Literal::Int(3), ((1, 14), (1, 14)))),
-                        Box::new(Expr::Literal(Literal::Int(1), ((1, 18), (1, 18)))),
+                        Box::new(Expr::Literal(Literal::I64(3), ((1, 14), (1, 14)))),
+                        Box::new(Expr::Literal(Literal::I64(1), ((1, 18), (1, 18)))),
                         ((1, 14), (1, 18)),
                     )),
                     Box::new(Expr::Infix(
                         Infix::Mul,
-                        Box::new(Expr::Literal(Literal::Int(4), ((1, 22), (1, 22)))),
-                        Box::new(Expr::Literal(Literal::Int(5), ((1, 26), (1, 26)))),
+                        Box::new(Expr::Literal(Literal::I64(4), ((1, 22), (1, 22)))),
+                        Box::new(Expr::Literal(Literal::I64(5), ((1, 26), (1, 26)))),
                         ((1, 22), (1, 26)),
                     )),
                     ((1, 14), (1, 26)),
@@ -518,8 +518,8 @@ fn test_parse_operator_precedence() {
                 Infix::EQ,
                 Box::new(Expr::Infix(
                     Infix::LT,
-                    Box::new(Expr::Literal(Literal::Int(1), ((1, 1), (1, 1)))),
-                    Box::new(Expr::Literal(Literal::Int(2), ((1, 5), (1, 5)))),
+                    Box::new(Expr::Literal(Literal::I64(1), ((1, 1), (1, 1)))),
+                    Box::new(Expr::Literal(Literal::I64(2), ((1, 5), (1, 5)))),
                     ((1, 1), (1, 5)),
                 )),
                 Box::new(Expr::Literal(Literal::Bool(true), ((1, 10), (1, 13)))),
@@ -532,8 +532,8 @@ fn test_parse_operator_precedence() {
                 Infix::EQ,
                 Box::new(Expr::Infix(
                     Infix::GT,
-                    Box::new(Expr::Literal(Literal::Int(1), ((1, 1), (1, 1)))),
-                    Box::new(Expr::Literal(Literal::Int(2), ((1, 5), (1, 5)))),
+                    Box::new(Expr::Literal(Literal::I64(1), ((1, 1), (1, 1)))),
+                    Box::new(Expr::Literal(Literal::I64(2), ((1, 5), (1, 5)))),
                     ((1, 1), (1, 5)),
                 )),
                 Box::new(Expr::Literal(Literal::Bool(false), ((1, 10), (1, 14)))),
@@ -546,16 +546,16 @@ fn test_parse_operator_precedence() {
                 Infix::Plus,
                 Box::new(Expr::Infix(
                     Infix::Plus,
-                    Box::new(Expr::Literal(Literal::Int(1), ((1, 1), (1, 1)))),
+                    Box::new(Expr::Literal(Literal::I64(1), ((1, 1), (1, 1)))),
                     Box::new(Expr::Infix(
                         Infix::Plus,
-                        Box::new(Expr::Literal(Literal::Int(2), ((1, 6), (1, 6)))),
-                        Box::new(Expr::Literal(Literal::Int(3), ((1, 10), (1, 10)))),
+                        Box::new(Expr::Literal(Literal::I64(2), ((1, 6), (1, 6)))),
+                        Box::new(Expr::Literal(Literal::I64(3), ((1, 10), (1, 10)))),
                         ((1, 6), (1, 10)),
                     )),
                     ((1, 1), (1, 10)),
                 )),
-                Box::new(Expr::Literal(Literal::Int(4), ((1, 15), (1, 15)))),
+                Box::new(Expr::Literal(Literal::I64(4), ((1, 15), (1, 15)))),
                 ((1, 1), (1, 15)),
             )),
         ),
@@ -565,11 +565,11 @@ fn test_parse_operator_precedence() {
                 Infix::Mul,
                 Box::new(Expr::Infix(
                     Infix::Plus,
-                    Box::new(Expr::Literal(Literal::Int(1), ((1, 2), (1, 2)))),
-                    Box::new(Expr::Literal(Literal::Int(1), ((1, 6), (1, 6)))),
+                    Box::new(Expr::Literal(Literal::I64(1), ((1, 2), (1, 2)))),
+                    Box::new(Expr::Literal(Literal::I64(1), ((1, 6), (1, 6)))),
                     ((1, 2), (1, 6)),
                 )),
-                Box::new(Expr::Literal(Literal::Int(2), ((1, 11), (1, 11)))),
+                Box::new(Expr::Literal(Literal::I64(2), ((1, 11), (1, 11)))),
                 ((1, 2), (1, 11)),
             )),
         ),
@@ -577,11 +577,11 @@ fn test_parse_operator_precedence() {
             "1 / (2 + 2)",
             Stmt::Expr(Expr::Infix(
                 Infix::Div,
-                Box::new(Expr::Literal(Literal::Int(1), ((1, 1), (1, 1)))),
+                Box::new(Expr::Literal(Literal::I64(1), ((1, 1), (1, 1)))),
                 Box::new(Expr::Infix(
                     Infix::Plus,
-                    Box::new(Expr::Literal(Literal::Int(2), ((1, 6), (1, 6)))),
-                    Box::new(Expr::Literal(Literal::Int(2), ((1, 10), (1, 10)))),
+                    Box::new(Expr::Literal(Literal::I64(2), ((1, 6), (1, 6)))),
+                    Box::new(Expr::Literal(Literal::I64(2), ((1, 10), (1, 10)))),
                     ((1, 6), (1, 10)),
                 )),
                 ((1, 1), (1, 10)),
@@ -593,8 +593,8 @@ fn test_parse_operator_precedence() {
                 Prefix::Minus,
                 Box::new(Expr::Infix(
                     Infix::Plus,
-                    Box::new(Expr::Literal(Literal::Int(1), ((1, 3), (1, 3)))),
-                    Box::new(Expr::Literal(Literal::Int(2), ((1, 7), (1, 7)))),
+                    Box::new(Expr::Literal(Literal::I64(1), ((1, 3), (1, 3)))),
+                    Box::new(Expr::Literal(Literal::I64(2), ((1, 7), (1, 7)))),
                     ((1, 3), (1, 7)),
                 )),
                 ((1, 1), (1, 7)),
@@ -668,7 +668,7 @@ fn test_parse_nested_if_expression() {
                 cond: Box::new(Expr::Infix(
                     Infix::GT,
                     Box::new(Expr::Ident(Ident::from("x"), ((2, 4), (2, 4)))),
-                    Box::new(Expr::Literal(Literal::Int(1), ((2, 8), (2, 8)))),
+                    Box::new(Expr::Literal(Literal::I64(1), ((2, 8), (2, 8)))),
                     ((2, 4), (2, 8)),
                 )),
                 then: vec![Stmt::Return(Expr::Ident(
@@ -733,11 +733,11 @@ fn test_parse_elif_expression() {
                 cond: Box::new(Expr::Infix(
                     Infix::GT,
                     Box::new(Expr::Ident(Ident::from("x"), ((5, 8), (5, 8)))),
-                    Box::new(Expr::Literal(Literal::Int(1), ((5, 12), (5, 12)))),
+                    Box::new(Expr::Literal(Literal::I64(1), ((5, 12), (5, 12)))),
                     ((5, 8), (5, 12)),
                 )),
                 then: vec![Stmt::Return(Expr::Literal(
-                    Literal::Int(1),
+                    Literal::I64(1),
                     ((6, 8), (6, 8)),
                 ))],
             },
@@ -764,7 +764,7 @@ fn test_parse_while_expression() {
             ((1, 7), (1, 11)),
         )),
         body: vec![Stmt::Expr(Expr::Literal(
-            Literal::Int(0),
+            Literal::I64(0),
             ((1, 15), (1, 15)),
         ))],
         span: ((1, 1), (1, 18)),
@@ -778,28 +778,28 @@ fn test_parse_while_expression() {
 fn test_parse_function_expressions() {
     let tests = [
         (
-            r#"fn foo() -> int {
+            r#"fn foo() -> i64 {
                    return 0;
                }"#,
             Stmt::Expr(Expr::Fn {
                 name: String::from("foo"),
                 args: vec![],
-                ret_t: Type::Int,
+                ret_t: Type::I64,
                 body: vec![Stmt::Return(Expr::Literal(
-                    Literal::Int(0),
+                    Literal::I64(0),
                     ((2, 8), (2, 8)),
                 ))],
                 span: ((1, 1), (3, 1)),
             }),
         ),
         (
-            r#"fn add(x: int, y: int) -> int {
+            r#"fn add(x: i64, y: i64) -> i64 {
                    return x + y;
                }"#,
             Stmt::Expr(Expr::Fn {
                 name: String::from("add"),
-                args: vec![Var::new("x", Type::Int), Var::new("y", Type::Int)],
-                ret_t: Type::Int,
+                args: vec![Var::new("x", Type::I64), Var::new("y", Type::I64)],
+                ret_t: Type::I64,
                 body: vec![Stmt::Return(Expr::Infix(
                     Infix::Plus,
                     Box::new(Expr::Ident(Ident::from("x"), ((2, 8), (2, 8)))),
@@ -824,17 +824,17 @@ fn test_parse_call_expression() {
     let expected = Stmt::Expr(Expr::Call {
         func: Box::new(Expr::Ident(Ident::from("add"), ((1, 1), (1, 3)))),
         args: vec![
-            Expr::Literal(Literal::Int(1), ((1, 5), (1, 5))),
+            Expr::Literal(Literal::I64(1), ((1, 5), (1, 5))),
             Expr::Infix(
                 Infix::Mul,
-                Box::new(Expr::Literal(Literal::Int(2), ((1, 8), (1, 8)))),
-                Box::new(Expr::Literal(Literal::Int(3), ((1, 12), (1, 12)))),
+                Box::new(Expr::Literal(Literal::I64(2), ((1, 8), (1, 8)))),
+                Box::new(Expr::Literal(Literal::I64(3), ((1, 12), (1, 12)))),
                 ((1, 8), (1, 12)),
             ),
             Expr::Infix(
                 Infix::Plus,
-                Box::new(Expr::Literal(Literal::Int(4), ((1, 15), (1, 15)))),
-                Box::new(Expr::Literal(Literal::Int(5), ((1, 19), (1, 19)))),
+                Box::new(Expr::Literal(Literal::I64(4), ((1, 15), (1, 15)))),
+                Box::new(Expr::Literal(Literal::I64(5), ((1, 19), (1, 19)))),
                 ((1, 15), (1, 19)),
             ),
         ],

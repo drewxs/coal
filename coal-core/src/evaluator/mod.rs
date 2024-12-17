@@ -267,10 +267,10 @@ impl Evaluator {
                 _ => FALSE,
             },
             Prefix::Minus => match rhs {
-                Object::Int(i) => Object::Int(-i),
-                Object::Float(f) => Object::Float(-f),
-                TRUE => Object::Int(-1),
-                FALSE => Object::Int(0),
+                Object::I64(i) => Object::I64(-i),
+                Object::F64(f) => Object::F64(-f),
+                TRUE => Object::I64(-1),
+                FALSE => Object::I64(0),
                 _ => Object::Error {
                     message: format!("bad operand type for unary -: '{}'", Type::from(&rhs)),
                     span: *span,
@@ -292,25 +292,25 @@ impl Evaluator {
         let rhs = self.eval_expr(rhs)?;
 
         match lhs {
-            Object::Int(lhs) => match rhs {
-                Object::Int(rhs) => Some(self.eval_infix_int_int(op, lhs, rhs)),
-                Object::Float(rhs) => Some(self.eval_infix_int_float(op, lhs, rhs)),
+            Object::I64(lhs) => match rhs {
+                Object::I64(rhs) => Some(self.eval_infix_int_int(op, lhs, rhs)),
+                Object::F64(rhs) => Some(self.eval_infix_int_float(op, lhs, rhs)),
                 _ => Some(Object::Error {
                     message: format!(
                         "unsupported operation: {} {op} {}",
-                        Type::Int,
+                        Type::I64,
                         Type::from(&rhs)
                     ),
                     span: *span,
                 }),
             },
-            Object::Float(lhs) => match rhs {
-                Object::Int(rhs) => Some(self.eval_infix_float_int(op, lhs, rhs)),
-                Object::Float(rhs) => Some(self.eval_infix_float_float(op, lhs, rhs)),
+            Object::F64(lhs) => match rhs {
+                Object::I64(rhs) => Some(self.eval_infix_float_int(op, lhs, rhs)),
+                Object::F64(rhs) => Some(self.eval_infix_float_float(op, lhs, rhs)),
                 _ => Some(Object::Error {
                     message: format!(
                         "unsupported operation: {} {op} {}",
-                        Type::Float,
+                        Type::F64,
                         Type::from(&rhs)
                     ),
                     span: *span,
@@ -318,7 +318,7 @@ impl Evaluator {
             },
             Object::Str(lhs) => match rhs {
                 Object::Str(rhs) => self.eval_infix_str_str(op, &lhs, &rhs, span),
-                Object::Int(rhs) => self.eval_infix_str_int(op, &lhs, &rhs, span),
+                Object::I64(rhs) => self.eval_infix_str_int(op, &lhs, &rhs, span),
                 _ => Some(Object::Error {
                     message: format!(
                         "unsupported operation: {} {op} {}",
@@ -345,12 +345,12 @@ impl Evaluator {
 
     fn eval_infix_int_int(&mut self, op: &Infix, lhs: i64, rhs: i64) -> Object {
         match op {
-            Infix::Plus => Object::Int(lhs + rhs),
-            Infix::Minus => Object::Int(lhs - rhs),
-            Infix::Mul => Object::Int(lhs * rhs),
-            Infix::Div => Object::Float(lhs as f64 / rhs as f64),
-            Infix::IntDiv => Object::Int(lhs / rhs),
-            Infix::Mod => Object::Int(lhs % rhs),
+            Infix::Plus => Object::I64(lhs + rhs),
+            Infix::Minus => Object::I64(lhs - rhs),
+            Infix::Mul => Object::I64(lhs * rhs),
+            Infix::Div => Object::F64(lhs as f64 / rhs as f64),
+            Infix::IntDiv => Object::I64(lhs / rhs),
+            Infix::Mod => Object::I64(lhs % rhs),
             Infix::EQ => Object::Bool(lhs == rhs),
             Infix::NEQ => Object::Bool(lhs != rhs),
             Infix::LT => Object::Bool(lhs < rhs),
@@ -362,12 +362,12 @@ impl Evaluator {
 
     fn eval_infix_int_float(&mut self, op: &Infix, lhs: i64, rhs: f64) -> Object {
         match op {
-            Infix::Plus => Object::Float((lhs as f64) + rhs),
-            Infix::Minus => Object::Float((lhs as f64) - rhs),
-            Infix::Mul => Object::Float((lhs as f64) * rhs),
-            Infix::Div => Object::Float((lhs as f64) / rhs),
-            Infix::IntDiv => Object::Float(((lhs as f64) / rhs).floor()),
-            Infix::Mod => Object::Float((lhs as f64) % rhs),
+            Infix::Plus => Object::F64((lhs as f64) + rhs),
+            Infix::Minus => Object::F64((lhs as f64) - rhs),
+            Infix::Mul => Object::F64((lhs as f64) * rhs),
+            Infix::Div => Object::F64((lhs as f64) / rhs),
+            Infix::IntDiv => Object::F64(((lhs as f64) / rhs).floor()),
+            Infix::Mod => Object::F64((lhs as f64) % rhs),
             Infix::EQ => Object::Bool(lhs as f64 == rhs),
             Infix::NEQ => Object::Bool(lhs as f64 != rhs),
             Infix::LT => Object::Bool((lhs as f64) < rhs),
@@ -379,12 +379,12 @@ impl Evaluator {
 
     fn eval_infix_float_int(&mut self, op: &Infix, lhs: f64, rhs: i64) -> Object {
         match op {
-            Infix::Plus => Object::Float(lhs + (rhs as f64)),
-            Infix::Minus => Object::Float(lhs - (rhs as f64)),
-            Infix::Mul => Object::Float(lhs * (rhs as f64)),
-            Infix::Div => Object::Float(lhs / (rhs as f64)),
-            Infix::IntDiv => Object::Float((lhs / (rhs as f64)).floor()),
-            Infix::Mod => Object::Float(lhs % (rhs as f64)),
+            Infix::Plus => Object::F64(lhs + (rhs as f64)),
+            Infix::Minus => Object::F64(lhs - (rhs as f64)),
+            Infix::Mul => Object::F64(lhs * (rhs as f64)),
+            Infix::Div => Object::F64(lhs / (rhs as f64)),
+            Infix::IntDiv => Object::F64((lhs / (rhs as f64)).floor()),
+            Infix::Mod => Object::F64(lhs % (rhs as f64)),
             Infix::EQ => Object::Bool(lhs == (rhs as f64)),
             Infix::NEQ => Object::Bool(lhs != (rhs as f64)),
             Infix::LT => Object::Bool(lhs < (rhs as f64)),
@@ -396,12 +396,12 @@ impl Evaluator {
 
     fn eval_infix_float_float(&mut self, op: &Infix, lhs: f64, rhs: f64) -> Object {
         match op {
-            Infix::Plus => Object::Float(lhs + rhs),
-            Infix::Minus => Object::Float(lhs - rhs),
-            Infix::Mul => Object::Float(lhs * rhs),
-            Infix::Div => Object::Float(lhs / rhs),
-            Infix::IntDiv => Object::Float((lhs / rhs).floor()),
-            Infix::Mod => Object::Float(lhs % rhs),
+            Infix::Plus => Object::F64(lhs + rhs),
+            Infix::Minus => Object::F64(lhs - rhs),
+            Infix::Mul => Object::F64(lhs * rhs),
+            Infix::Div => Object::F64(lhs / rhs),
+            Infix::IntDiv => Object::F64((lhs / rhs).floor()),
+            Infix::Mod => Object::F64(lhs % rhs),
             Infix::EQ => Object::Bool(lhs == rhs),
             Infix::NEQ => Object::Bool(lhs != rhs),
             Infix::LT => Object::Bool(lhs < rhs),
@@ -445,7 +445,7 @@ impl Evaluator {
             Infix::EQ => Some(FALSE),
             Infix::NEQ => Some(TRUE),
             _ => Some(Object::Error {
-                message: format!("unsupported operation: {} {op} {}", Type::Str, Type::Int),
+                message: format!("unsupported operation: {} {op} {}", Type::Str, Type::I64),
                 span: *span,
             }),
         }

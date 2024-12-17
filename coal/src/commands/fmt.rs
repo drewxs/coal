@@ -101,12 +101,12 @@ mod tests {
                             return   0;
                          }
             ";
-        let expected = "let x: int = 5;
-let y: int = 10;
+        let expected = "let x: i64 = 5;
+let y: i64 = 10;
 
 if x > y {
     if x > 1 {
-        let z: float = 1.0;
+        let z: f64 = 1.0;
         return z;
     } else {
         return 1;

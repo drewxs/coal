@@ -11,8 +11,8 @@ pub enum Token {
     // Identifiers + literals
     Ident(String),
     Str(String),
-    Int(i64),
-    Float(f64),
+    I64(i64),
+    F64(f64),
     Bool(bool),
 
     // Operators
@@ -107,8 +107,8 @@ impl fmt::Display for Token {
             Token::NewLine => writeln!(f),
             Token::Ident(name) => write!(f, "{name}"),
             Token::Str(s) => write!(f, "{s}"),
-            Token::Int(i) => write!(f, "{i}"),
-            Token::Float(n) => write!(f, "{n}"),
+            Token::I64(i) => write!(f, "{i}"),
+            Token::F64(n) => write!(f, "{n}"),
             Token::Bool(b) => write!(f, "{b}"),
             Token::Assign => write!(f, "="),
             Token::Plus => write!(f, "+"),

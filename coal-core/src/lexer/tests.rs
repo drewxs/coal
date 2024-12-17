@@ -16,12 +16,12 @@ fn test_lex_whitespace() {
     let mut lexer = Lexer::new(input);
 
     let expected = vec![
-        LexicalToken::new(Token::Int(1), ((1, 1), (1, 1))),
+        LexicalToken::new(Token::I64(1), ((1, 1), (1, 1))),
         LexicalToken::new(Token::Semicolon, ((1, 2), (1, 2))),
         LexicalToken::new(Token::NewLine, ((2, 1), (2, 1))),
-        LexicalToken::new(Token::Int(2), ((3, 1), (3, 1))),
+        LexicalToken::new(Token::I64(2), ((3, 1), (3, 1))),
         LexicalToken::new(Token::Semicolon, ((3, 2), (3, 2))),
-        LexicalToken::new(Token::Int(3), ((4, 1), (4, 1))),
+        LexicalToken::new(Token::I64(3), ((4, 1), (4, 1))),
         LexicalToken::new(Token::NewLine, ((5, 1), (5, 1))),
         LexicalToken::new(Token::Str(String::from("hello")), ((6, 1), (6, 7))),
     ];
@@ -56,10 +56,10 @@ fn test_lex_comments() {
         Token::Let,
         Token::Ident(String::from("one")),
         Token::Assign,
-        Token::Int(1),
+        Token::I64(1),
         Token::Semicolon,
         Token::Comment(String::from("bar")),
-        Token::Int(2),
+        Token::I64(2),
         Token::Semicolon,
     ];
 
@@ -71,10 +71,10 @@ fn test_next_tok() {
     let input = r#"
         // foo
 
-        let five: int = 5;
-        let ten: int = 10;
+        let five: i64 = 5;
+        let ten: i64 = 10;
 
-        fn add(x: int, y: int) -> int {
+        fn add(x: i64, y: i64) -> i64 {
             x + y
         }
 
@@ -102,16 +102,16 @@ fn test_next_tok() {
         Token::Let,
         Token::Ident(String::from("five")),
         Token::Colon,
-        Token::Ident(String::from("int")),
+        Token::Ident(String::from("i64")),
         Token::Assign,
-        Token::Int(5),
+        Token::I64(5),
         Token::Semicolon,
         Token::Let,
         Token::Ident(String::from("ten")),
         Token::Colon,
-        Token::Ident(String::from("int")),
+        Token::Ident(String::from("i64")),
         Token::Assign,
-        Token::Int(10),
+        Token::I64(10),
         Token::Semicolon,
         Token::NewLine,
         Token::Fn,
@@ -119,14 +119,14 @@ fn test_next_tok() {
         Token::Lparen,
         Token::Ident(String::from("x")),
         Token::Colon,
-        Token::Ident(String::from("int")),
+        Token::Ident(String::from("i64")),
         Token::Comma,
         Token::Ident(String::from("y")),
         Token::Colon,
-        Token::Ident(String::from("int")),
+        Token::Ident(String::from("i64")),
         Token::Rparen,
         Token::Arrow,
-        Token::Ident(String::from("int")),
+        Token::Ident(String::from("i64")),
         Token::Lbrace,
         Token::Ident(String::from("x")),
         Token::Plus,
@@ -147,28 +147,28 @@ fn test_next_tok() {
         Token::Minus,
         Token::Slash,
         Token::Asterisk,
-        Token::Int(5),
+        Token::I64(5),
         Token::Semicolon,
-        Token::Int(5),
+        Token::I64(5),
         Token::LT,
-        Token::Int(10),
+        Token::I64(10),
         Token::GT,
-        Token::Int(5),
+        Token::I64(5),
         Token::Semicolon,
         Token::NewLine,
         Token::If,
-        Token::Int(5),
+        Token::I64(5),
         Token::LT,
-        Token::Int(10),
+        Token::I64(10),
         Token::Lbrace,
         Token::Return,
-        Token::Int(1),
+        Token::I64(1),
         Token::Semicolon,
         Token::Rbrace,
         Token::Elif,
-        Token::Int(4),
+        Token::I64(4),
         Token::LT,
-        Token::Int(5),
+        Token::I64(5),
         Token::Lbrace,
         Token::Return,
         Token::Bool(true),
@@ -181,13 +181,13 @@ fn test_next_tok() {
         Token::Semicolon,
         Token::Rbrace,
         Token::NewLine,
-        Token::Int(10),
+        Token::I64(10),
         Token::EQ,
-        Token::Int(10),
+        Token::I64(10),
         Token::Semicolon,
-        Token::Int(10),
+        Token::I64(10),
         Token::NEQ,
-        Token::Int(9),
+        Token::I64(9),
         Token::Semicolon,
         Token::EOF,
     ];

@@ -200,8 +200,8 @@ impl Parser {
             Token::Ident(_) => Ident::try_from(&self.curr_node.token)
                 .map(|ident| Expr::Ident(ident, *span))
                 .ok(),
-            Token::Int(i) => Some(Expr::Literal(Literal::Int(*i), *span)),
-            Token::Float(f) => Some(Expr::Literal(Literal::Float(*f), *span)),
+            Token::I64(i) => Some(Expr::Literal(Literal::I64(*i), *span)),
+            Token::F64(f) => Some(Expr::Literal(Literal::F64(*f), *span)),
             Token::Str(s) => Some(Expr::Literal(Literal::Str(s.clone()), *span)),
             Token::Bool(b) => Some(Expr::Literal(Literal::Bool(*b), *span)),
             Token::Bang | Token::Plus | Token::Minus => self.parse_prefix_expr(),

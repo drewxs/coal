@@ -8,8 +8,8 @@ use crate::{Literal, ParserError, Span, Stmt, Type, Var};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Object {
-    Int(i64),
-    Float(f64),
+    I64(i64),
+    F64(f64),
     Str(String),
     Bool(bool),
     List {
@@ -65,8 +65,8 @@ impl From<&Literal> for Object {
     fn from(literal: &Literal) -> Self {
         match literal {
             Literal::Str(s) => Object::Str(s.clone()),
-            Literal::Int(i) => Object::Int(*i),
-            Literal::Float(f) => Object::Float(*f),
+            Literal::I64(i) => Object::I64(*i),
+            Literal::F64(f) => Object::F64(*f),
             Literal::Bool(b) => Object::from(*b),
             Literal::Nil => Object::Nil,
         }
@@ -85,8 +85,8 @@ impl From<&ParserError> for Object {
 impl Hash for Object {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            Object::Int(i) => i.hash(state),
-            Object::Float(f) => f.to_bits().hash(state),
+            Object::I64(i) => i.hash(state),
+            Object::F64(f) => f.to_bits().hash(state),
             Object::Str(s) => s.hash(state),
             Object::Bool(b) => b.hash(state),
             Object::List { data, .. } => data.hash(state),
@@ -105,8 +105,8 @@ impl Hash for Object {
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Object::Int(i) => write!(f, "{i}"),
-            Object::Float(x) => write!(f, "{x:?}"),
+            Object::I64(i) => write!(f, "{i}"),
+            Object::F64(x) => write!(f, "{x:?}"),
             Object::Str(s) => write!(f, "{s}"),
             Object::Bool(b) => write!(f, "{b}"),
             Object::List { data, .. } => write!(f, "{data:?}"),

@@ -1,4 +1,4 @@
-let x: int = 0;
+let x: i64 = 0;
 while x < 1000 {
     x = x + 1;
 }

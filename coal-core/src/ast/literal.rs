@@ -3,8 +3,8 @@ use std::fmt;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
     Str(String),
-    Int(i64),
-    Float(f64),
+    I64(i64),
+    F64(f64),
     Bool(bool),
     Nil,
 }
@@ -12,8 +12,8 @@ pub enum Literal {
 impl From<&str> for Literal {
     fn from(s: &str) -> Self {
         match s.parse::<f64>() {
-            Ok(f) if f.fract() == 0.0 => Literal::Int(f as i64),
-            Ok(f) => Literal::Float(f),
+            Ok(f) if f.fract() == 0.0 => Literal::I64(f as i64),
+            Ok(f) => Literal::F64(f),
             Err(_) => match s {
                 "true" => Literal::Bool(true),
                 "false" => Literal::Bool(false),
@@ -66,8 +66,8 @@ impl fmt::Display for Literal {
 
                 write!(f, "\"{result}\"")
             }
-            Literal::Int(i) => write!(f, "{i}"),
-            Literal::Float(x) => write!(f, "{x:?}"),
+            Literal::I64(i) => write!(f, "{i}"),
+            Literal::F64(x) => write!(f, "{x:?}"),
             Literal::Bool(b) => write!(f, "{b}"),
             Literal::Nil => write!(f, "nil"),
         }

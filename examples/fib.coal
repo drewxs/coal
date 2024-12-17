@@ -1,10 +1,10 @@
-fn fib(n: int) -> int {
-    let i: int = 0;
-    let x: int = 0;
-    let y: int = 1;
+fn fib(n: i64) -> i64 {
+    let i: i64 = 0;
+    let x: i64 = 0;
+    let y: i64 = 1;
 
     while i < n {
-        let tmp: int = x;
+        let tmp: i64 = x;
         x = y;
         y = tmp + y;
         i = i + 1;
