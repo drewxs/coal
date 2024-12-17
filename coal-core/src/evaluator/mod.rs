@@ -78,6 +78,24 @@ impl Evaluator {
         res
     }
 
+    fn eval_stmts_in_scope(&mut self, stmts: Vec<Stmt>, env: Rc<RefCell<Env>>) -> Option<Object> {
+        let curr_env = Rc::clone(&self.env);
+        self.env = env;
+        let res = self.eval_stmts(stmts);
+        self.env = curr_env;
+
+        res
+    }
+
+    fn eval_block(&mut self, stmts: Vec<Stmt>) -> Option<Object> {
+        let curr_env = Rc::clone(&self.env);
+        self.env = Rc::new(RefCell::new(Env::from(Rc::clone(&self.env))));
+        let res = self.eval_stmts(stmts);
+        self.env = curr_env;
+
+        res
+    }
+
     fn eval_let_stmt(&mut self, ident: &Ident, t: &Type, expr: &Expr) -> Option<Object> {
         let Ident(name) = ident;
         if self.env.borrow_mut().get(name).is_some() {
@@ -449,14 +467,14 @@ impl Evaluator {
             return Some(cond);
         }
         if cond.is_truthy() {
-            return self.eval_stmts(then.to_owned());
+            return self.eval_block(then.to_owned());
         }
         for elif in elifs {
             if self.eval_expr(&elif.cond)?.is_truthy() {
-                return self.eval_stmts(elif.then.to_owned());
+                return self.eval_block(elif.then.to_owned());
             }
         }
-        self.eval_stmts(alt.to_owned()?)
+        self.eval_block(alt.to_owned()?)
     }
 
     fn eval_while_expr(&mut self, cond: &Expr, body: &Vec<Stmt>) -> Option<Object> {
@@ -466,7 +484,7 @@ impl Evaluator {
         }
 
         while resolved_cond.is_truthy() {
-            self.eval_stmts(body.to_owned());
+            self.eval_block(body.to_owned());
             resolved_cond = self.eval_expr(cond)?;
         }
 
@@ -528,15 +546,11 @@ impl Evaluator {
                     enclosed_env.set(var.name.to_owned(), value.to_owned());
                 });
 
-            let curr_env = Rc::clone(&self.env);
-            self.env = Rc::new(RefCell::new(enclosed_env));
-
-            let mut res = self.eval_stmts(fn_body.to_owned());
+            let mut res =
+                self.eval_stmts_in_scope(fn_body.to_owned(), Rc::new(RefCell::new(enclosed_env)));
             if let Some(Object::Return(val)) = res {
                 res = Some(*val);
             }
-
-            self.env = curr_env;
 
             res
         } else {
