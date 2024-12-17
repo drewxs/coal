@@ -53,6 +53,7 @@ pub enum Token {
     If,
     Elif,
     Else,
+    While,
     Return,
 }
 
@@ -90,6 +91,7 @@ impl From<&str> for Token {
             "if" => Token::If,
             "elif" => Token::Elif,
             "else" => Token::Else,
+            "while" => Token::While,
             "return" => Token::Return,
             _ => Token::Ident(s.to_string()),
         }
@@ -137,6 +139,7 @@ impl fmt::Display for Token {
             Token::If => write!(f, "if"),
             Token::Elif => write!(f, "elif"),
             Token::Else => write!(f, "else"),
+            Token::While => write!(f, "while"),
             Token::Return => write!(f, "return"),
         }
     }

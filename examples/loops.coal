@@ -1,0 +1,8 @@
+let x: int = 0;
+
+while x < 100 {
+    let x: int = x + 1;
+}
+
+return x;
+

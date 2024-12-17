@@ -729,6 +729,27 @@ fn test_parse_elif_expression() {
 }
 
 #[test]
+fn test_parse_while_expression() {
+    let input = "while x < y { 0; }";
+    let expected = Stmt::Expr(Expr::While {
+        cond: Box::new(Expr::Infix(
+            Infix::LT,
+            Box::new(Expr::Ident(Ident::from("x"), ((1, 7), (1, 7)))),
+            Box::new(Expr::Ident(Ident::from("y"), ((1, 11), (1, 11)))),
+            ((1, 7), (1, 11)),
+        )),
+        body: vec![Stmt::Expr(Expr::Literal(
+            Literal::Int(0),
+            ((1, 15), (1, 15)),
+        ))],
+        span: ((1, 1), (1, 18)),
+    });
+    let actual = Parser::from(input).parse();
+
+    assert_eq!(expected, actual[0]);
+}
+
+#[test]
 fn test_parse_function_expressions() {
     let tests = [
         (

@@ -115,6 +115,7 @@ impl Evaluator {
                 alt,
                 ..
             } => self.eval_if_expr(cond, then, elifs, alt),
+            Expr::While { cond, body, .. } => self.eval_while_expr(cond, body),
             Expr::Fn {
                 name,
                 args,
@@ -418,6 +419,20 @@ impl Evaluator {
             }
         }
         self.eval_stmts(alt.to_owned()?)
+    }
+
+    fn eval_while_expr(&mut self, cond: &Expr, body: &Vec<Stmt>) -> Option<Object> {
+        let mut resolved_cond = self.eval_expr(cond)?;
+        if let Object::Error { .. } = resolved_cond {
+            return Some(resolved_cond);
+        }
+
+        while resolved_cond.is_truthy() {
+            self.eval_stmts(body.to_owned());
+            resolved_cond = self.eval_expr(cond)?;
+        }
+
+        None
     }
 
     fn eval_call_expr(&mut self, func: &Expr, args: &[Expr], span: &Span) -> Option<Object> {

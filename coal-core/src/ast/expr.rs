@@ -17,6 +17,11 @@ pub enum Expr {
         alt: Option<Vec<Stmt>>,
         span: Span,
     },
+    While {
+        cond: Box<Expr>,
+        body: Vec<Stmt>,
+        span: Span,
+    },
     Fn {
         name: String,
         args: Vec<Var>,
@@ -45,6 +50,7 @@ impl Expr {
             Expr::Prefix(_, _, span) => *span,
             Expr::Infix(_, _, _, span) => *span,
             Expr::If { span, .. } => *span,
+            Expr::While { span, .. } => *span,
             Expr::Fn { span, .. } => *span,
             Expr::Call { span, .. } => *span,
         }
@@ -80,6 +86,13 @@ impl Expr {
                     for stmt in else_block {
                         stmt.fmt_with_indent(f, indent_level + 1)?;
                     }
+                }
+                writeln!(f, "{indent}}}")
+            }
+            Expr::While { cond, body, .. } => {
+                writeln!(f, "{}while {cond} {{", indent)?;
+                for stmt in body {
+                    stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
                 writeln!(f, "{indent}}}")
             }

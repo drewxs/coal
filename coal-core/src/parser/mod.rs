@@ -195,6 +195,7 @@ impl Parser {
             Token::Bang | Token::Plus | Token::Minus => self.parse_prefix_expr(),
             Token::Lparen => self.parse_grouped_expr(),
             Token::If => self.parse_if_expr(),
+            Token::While => self.parse_while_expr(),
             Token::Fn => self.parse_fn_expr(),
             _ => {
                 self.error(ParserErrorKind::SyntaxError(self.curr_node.token.clone()));
@@ -338,6 +339,25 @@ impl Parser {
             then,
             elifs,
             alt,
+            span: (start, end),
+        })
+    }
+
+    fn parse_while_expr(&mut self) -> Option<Expr> {
+        let (start, _) = self.curr_node.span;
+        self.advance();
+
+        let cond = self.parse_expr(Precedence::Lowest)?;
+        if !self.expect_next(Token::Lbrace) {
+            return None;
+        }
+
+        let body = self.parse_block_stmt();
+        let (_, end) = self.curr_node.span;
+
+        Some(Expr::While {
+            cond: Box::new(cond),
+            body,
             span: (start, end),
         })
     }
