@@ -10,8 +10,6 @@
     - [ ] BTree map
 - [ ] Type system
   - [ ] Inference
-    - [x] From literals
-    - [ ] From identifiers/symbols
   - [ ] Static type checking
   - [ ] Generics
   - [ ] Sum types
@@ -22,7 +20,7 @@
     - [ ] Tuples
     - [ ] Structs
 - [ ] Compiler/VM optimizations
-  - [x] Tail call optimization
+  - [ ] Tail call optimization
   - [ ] Constant folding
   - [ ] Dead code elimination
 - [ ] LSP
@@ -32,7 +30,7 @@
   - [ ] Signature help
 - [ ] Treesitter grammar
 - [ ] Linter
-- [x] Formatter
+- [ ] Formatter
 - [x] REPL
   - [x] History
-  - [x] Autocomplete
+  - [ ] Autocomplete

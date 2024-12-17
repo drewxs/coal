@@ -9,7 +9,7 @@ pub use object::*;
 
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{Expr, Ident, IfExpr, Infix, Literal, Parser, Prefix, Span, Stmt, Type, Var};
+use crate::{Expr, Ident, IfExpr, Infix, Literal, Parser, Prefix, Span, Stmt, Type};
 
 #[derive(Clone, Debug)]
 pub struct Evaluator {
@@ -35,7 +35,8 @@ impl Evaluator {
             if stmt == Stmt::Void {
                 continue;
             }
-            match self.eval_stmt(stmt, false) {
+
+            match self.eval_stmt(stmt) {
                 Some(Object::Return(val)) => return Some(*val),
                 Some(Object::Error { message, span }) => {
                     return Some(Object::Error { message, span })
@@ -47,10 +48,10 @@ impl Evaluator {
         res
     }
 
-    fn eval_stmt(&mut self, stmt: Stmt, tail: bool) -> Option<Object> {
+    fn eval_stmt(&mut self, stmt: Stmt) -> Option<Object> {
         match stmt {
             Stmt::Let(Ident(name), t, expr) => {
-                let val = self.eval_expr(&expr, false)?;
+                let val = self.eval_expr(&expr)?;
                 if let Object::Error { .. } = val {
                     return Some(val);
                 }
@@ -64,12 +65,11 @@ impl Evaluator {
                 self.env.borrow_mut().set(name, val);
                 None
             }
-            Stmt::Expr(expr) => self.eval_expr(&expr, tail),
+            Stmt::Expr(expr) => self.eval_expr(&expr),
             Stmt::Return(expr) => {
-                let val = self.eval_expr(&expr, tail)?;
+                let val = self.eval_expr(&expr)?;
                 match val {
                     Object::Error { message, span } => Some(Object::Error { message, span }),
-                    Object::TailCall { .. } => Some(val),
                     _ => Some(Object::Return(Box::new(val))),
                 }
             }
@@ -77,21 +77,18 @@ impl Evaluator {
         }
     }
 
-    fn eval_stmts(&mut self, stmts: Vec<Stmt>, tail: bool) -> Option<Object> {
-        let len = stmts.len();
+    fn eval_stmts(&mut self, stmts: Vec<Stmt>) -> Option<Object> {
         let mut res = None;
 
-        for (i, stmt) in stmts.into_iter().enumerate() {
-            let is_tail_pos = i == len - 1 && tail;
-            let obj = self.eval_stmt(stmt, is_tail_pos);
-            match obj {
+        for stmt in stmts {
+            if stmt == Stmt::Void {
+                continue;
+            }
+
+            match self.eval_stmt(stmt) {
                 Some(Object::Return(val)) => return Some(Object::Return(val)),
                 Some(Object::Error { message, span }) => {
                     return Some(Object::Error { message, span })
-                }
-                Some(Object::TailCall { .. }) => {
-                    println!("tail call");
-                    return obj;
                 }
                 obj => res = obj,
             }
@@ -100,7 +97,7 @@ impl Evaluator {
         res
     }
 
-    fn eval_expr(&mut self, expr: &Expr, tail: bool) -> Option<Object> {
+    fn eval_expr(&mut self, expr: &Expr) -> Option<Object> {
         match expr {
             Expr::Ident(Ident(name), _) => self.env.borrow().get(name).or_else(|| {
                 Some(Object::Error {
@@ -117,7 +114,7 @@ impl Evaluator {
                 elifs,
                 alt,
                 ..
-            } => self.eval_if_expr(cond, then, elifs, alt, tail),
+            } => self.eval_if_expr(cond, then, elifs, alt),
             Expr::Fn {
                 name,
                 args,
@@ -134,7 +131,7 @@ impl Evaluator {
                 self.env.borrow_mut().set(name.to_owned(), func.to_owned());
                 Some(func)
             }
-            Expr::Call { func, args, span } => self.eval_call_expr(func, args, span, tail),
+            Expr::Call { func, args, span } => self.eval_call_expr(func, args, span),
         }
     }
 
@@ -199,7 +196,7 @@ impl Evaluator {
     }
 
     fn eval_prefix_expr(&mut self, prefix: &Prefix, rhs: &Expr, span: &Span) -> Option<Object> {
-        let rhs = self.eval_expr(rhs, false)?;
+        let rhs = self.eval_expr(rhs)?;
         let obj = match prefix {
             Prefix::Not => match rhs {
                 Object::Nil | FALSE => TRUE,
@@ -227,8 +224,8 @@ impl Evaluator {
         rhs: &Expr,
         span: &Span,
     ) -> Option<Object> {
-        let lhs = self.eval_expr(lhs, false)?;
-        let rhs = self.eval_expr(rhs, false)?;
+        let lhs = self.eval_expr(lhs)?;
+        let rhs = self.eval_expr(rhs)?;
 
         match lhs {
             Object::Int(lhs) => match rhs {
@@ -407,124 +404,67 @@ impl Evaluator {
         then: &Vec<Stmt>,
         elifs: &Vec<IfExpr>,
         alt: &Option<Vec<Stmt>>,
-        tail: bool,
     ) -> Option<Object> {
-        let cond_obj = self.eval_expr(cond, false)?;
-        if let Object::Error { .. } = cond_obj {
-            return Some(cond_obj);
+        let cond = self.eval_expr(cond)?;
+        if let Object::Error { .. } = cond {
+            return Some(cond);
         }
-        if cond_obj.is_truthy() {
-            return self.eval_stmts(then.to_owned(), tail);
+        if cond.is_truthy() {
+            return self.eval_stmts(then.to_owned());
         }
         for elif in elifs {
-            let elif_cond_obj = self.eval_expr(&elif.cond, false)?;
-            if elif_cond_obj.is_truthy() {
-                return self.eval_stmts(elif.then.to_owned(), tail);
+            if self.eval_expr(&elif.cond)?.is_truthy() {
+                return self.eval_stmts(elif.then.to_owned());
             }
         }
-        self.eval_stmts(alt.to_owned().unwrap_or_default(), tail)
+        self.eval_stmts(alt.to_owned()?)
     }
 
-    fn eval_call_expr(
-        &mut self,
-        func: &Expr,
-        args: &[Expr],
-        span: &Span,
-        tail: bool,
-    ) -> Option<Object> {
-        let resolved_args: Vec<_> = args
-            .iter()
-            .filter_map(|arg| self.eval_expr(arg, false))
-            .collect();
-        let resolved_fn = self.eval_expr(func, false)?;
+    fn eval_call_expr(&mut self, func: &Expr, args: &[Expr], span: &Span) -> Option<Object> {
+        let resolved_args: Vec<_> = args.iter().filter_map(|arg| self.eval_expr(arg)).collect();
+        let resolved_fn = self.eval_expr(func)?;
 
-        match resolved_fn {
-            Object::Fn {
-                name,
-                args: fn_args,
-                body: fn_body,
-                ret_t,
-            } => {
-                if fn_args.len() != resolved_args.len() {
-                    return Some(Object::Error {
-                        message: format!(
-                            "expected {} arguments, got {}",
-                            fn_args.len(),
-                            resolved_args.len()
-                        ),
-                        span: *span,
-                    });
-                }
-
-                if tail {
-                    return Some(Object::TailCall {
-                        func: Box::new(Object::Fn {
-                            name,
-                            args: fn_args,
-                            body: fn_body,
-                            ret_t,
-                        }),
-                        args: resolved_args,
-                    });
-                }
-
-                self.eval_fn_call(fn_args, fn_body, resolved_args, span)
+        if let Object::Fn {
+            args: fn_args,
+            body: fn_body,
+            ..
+        } = resolved_fn
+        {
+            if fn_args.len() != resolved_args.len() {
+                return Some(Object::Error {
+                    message: format!(
+                        "expected {} arguments, got {}",
+                        fn_args.len(),
+                        resolved_args.len()
+                    ),
+                    span: *span,
+                });
             }
-            _ => Some(Object::Error {
+
+            let mut enclosed_env = Env::from(Rc::clone(&self.env));
+            fn_args
+                .iter()
+                .zip(resolved_args.iter())
+                .for_each(|(var, value)| {
+                    enclosed_env.set(var.name.to_owned(), value.to_owned());
+                });
+
+            let curr_env = Rc::clone(&self.env);
+            self.env = Rc::new(RefCell::new(enclosed_env));
+
+            let mut res = self.eval_stmts(fn_body.to_owned());
+            if let Some(Object::Return(val)) = res {
+                res = Some(*val);
+            }
+
+            self.env = curr_env;
+
+            res
+        } else {
+            Some(Object::Error {
                 message: format!("expected function, got {resolved_fn}"),
                 span: *span,
-            }),
-        }
-    }
-
-    fn eval_fn_call(
-        &mut self,
-        fn_args: Vec<Var>,
-        fn_body: Vec<Stmt>,
-        resolved_args: Vec<Object>,
-        span: &Span,
-    ) -> Option<Object> {
-        let curr_env = Rc::clone(&self.env);
-        let mut enclosed_env = Env::from(Rc::clone(&self.env));
-        for (var, val) in fn_args.iter().zip(resolved_args.iter()) {
-            enclosed_env.set(var.name.to_owned(), val.to_owned());
-        }
-        self.env = Rc::new(RefCell::new(enclosed_env));
-
-        let mut res = self.eval_stmts(fn_body.clone(), true);
-        loop {
-            match res {
-                Some(Object::TailCall { func, args }) => {
-                    // Tail call detected, rebind env without using the stack
-                    if let Object::Fn {
-                        args: fn_args,
-                        body: fn_body,
-                        ..
-                    } = *func
-                    {
-                        let mut enclosed_env = Env::from(Rc::clone(&curr_env));
-                        for (var, val) in fn_args.iter().zip(args.iter()) {
-                            enclosed_env.set(var.name.to_owned(), val.to_owned());
-                        }
-                        self.env = Rc::new(RefCell::new(enclosed_env));
-                        res = self.eval_stmts(fn_body.clone(), true);
-                    } else {
-                        self.env = curr_env;
-                        return Some(Object::Error {
-                            message: "expected function in tail call".to_string(),
-                            span: *span,
-                        });
-                    }
-                }
-                Some(Object::Return(val)) => {
-                    self.env = curr_env;
-                    return Some(*val);
-                }
-                other => {
-                    self.env = curr_env;
-                    return other;
-                }
-            }
+            })
         }
     }
 }
