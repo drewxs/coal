@@ -133,6 +133,13 @@ impl Evaluator {
                 return Some(val);
             }
 
+            if let Object::Fn { .. } = curr {
+                return Some(Object::Error {
+                    message: String::from("cannot assign to function"),
+                    span: expr.span(),
+                });
+            }
+
             let curr_t = Type::from(&curr);
             let val_t = Type::from(&val);
 
