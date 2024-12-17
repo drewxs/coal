@@ -72,6 +72,31 @@ fn test_parse_let_statements_inference() {
 }
 
 #[test]
+fn test_parse_assign_statements() {
+    let input = r#"
+        x = 1;
+        y = "foo";;
+        z = true;"#;
+    let expected = vec![
+        Stmt::Assign(
+            Ident(String::from("x")),
+            Expr::Literal(Literal::Int(1), ((1, 5), (1, 5))),
+        ),
+        Stmt::Assign(
+            Ident(String::from("y")),
+            Expr::Literal(Literal::from("foo"), ((2, 5), (2, 9))),
+        ),
+        Stmt::Assign(
+            Ident(String::from("z")),
+            Expr::Literal(Literal::Bool(true), ((3, 5), (3, 8))),
+        ),
+    ];
+    let actual = Parser::from(input).parse();
+
+    assert_eq!(expected, actual);
+}
+
+#[test]
 fn test_parse_return_statements() {
     let tests = vec!["return 7;", "return 100;", "return 999999;"];
 

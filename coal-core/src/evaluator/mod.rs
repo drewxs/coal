@@ -50,29 +50,10 @@ impl Evaluator {
 
     fn eval_stmt(&mut self, stmt: Stmt) -> Option<Object> {
         match stmt {
-            Stmt::Let(Ident(name), t, expr) => {
-                let val = self.eval_expr(&expr)?;
-                if let Object::Error { .. } = val {
-                    return Some(val);
-                }
-                let resolved_t = Type::from(&val);
-                if t != resolved_t {
-                    return Some(Object::Error {
-                        message: format!("type mismatch: expected={t}, got={resolved_t}"),
-                        span: expr.span(),
-                    });
-                }
-                self.env.borrow_mut().set(name, val);
-                None
-            }
+            Stmt::Let(ident, t, expr) => self.eval_let_stmt(&ident, &t, &expr),
+            Stmt::Assign(ident, expr) => self.eval_assign_stmt(&ident, &expr),
+            Stmt::Return(expr) => self.eval_return_stmt(&expr),
             Stmt::Expr(expr) => self.eval_expr(&expr),
-            Stmt::Return(expr) => {
-                let val = self.eval_expr(&expr)?;
-                match val {
-                    Object::Error { message, span } => Some(Object::Error { message, span }),
-                    _ => Some(Object::Return(Box::new(val))),
-                }
-            }
             _ => None,
         }
     }
@@ -95,6 +76,65 @@ impl Evaluator {
         }
 
         res
+    }
+
+    fn eval_let_stmt(&mut self, ident: &Ident, t: &Type, expr: &Expr) -> Option<Object> {
+        let val = self.eval_expr(expr)?;
+        if let Object::Error { .. } = val {
+            return Some(val);
+        }
+
+        let resolved_t = Type::from(&val);
+        if t != &resolved_t {
+            return Some(Object::Error {
+                message: format!("type mismatch: expected={t}, got={resolved_t}"),
+                span: expr.span(),
+            });
+        }
+
+        let Ident(name) = ident;
+        self.env.borrow_mut().set(name.to_owned(), val);
+
+        None
+    }
+
+    fn eval_assign_stmt(&mut self, ident: &Ident, expr: &Expr) -> Option<Object> {
+        let Ident(name) = ident;
+        let curr = self.env.borrow_mut().get(name);
+
+        if let Some(curr) = curr {
+            let val = self.eval_expr(expr)?;
+            if let Object::Error { .. } = val {
+                return Some(val);
+            }
+
+            let curr_t = Type::from(&curr);
+            let val_t = Type::from(&val);
+
+            if curr_t != val_t {
+                return Some(Object::Error {
+                    message: format!("type mismatch: expected={curr_t}, got={val_t}"),
+                    span: expr.span(),
+                });
+            }
+
+            self.env.borrow_mut().set(name.to_owned(), val);
+
+            None
+        } else {
+            let ((line, _), _) = expr.span();
+            Some(Object::Error {
+                message: format!("identifier not found: {name}"),
+                span: ((line, 1), (line, name.len())),
+            })
+        }
+    }
+
+    fn eval_return_stmt(&mut self, expr: &Expr) -> Option<Object> {
+        self.eval_expr(expr).map(|val| match val {
+            Object::Error { .. } => val,
+            _ => Object::Return(Box::new(val)),
+        })
     }
 
     fn eval_expr(&mut self, expr: &Expr) -> Option<Object> {

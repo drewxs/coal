@@ -111,6 +111,10 @@ impl Parser {
     fn parse_stmt(&mut self) -> Option<Stmt> {
         match &self.curr_node.token {
             Token::Let => self.parse_let_stmt(),
+            Token::Ident(_) => match self.next_node.token {
+                Token::Assign => self.parse_assign_stmt(),
+                _ => self.parse_expr_stmt(),
+            },
             Token::Return => self.parse_ret_stmt(),
             Token::Comment(c) => Some(Stmt::Comment(Comment(c.clone()))),
             Token::NewLine => Some(Stmt::Newline),
@@ -171,6 +175,16 @@ impl Parser {
             ));
             Some(Stmt::Let(ident, Type::Unknown, expr))
         }
+    }
+
+    fn parse_assign_stmt(&mut self) -> Option<Stmt> {
+        let ident = Ident::try_from(&self.curr_node.token).ok()?;
+        self.advance();
+        self.advance();
+        self.parse_expr(Precedence::Lowest).map(|expr| {
+            self.consume(Token::Semicolon);
+            Stmt::Assign(ident, expr)
+        })
     }
 
     fn parse_ret_stmt(&mut self) -> Option<Stmt> {

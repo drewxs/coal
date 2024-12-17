@@ -8,8 +8,9 @@ pub enum Stmt {
     Newline,
     Comment(Comment),
     Let(Ident, Type, Expr),
-    Expr(Expr),
+    Assign(Ident, Expr),
     Return(Expr),
+    Expr(Expr),
 }
 
 impl Stmt {
@@ -25,6 +26,14 @@ impl Stmt {
                 expr.fmt_with_indent(f, indent_level)?;
                 writeln!(f, ";")
             }
+            Stmt::Assign(ident, expr) => {
+                writeln!(f, "{}{ident} = {expr};", indent)
+            }
+            Stmt::Return(expr) => {
+                write!(f, "{}return ", indent)?;
+                expr.fmt_with_indent(f, indent_level)?;
+                writeln!(f, ";")
+            }
             Stmt::Expr(expr) => match expr {
                 Expr::Ident(_, _)
                 | Expr::Literal(_, _)
@@ -36,11 +45,6 @@ impl Stmt {
                 }
                 _ => expr.fmt_with_indent(f, indent_level),
             },
-            Stmt::Return(expr) => {
-                write!(f, "{}return ", indent)?;
-                expr.fmt_with_indent(f, indent_level)?;
-                writeln!(f, ";")
-            }
         }
     }
 }

@@ -1,9 +1,17 @@
 fn fib(n: int) -> int {
-    if n < 2 {
-        return n;
+    let i: int = 0;
+    let x: int = 0;
+    let y: int = 1;
+
+    while i < n {
+        let tmp: int = x;
+        x = y;
+        y = tmp + y;
+        i = i + 1;
     }
-    return fib(n - 1) + fib(n - 2);
+
+    return x;
 }
 
-fib(10);
+fib(50);
 

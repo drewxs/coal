@@ -200,6 +200,31 @@ fn test_eval_let_statements() {
 }
 
 #[test]
+fn test_eval_assign_statements() {
+    let tests = vec![
+        ("let x = 1; x = 2; x;", Some(Object::Int(2))),
+        (
+            "x = 1",
+            Some(Object::Error {
+                message: String::from("identifier not found: x"),
+                span: ((1, 1), (1, 1)),
+            }),
+        ),
+        (
+            r#"let x = 1; x = "foo""#,
+            Some(Object::Error {
+                message: String::from("type mismatch: expected=int, got=str"),
+                span: ((1, 16), (1, 20)),
+            }),
+        ),
+    ];
+
+    for (expr, expected) in tests {
+        assert_eq!(expected, Evaluator::default().eval(expr));
+    }
+}
+
+#[test]
 fn test_eval_fn_expr() {
     let tests = vec![(
         r#"fn add(x: int, y: int) -> int {
