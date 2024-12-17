@@ -111,7 +111,7 @@ impl ReplCompleter {
 }
 
 const KEYWORDS_BUILTINS: &[&str] = &[
-    "let", "fn", "if", "else", "elif", "then", "return", "true", "false", "print",
+    "let", "fn", "if", "elif", "else", "while", "return", "true", "false", "print",
 ];
 
 impl Completer for ReplCompleter {
