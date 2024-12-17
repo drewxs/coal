@@ -96,16 +96,16 @@ impl Parser {
             .push(ParserError::new(kind, self.curr_node.span));
     }
 
-    fn expect_next(&mut self, token: Token) -> bool {
+    fn expect_next(&mut self, token: Token) -> Option<()> {
         if self.next_node.token == token {
             self.advance();
-            return true;
+            return Some(());
         }
         self.error(ParserErrorKind::UnexpectedToken {
             expected: token,
             got: self.next_node.token.clone(),
         });
-        false
+        None
     }
 
     fn parse_stmt(&mut self) -> Option<Stmt> {
@@ -152,9 +152,7 @@ impl Parser {
             None
         };
 
-        if !self.expect_next(Token::Assign) {
-            return None;
-        }
+        self.expect_next(Token::Assign)?;
         self.advance();
 
         let expr = self.parse_expr(Precedence::Lowest)?;
@@ -290,9 +288,7 @@ impl Parser {
     fn parse_grouped_expr(&mut self) -> Option<Expr> {
         self.advance();
         let expr = self.parse_expr(Precedence::Lowest);
-        if !self.expect_next(Token::Rparen) {
-            return None;
-        }
+        self.expect_next(Token::Rparen)?;
         expr
     }
 
@@ -301,9 +297,7 @@ impl Parser {
         self.advance();
 
         let cond = self.parse_expr(Precedence::Lowest)?;
-        if !self.expect_next(Token::Lbrace) {
-            return None;
-        }
+        self.expect_next(Token::Lbrace)?;
 
         let then = self.parse_block_stmt();
 
@@ -313,9 +307,7 @@ impl Parser {
             self.advance();
 
             let cond = self.parse_expr(Precedence::Lowest)?;
-            if !self.expect_next(Token::Lbrace) {
-                return None;
-            }
+            self.expect_next(Token::Lbrace)?;
 
             elifs.push(IfExpr {
                 cond: Box::new(cond),
@@ -326,9 +318,7 @@ impl Parser {
         let mut alt = None;
         if self.next_node.token == Token::Else {
             self.advance();
-            if !self.expect_next(Token::Lbrace) {
-                return None;
-            }
+            self.expect_next(Token::Lbrace)?;
             alt = Some(self.parse_block_stmt());
         }
 
@@ -348,9 +338,7 @@ impl Parser {
         self.advance();
 
         let cond = self.parse_expr(Precedence::Lowest)?;
-        if !self.expect_next(Token::Lbrace) {
-            return None;
-        }
+        self.expect_next(Token::Lbrace)?;
 
         let body = self.parse_block_stmt();
         let (_, end) = self.curr_node.span;
@@ -367,11 +355,11 @@ impl Parser {
         self.advance();
 
         let ident = Ident::try_from(&self.curr_node.token).ok()?;
-        self.expect_next(Token::Lparen);
+        self.expect_next(Token::Lparen)?;
         self.advance();
 
         let args = self.parse_decl_args()?;
-        self.expect_next(Token::Arrow);
+        self.expect_next(Token::Arrow)?;
         self.advance();
 
         let ret_t = Type::try_from(&self.curr_node.token).ok()?;
@@ -393,7 +381,7 @@ impl Parser {
         let mut args = vec![];
 
         while let Token::Ident(name) = self.curr_node.token.clone() {
-            self.expect_next(Token::Colon);
+            self.expect_next(Token::Colon)?;
             self.advance();
 
             let t = Type::try_from(&self.curr_node.token).ok()?;
@@ -426,11 +414,7 @@ impl Parser {
             list.push(expr);
         }
 
-        if self.expect_next(end_tok) {
-            Some(list)
-        } else {
-            None
-        }
+        self.expect_next(end_tok).map(|_| list)
     }
 }
 
