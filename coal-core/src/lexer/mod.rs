@@ -229,7 +229,7 @@ impl Iterator for Lexer {
             }
             'a'..='z' | 'A'..='Z' | '_' => {
                 let pos = self.pos;
-                while self.ch == '_' || self.ch.is_alphabetic() {
+                while self.ch == '_' || self.ch.is_alphanumeric() {
                     self.read_char();
                 }
                 LexicalToken::new(
