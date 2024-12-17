@@ -192,10 +192,9 @@ fn test_eval_let_statements() {
             }),
         ),
     ];
-    let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
-        assert_eq!(expected, evaluator.eval(expr));
+        assert_eq!(expected, Evaluator::default().eval(expr));
     }
 }
 
