@@ -9,7 +9,7 @@ pub use object::*;
 
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{Expr, Ident, IfExpr, Infix, Literal, Parser, Prefix, Span, Stmt, Type};
+use crate::{Expr, Ident, IfExpr, Infix, Literal, Parser, Prefix, Span, Stmt, Type, Var};
 
 #[derive(Clone, Debug)]
 pub struct Evaluator {
@@ -168,23 +168,8 @@ impl Evaluator {
                 args,
                 ret_t,
                 body,
-                ..
-            } => {
-                if self.env.borrow_mut().get(name).is_some() {
-                    return Some(Object::Error {
-                        message: format!("identifier '{name}' already exists"),
-                        span: expr.span(),
-                    });
-                }
-                let func = Object::Fn {
-                    name: name.to_owned(),
-                    args: args.to_owned(),
-                    body: body.to_owned(),
-                    ret_t: ret_t.to_owned(),
-                };
-                self.env.borrow_mut().set(name.to_owned(), func.to_owned());
-                Some(func)
-            }
+                span,
+            } => self.eval_fn_expr(name, args, ret_t, body, span),
             Expr::Call { func, args, span } => self.eval_call_expr(func, args, span),
         }
     }
@@ -486,6 +471,32 @@ impl Evaluator {
         }
 
         None
+    }
+
+    fn eval_fn_expr(
+        &mut self,
+        name: &str,
+        args: &[Var],
+        ret_t: &Type,
+        body: &Vec<Stmt>,
+        span: &Span,
+    ) -> Option<Object> {
+        if self.env.borrow_mut().get(name).is_some() {
+            return Some(Object::Error {
+                message: format!("identifier '{name}' already exists"),
+                span: *span,
+            });
+        }
+
+        let func = Object::Fn {
+            name: name.to_owned(),
+            args: args.to_owned(),
+            body: body.to_owned(),
+            ret_t: ret_t.to_owned(),
+        };
+        self.env.borrow_mut().set(name.to_owned(), func.to_owned());
+
+        Some(func)
     }
 
     fn eval_call_expr(&mut self, func: &Expr, args: &[Expr], span: &Span) -> Option<Object> {
