@@ -52,6 +52,11 @@ impl Evaluator {
         match stmt {
             Stmt::Let(ident, t, expr) => self.eval_let_stmt(&ident, &t, &expr),
             Stmt::Assign(ident, expr) => self.eval_assign_stmt(&ident, &expr),
+            Stmt::AddAssign(ident, expr) => self.eval_op_assign_stmt(&ident, &expr, Infix::Add),
+            Stmt::SubAssign(ident, expr) => self.eval_op_assign_stmt(&ident, &expr, Infix::Sub),
+            Stmt::MulAssign(ident, expr) => self.eval_op_assign_stmt(&ident, &expr, Infix::Mul),
+            Stmt::DivAssign(ident, expr) => self.eval_op_assign_stmt(&ident, &expr, Infix::Div),
+            Stmt::RemAssign(ident, expr) => self.eval_op_assign_stmt(&ident, &expr, Infix::Rem),
             Stmt::Return(expr) => self.eval_return_stmt(&expr),
             Stmt::Expr(expr) => self.eval_expr(&expr),
             _ => None,
@@ -149,6 +154,55 @@ impl Evaluator {
             }
 
             self.env.borrow_mut().set(name.to_owned(), val);
+
+            None
+        } else {
+            let ((line, _), _) = expr.span();
+            Some(Object::Error {
+                message: format!("identifier not found: {name}"),
+                span: ((line, 1), (line, name.len())),
+            })
+        }
+    }
+
+    fn eval_op_assign_stmt(&mut self, ident: &Ident, expr: &Expr, op: Infix) -> Option<Object> {
+        let Ident(name) = ident;
+        let curr = self.env.borrow_mut().get(name);
+        let span = expr.span();
+
+        if let Some(curr) = curr {
+            let val = self.eval_expr(expr)?;
+            if let Object::Error { .. } = val {
+                return Some(val);
+            }
+
+            if let Object::Fn { .. } = curr {
+                return Some(Object::Error {
+                    message: String::from("cannot assign to function"),
+                    span: expr.span(),
+                });
+            }
+
+            let curr_t = Type::from(&curr);
+            let val_t = Type::from(&val);
+
+            if curr_t != val_t {
+                return Some(Object::Error {
+                    message: format!("type mismatch: expected={curr_t}, got={val_t}"),
+                    span: expr.span(),
+                });
+            }
+
+            let updated_val = match op {
+                Infix::Add => self.eval_infix_objects(&op, curr, val, &span),
+                Infix::Sub => self.eval_infix_objects(&op, curr, val, &span),
+                Infix::Mul => self.eval_infix_objects(&op, curr, val, &span),
+                Infix::Div => self.eval_infix_objects(&op, curr, val, &span),
+                Infix::Rem => self.eval_infix_objects(&op, curr, val, &span),
+                _ => unimplemented!(),
+            };
+
+            self.env.borrow_mut().set(name.to_owned(), updated_val?);
 
             None
         } else {
@@ -279,19 +333,18 @@ impl Evaluator {
         Some(obj)
     }
 
-    fn eval_infix_expr(
+    fn eval_infix_objects(
         &mut self,
         op: &Infix,
-        lhs: &Expr,
-        rhs: &Expr,
+        lhs: Object,
+        rhs: Object,
         span: &Span,
     ) -> Option<Object> {
-        let (lhs, rhs) = (self.eval_expr(lhs)?, self.eval_expr(rhs)?);
         let (lhs_t, rhs_t) = (Type::from(&lhs), Type::from(&rhs));
 
         let result = match op {
-            Infix::Plus => lhs + rhs,
-            Infix::Minus => lhs - rhs,
+            Infix::Add => lhs + rhs,
+            Infix::Sub => lhs - rhs,
             Infix::Mul => lhs * rhs,
             Infix::Div => lhs / rhs,
             Infix::IntDiv => lhs.int_div(rhs),
@@ -308,6 +361,19 @@ impl Evaluator {
             message: format!("unsupported operation: {lhs_t} {op} {rhs_t}"),
             span: *span,
         }))
+    }
+
+    fn eval_infix_expr(
+        &mut self,
+        op: &Infix,
+        lhs: &Expr,
+        rhs: &Expr,
+        span: &Span,
+    ) -> Option<Object> {
+        let lhs = self.eval_expr(lhs)?;
+        let rhs = self.eval_expr(rhs)?;
+
+        self.eval_infix_objects(op, lhs, rhs, span)
     }
 
     fn eval_if_expr(

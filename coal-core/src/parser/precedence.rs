@@ -18,8 +18,8 @@ impl From<&Token> for Precedence {
         match token {
             Token::EQ | Token::NEQ => Precedence::Eq,
             Token::LT | Token::LTE | Token::GT | Token::GTE => Precedence::Cmp,
-            Token::Plus | Token::Minus => Precedence::Sum,
-            Token::Asterisk | Token::Slash | Token::DoubleSlash | Token::Rem => Precedence::Product,
+            Token::Add | Token::Sub => Precedence::Sum,
+            Token::Mul | Token::Div | Token::IntDiv | Token::Rem => Precedence::Product,
             Token::Lbracket => Precedence::Index,
             Token::Lparen => Precedence::Call,
             _ => Precedence::Lowest,

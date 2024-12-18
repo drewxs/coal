@@ -5,8 +5,8 @@ use crate::Token;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Infix {
     // Operators
-    Plus,
-    Minus,
+    Add,
+    Sub,
     Mul,
     Div,
     IntDiv,
@@ -26,11 +26,11 @@ impl TryFrom<&Token> for Infix {
 
     fn try_from(token: &Token) -> Result<Self, Self::Error> {
         match token {
-            Token::Plus => Ok(Infix::Plus),
-            Token::Minus => Ok(Infix::Minus),
-            Token::Asterisk => Ok(Infix::Mul),
-            Token::Slash => Ok(Infix::Div),
-            Token::DoubleSlash => Ok(Infix::IntDiv),
+            Token::Add => Ok(Infix::Add),
+            Token::Sub => Ok(Infix::Sub),
+            Token::Mul => Ok(Infix::Mul),
+            Token::Div => Ok(Infix::Div),
+            Token::IntDiv => Ok(Infix::IntDiv),
             Token::Rem => Ok(Infix::Rem),
             Token::EQ => Ok(Infix::EQ),
             Token::NEQ => Ok(Infix::NEQ),
@@ -46,8 +46,8 @@ impl TryFrom<&Token> for Infix {
 impl fmt::Display for Infix {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Infix::Plus => write!(f, "+"),
-            Infix::Minus => write!(f, "-"),
+            Infix::Add => write!(f, "+"),
+            Infix::Sub => write!(f, "-"),
             Infix::Mul => write!(f, "*"),
             Infix::Div => write!(f, "/"),
             Infix::IntDiv => write!(f, "//"),

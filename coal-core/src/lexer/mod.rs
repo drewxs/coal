@@ -134,11 +134,23 @@ impl Iterator for Lexer {
                     LexicalToken::new(Token::Bang, (cursor, cursor))
                 }
             },
-            '+' => {
-                self.read_char();
-                LexicalToken::new(Token::Plus, (cursor, cursor))
-            }
+            '+' => match self.next_char() {
+                '=' => {
+                    self.read_char();
+                    self.read_char();
+                    LexicalToken::new(Token::AddAssign, (cursor, (self.line, self.col)))
+                }
+                _ => {
+                    self.read_char();
+                    LexicalToken::new(Token::Add, (cursor, cursor))
+                }
+            },
             '-' => match self.next_char() {
+                '=' => {
+                    self.read_char();
+                    self.read_char();
+                    LexicalToken::new(Token::SubAssign, (cursor, (self.line, self.col)))
+                }
                 '>' => {
                     self.read_char();
                     self.read_char();
@@ -146,14 +158,26 @@ impl Iterator for Lexer {
                 }
                 _ => {
                     self.read_char();
-                    LexicalToken::new(Token::Minus, (cursor, cursor))
+                    LexicalToken::new(Token::Sub, (cursor, cursor))
                 }
             },
-            '*' => {
-                self.read_char();
-                LexicalToken::new(Token::Asterisk, (cursor, cursor))
-            }
+            '*' => match self.next_char() {
+                '=' => {
+                    self.read_char();
+                    self.read_char();
+                    LexicalToken::new(Token::MulAssign, (cursor, (self.line, self.col)))
+                }
+                _ => {
+                    self.read_char();
+                    LexicalToken::new(Token::Mul, (cursor, cursor))
+                }
+            },
             '/' => match self.next_char() {
+                '=' => {
+                    self.read_char();
+                    self.read_char();
+                    LexicalToken::new(Token::DivAssign, (cursor, (self.line, self.col)))
+                }
                 '/' => {
                     if self.col <= 2 {
                         let pos = self.pos + 3;
@@ -165,18 +189,25 @@ impl Iterator for Lexer {
                     } else {
                         self.read_char();
                         self.read_char();
-                        LexicalToken::new(Token::DoubleSlash, (cursor, (self.line, self.col)))
+                        LexicalToken::new(Token::IntDiv, (cursor, (self.line, self.col)))
                     }
                 }
                 _ => {
                     self.read_char();
-                    LexicalToken::new(Token::Slash, (cursor, cursor))
+                    LexicalToken::new(Token::Div, (cursor, cursor))
                 }
             },
-            '%' => {
-                self.read_char();
-                LexicalToken::new(Token::Rem, (cursor, cursor))
-            }
+            '%' => match self.next_char() {
+                '=' => {
+                    self.read_char();
+                    self.read_char();
+                    LexicalToken::new(Token::RemAssign, (cursor, (self.line, self.col)))
+                }
+                _ => {
+                    self.read_char();
+                    LexicalToken::new(Token::Rem, (cursor, cursor))
+                }
+            },
             '<' => match self.next_char() {
                 '=' => {
                     self.read_char();

@@ -250,6 +250,11 @@ fn test_eval_assign() {
     let tests = vec![
         ("let x = 1; x = 2; x;", Some(Object::I64(2))),
         ("let x = 1; x = x + x + x; x;", Some(Object::I64(3))),
+        ("let x = 1; x += 1; x;", Some(Object::I64(2))),
+        ("let x = 4; x -= 1; x;", Some(Object::I64(3))),
+        ("let x = 2; x *= 3; x;", Some(Object::I64(6))),
+        ("let x = 8; x /= 2; x;", Some(Object::I64(4))),
+        ("let x = 10; x %= 3; x;", Some(Object::I64(1))),
     ];
 
     for (expr, expected) in tests {
@@ -291,14 +296,14 @@ fn test_eval_function() {
                     ((2, 4), (2, 8)),
                 )),
                 then: vec![Stmt::Return(Expr::Infix(
-                    Infix::Minus,
+                    Infix::Sub,
                     Box::new(Expr::Ident(Ident::from("x"), ((3, 8), (3, 8)))),
                     Box::new(Expr::Ident(Ident::from("y"), ((3, 12), (3, 12)))),
                     ((3, 8), (3, 12)),
                 ))],
                 elifs: vec![],
                 alt: Some(vec![Stmt::Return(Expr::Infix(
-                    Infix::Plus,
+                    Infix::Add,
                     Box::new(Expr::Ident(Ident::from("x"), ((5, 8), (5, 8)))),
                     Box::new(Expr::Ident(Ident::from("y"), ((5, 12), (5, 12)))),
                     ((5, 8), (5, 12)),

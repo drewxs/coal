@@ -9,6 +9,11 @@ pub enum Stmt {
     Comment(Comment),
     Let(Ident, Type, Expr),
     Assign(Ident, Expr),
+    AddAssign(Ident, Expr),
+    SubAssign(Ident, Expr),
+    MulAssign(Ident, Expr),
+    DivAssign(Ident, Expr),
+    RemAssign(Ident, Expr),
     Return(Expr),
     Expr(Expr),
 }
@@ -28,6 +33,21 @@ impl Stmt {
             }
             Stmt::Assign(ident, expr) => {
                 writeln!(f, "{}{ident} = {expr};", indent)
+            }
+            Stmt::AddAssign(ident, expr) => {
+                writeln!(f, "{}{ident} += {expr};", indent)
+            }
+            Stmt::SubAssign(ident, expr) => {
+                writeln!(f, "{}{ident} -= {expr};", indent)
+            }
+            Stmt::MulAssign(ident, expr) => {
+                writeln!(f, "{}{ident} *= {expr};", indent)
+            }
+            Stmt::DivAssign(ident, expr) => {
+                writeln!(f, "{}{ident} /= {expr};", indent)
+            }
+            Stmt::RemAssign(ident, expr) => {
+                writeln!(f, "{}{ident} %= {expr};", indent)
             }
             Stmt::Return(expr) => {
                 write!(f, "{}return ", indent)?;

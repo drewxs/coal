@@ -113,6 +113,11 @@ impl Parser {
             Token::Let => self.parse_let_stmt(),
             Token::Ident(_) => match self.next_node.token {
                 Token::Assign => self.parse_assign_stmt(),
+                Token::AddAssign => self.parse_op_assign_stmt(Infix::Add),
+                Token::SubAssign => self.parse_op_assign_stmt(Infix::Sub),
+                Token::MulAssign => self.parse_op_assign_stmt(Infix::Mul),
+                Token::DivAssign => self.parse_op_assign_stmt(Infix::Div),
+                Token::RemAssign => self.parse_op_assign_stmt(Infix::Rem),
                 _ => self.parse_expr_stmt(),
             },
             Token::Return => self.parse_ret_stmt(),
@@ -187,6 +192,23 @@ impl Parser {
         })
     }
 
+    fn parse_op_assign_stmt(&mut self, op: Infix) -> Option<Stmt> {
+        let ident = Ident::try_from(&self.curr_node.token).ok()?;
+        self.advance();
+        self.advance();
+        self.parse_expr(Precedence::Lowest).map(|expr| {
+            self.consume(Token::Semicolon);
+            match op {
+                Infix::Add => Stmt::AddAssign(ident, expr),
+                Infix::Sub => Stmt::SubAssign(ident, expr),
+                Infix::Mul => Stmt::MulAssign(ident, expr),
+                Infix::Div => Stmt::DivAssign(ident, expr),
+                Infix::Rem => Stmt::RemAssign(ident, expr),
+                _ => unreachable!(),
+            }
+        })
+    }
+
     fn parse_ret_stmt(&mut self) -> Option<Stmt> {
         self.advance();
         let expr = self.parse_expr(Precedence::Lowest).map(Stmt::Return);
@@ -204,7 +226,7 @@ impl Parser {
             Token::F64(f) => Some(Expr::Literal(Literal::F64(*f), *span)),
             Token::Str(s) => Some(Expr::Literal(Literal::Str(s.clone()), *span)),
             Token::Bool(b) => Some(Expr::Literal(Literal::Bool(*b), *span)),
-            Token::Bang | Token::Plus | Token::Minus => self.parse_prefix_expr(),
+            Token::Bang | Token::Add | Token::Sub => self.parse_prefix_expr(),
             Token::Lparen => self.parse_grouped_expr(),
             Token::If => self.parse_if_expr(),
             Token::While => self.parse_while_expr(),
@@ -219,11 +241,11 @@ impl Parser {
             && precedence < Precedence::from(&self.next_node.token)
         {
             match self.next_node.token {
-                Token::Plus
-                | Token::Minus
-                | Token::Asterisk
-                | Token::Slash
-                | Token::DoubleSlash
+                Token::Add
+                | Token::Sub
+                | Token::Mul
+                | Token::Div
+                | Token::IntDiv
                 | Token::Rem
                 | Token::EQ
                 | Token::NEQ

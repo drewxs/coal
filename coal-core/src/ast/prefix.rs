@@ -14,7 +14,7 @@ impl TryFrom<&Token> for Prefix {
     fn try_from(token: &Token) -> Result<Self, Self::Error> {
         match token {
             Token::Bang => Ok(Prefix::Not),
-            Token::Minus => Ok(Prefix::Minus),
+            Token::Sub => Ok(Prefix::Minus),
             _ => Err(format!("invalid prefix token: {token:?}")),
         }
     }
