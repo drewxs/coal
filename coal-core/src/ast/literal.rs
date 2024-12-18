@@ -3,7 +3,12 @@ use std::fmt;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
     Str(String),
+    U32(u32),
+    U64(u64),
+    I32(i32),
     I64(i64),
+    I128(i128),
+    F32(f32),
     F64(f64),
     Bool(bool),
     Nil,
@@ -66,7 +71,12 @@ impl fmt::Display for Literal {
 
                 write!(f, "\"{result}\"")
             }
+            Literal::U32(i) => write!(f, "{i}"),
+            Literal::U64(i) => write!(f, "{i}"),
+            Literal::I32(i) => write!(f, "{i}"),
             Literal::I64(i) => write!(f, "{i}"),
+            Literal::I128(i) => write!(f, "{i}"),
+            Literal::F32(x) => write!(f, "{x:?}"),
             Literal::F64(x) => write!(f, "{x:?}"),
             Literal::Bool(b) => write!(f, "{b}"),
             Literal::Nil => write!(f, "nil"),

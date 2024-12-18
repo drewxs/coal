@@ -175,7 +175,7 @@ impl Iterator for Lexer {
             },
             '%' => {
                 self.read_char();
-                LexicalToken::new(Token::Modulo, (cursor, cursor))
+                LexicalToken::new(Token::Rem, (cursor, cursor))
             }
             '<' => match self.next_char() {
                 '=' => {

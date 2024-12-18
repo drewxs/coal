@@ -224,7 +224,7 @@ impl Parser {
                 | Token::Asterisk
                 | Token::Slash
                 | Token::DoubleSlash
-                | Token::Modulo
+                | Token::Rem
                 | Token::EQ
                 | Token::NEQ
                 | Token::GT

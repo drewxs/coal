@@ -10,7 +10,7 @@ pub enum Infix {
     Mul,
     Div,
     IntDiv,
-    Mod,
+    Rem,
 
     // Comparisons
     EQ,
@@ -31,7 +31,7 @@ impl TryFrom<&Token> for Infix {
             Token::Asterisk => Ok(Infix::Mul),
             Token::Slash => Ok(Infix::Div),
             Token::DoubleSlash => Ok(Infix::IntDiv),
-            Token::Modulo => Ok(Infix::Mod),
+            Token::Rem => Ok(Infix::Rem),
             Token::EQ => Ok(Infix::EQ),
             Token::NEQ => Ok(Infix::NEQ),
             Token::LT => Ok(Infix::LT),
@@ -51,7 +51,7 @@ impl fmt::Display for Infix {
             Infix::Mul => write!(f, "*"),
             Infix::Div => write!(f, "/"),
             Infix::IntDiv => write!(f, "//"),
-            Infix::Mod => write!(f, "%"),
+            Infix::Rem => write!(f, "%"),
             Infix::EQ => write!(f, "=="),
             Infix::NEQ => write!(f, "!="),
             Infix::LT => write!(f, "<"),

@@ -2,7 +2,7 @@ use std::assert_matches::assert_matches;
 
 use test::Bencher;
 
-use crate::{Expr, Ident, Infix, Stmt, Type, Var};
+use crate::{Expr, Ident, Infix, Stmt, Var, I64};
 
 use super::{Evaluator, Object, FALSE, TRUE};
 
@@ -65,9 +65,9 @@ fn test_eval_prefix() {
 #[test]
 fn test_eval_infix() {
     let tests = vec![
-        ("(7 + 2 * 3 / 2) % 3", Some(Object::F64(1.0))),
-        ("1 + 2 * 3 + 4 / 5", Some(Object::F64(7.8))),
-        ("(1 + 2 * 3 + 4 / 5) * 2 + -10", Some(Object::F64(5.6))),
+        ("(7 + 2 * 3 / 2) % 3", Some(Object::I64(1))),
+        ("1 + 2 * 3 + 4 / 5", Some(Object::I64(7))),
+        ("(1 + 2 * 3 + 4 / 5) * 2 + -10", Some(Object::I64(4))),
         ("8 // 3", Some(Object::I64(2))),
         ("10.4 // 2", Some(Object::F64(5.0))),
         ("true == true", Some(TRUE)),
@@ -211,6 +211,12 @@ fn test_eval_let_existing() {
 fn test_eval_let_scope() {
     let input = "fn x() -> i64 {}; let x = 1;";
     assert_matches!(Evaluator::default().eval(input), Some(Object::Error { .. }));
+
+    let input = "let x = 1; if true { x = x + 1; }; x;";
+    assert_matches!(Evaluator::default().eval(input), Some(Object::I64(2)));
+
+    let input = "let x = 1; fn foo() -> i64 { x = x + 1; }; foo(); x;";
+    assert_matches!(Evaluator::default().eval(input), Some(Object::I64(2)));
 }
 
 #[test]
@@ -250,7 +256,7 @@ fn test_eval_function() {
         }"#,
         Some(Object::Fn {
             name: String::from("add"),
-            args: vec![Var::new("x", Type::I64), Var::new("y", Type::I64)],
+            args: vec![Var::new("x", I64), Var::new("y", I64)],
             body: vec![Stmt::Expr(Expr::If {
                 cond: Box::new(Expr::Infix(
                     Infix::GT,
@@ -273,7 +279,7 @@ fn test_eval_function() {
                 ))]),
                 span: ((2, 1), (6, 1)),
             })],
-            ret_t: Type::I64,
+            ret_t: I64,
         }),
     )];
     let mut evaluator = Evaluator::default();

@@ -1,10 +1,10 @@
-fn fib(n: i64) -> i64 {
+fn fib(n: i64) -> i128 {
     let i: i64 = 0;
-    let x: i64 = 0;
-    let y: i64 = 1;
+    let x: i128 = 0;
+    let y: i128 = 1;
 
     while i < n {
-        let tmp: i64 = x;
+        let tmp: i128 = x;
         x = y;
         y = tmp + y;
         i = i + 1;
@@ -13,5 +13,5 @@ fn fib(n: i64) -> i64 {
     return x;
 }
 
-fib(50);
+fib(184);
 

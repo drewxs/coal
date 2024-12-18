@@ -1,3 +1,5 @@
+use crate::{F64, I64};
+
 use super::*;
 
 #[test]
@@ -7,7 +9,7 @@ fn test_parse_let_statements() {
             "let x: i64 = 5;",
             Stmt::Let(
                 Ident(String::from("x")),
-                Type::I64,
+                I64,
                 Expr::Literal(Literal::I64(5), ((1, 14), (1, 14))),
             ),
         ),
@@ -15,7 +17,7 @@ fn test_parse_let_statements() {
             "let y: i64 = 10;",
             Stmt::Let(
                 Ident(String::from("y")),
-                Type::I64,
+                I64,
                 Expr::Literal(Literal::I64(10), ((1, 14), (1, 15))),
             ),
         ),
@@ -23,7 +25,7 @@ fn test_parse_let_statements() {
             "let z: i64 = 99999;",
             Stmt::Let(
                 Ident(String::from("z")),
-                Type::I64,
+                I64,
                 Expr::Literal(Literal::I64(99999), ((1, 14), (1, 18))),
             ),
         ),
@@ -52,12 +54,12 @@ fn test_parse_let_statements_inference() {
     let expected = vec![
         Stmt::Let(
             Ident(String::from("x")),
-            Type::I64,
+            I64,
             Expr::Literal(Literal::I64(5), ((1, 9), (1, 9))),
         ),
         Stmt::Let(
             Ident(String::from("y")),
-            Type::F64,
+            F64,
             Expr::Literal(Literal::F64(5.0), ((2, 9), (2, 11))),
         ),
         Stmt::Let(
@@ -210,7 +212,7 @@ fn test_parse_infix_expressions() {
         (
             "7 % 2",
             Stmt::Expr(Expr::Infix(
-                Infix::Mod,
+                Infix::Rem,
                 Box::new(Expr::Literal(Literal::I64(7), ((1, 1), (1, 1)))),
                 Box::new(Expr::Literal(Literal::I64(2), ((1, 5), (1, 5)))),
                 ((1, 1), (1, 5)),
@@ -784,7 +786,7 @@ fn test_parse_function_expressions() {
             Stmt::Expr(Expr::Fn {
                 name: String::from("foo"),
                 args: vec![],
-                ret_t: Type::I64,
+                ret_t: I64,
                 body: vec![Stmt::Return(Expr::Literal(
                     Literal::I64(0),
                     ((2, 8), (2, 8)),
@@ -798,8 +800,8 @@ fn test_parse_function_expressions() {
                }"#,
             Stmt::Expr(Expr::Fn {
                 name: String::from("add"),
-                args: vec![Var::new("x", Type::I64), Var::new("y", Type::I64)],
-                ret_t: Type::I64,
+                args: vec![Var::new("x", I64), Var::new("y", I64)],
+                ret_t: I64,
                 body: vec![Stmt::Return(Expr::Infix(
                     Infix::Plus,
                     Box::new(Expr::Ident(Ident::from("x"), ((2, 8), (2, 8)))),

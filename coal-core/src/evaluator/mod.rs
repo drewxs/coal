@@ -105,17 +105,21 @@ impl Evaluator {
             });
         }
 
-        let val = self.eval_expr(expr)?;
+        let mut val = self.eval_expr(expr)?;
         if let Object::Error { .. } = val {
             return Some(val);
         }
 
         let resolved_t = Type::from(&val);
         if t != &resolved_t {
-            return Some(Object::Error {
-                message: format!("type mismatch: expected={t}, got={resolved_t}"),
-                span: expr.span(),
-            });
+            if let Some(casted) = val.cast(t) {
+                val = casted;
+            } else {
+                return Some(Object::Error {
+                    message: format!("type mismatch: expected={t}, got={resolved_t}"),
+                    span: expr.span(),
+                });
+            }
         }
 
         self.env.borrow_mut().set(name.to_owned(), val);
@@ -288,178 +292,28 @@ impl Evaluator {
         rhs: &Expr,
         span: &Span,
     ) -> Option<Object> {
-        let lhs = self.eval_expr(lhs)?;
-        let rhs = self.eval_expr(rhs)?;
+        let (lhs, rhs) = (self.eval_expr(lhs)?, self.eval_expr(rhs)?);
+        let (lhs_t, rhs_t) = (Type::from(&lhs), Type::from(&rhs));
 
-        match lhs {
-            Object::I64(lhs) => match rhs {
-                Object::I64(rhs) => Some(self.eval_infix_int_int(op, lhs, rhs)),
-                Object::F64(rhs) => Some(self.eval_infix_int_float(op, lhs, rhs)),
-                _ => Some(Object::Error {
-                    message: format!(
-                        "unsupported operation: {} {op} {}",
-                        Type::I64,
-                        Type::from(&rhs)
-                    ),
-                    span: *span,
-                }),
-            },
-            Object::F64(lhs) => match rhs {
-                Object::I64(rhs) => Some(self.eval_infix_float_int(op, lhs, rhs)),
-                Object::F64(rhs) => Some(self.eval_infix_float_float(op, lhs, rhs)),
-                _ => Some(Object::Error {
-                    message: format!(
-                        "unsupported operation: {} {op} {}",
-                        Type::F64,
-                        Type::from(&rhs)
-                    ),
-                    span: *span,
-                }),
-            },
-            Object::Str(lhs) => match rhs {
-                Object::Str(rhs) => self.eval_infix_str_str(op, &lhs, &rhs, span),
-                Object::I64(rhs) => self.eval_infix_str_int(op, &lhs, &rhs, span),
-                _ => Some(Object::Error {
-                    message: format!(
-                        "unsupported operation: {} {op} {}",
-                        Type::Str,
-                        Type::from(&rhs)
-                    ),
-                    span: *span,
-                }),
-            },
-            Object::Bool(lhs) => match rhs {
-                Object::Bool(rhs) => Some(self.eval_infix_bool_bool(op, &lhs, &rhs, span)),
-                _ => Some(FALSE),
-            },
-            _ => Some(Object::Error {
-                message: format!(
-                    "unsupported operation: {} {op} {}",
-                    Type::from(&lhs),
-                    Type::from(&rhs)
-                ),
-                span: *span,
-            }),
-        }
-    }
-
-    fn eval_infix_int_int(&mut self, op: &Infix, lhs: i64, rhs: i64) -> Object {
-        match op {
-            Infix::Plus => Object::I64(lhs + rhs),
-            Infix::Minus => Object::I64(lhs - rhs),
-            Infix::Mul => Object::I64(lhs * rhs),
-            Infix::Div => Object::F64(lhs as f64 / rhs as f64),
-            Infix::IntDiv => Object::I64(lhs / rhs),
-            Infix::Mod => Object::I64(lhs % rhs),
-            Infix::EQ => Object::Bool(lhs == rhs),
-            Infix::NEQ => Object::Bool(lhs != rhs),
-            Infix::LT => Object::Bool(lhs < rhs),
-            Infix::LTE => Object::Bool(lhs <= rhs),
-            Infix::GT => Object::Bool(lhs > rhs),
-            Infix::GTE => Object::Bool(lhs >= rhs),
-        }
-    }
-
-    fn eval_infix_int_float(&mut self, op: &Infix, lhs: i64, rhs: f64) -> Object {
-        match op {
-            Infix::Plus => Object::F64((lhs as f64) + rhs),
-            Infix::Minus => Object::F64((lhs as f64) - rhs),
-            Infix::Mul => Object::F64((lhs as f64) * rhs),
-            Infix::Div => Object::F64((lhs as f64) / rhs),
-            Infix::IntDiv => Object::F64(((lhs as f64) / rhs).floor()),
-            Infix::Mod => Object::F64((lhs as f64) % rhs),
-            Infix::EQ => Object::Bool(lhs as f64 == rhs),
-            Infix::NEQ => Object::Bool(lhs as f64 != rhs),
-            Infix::LT => Object::Bool((lhs as f64) < rhs),
-            Infix::LTE => Object::Bool((lhs as f64) <= rhs),
-            Infix::GT => Object::Bool((lhs as f64) > rhs),
-            Infix::GTE => Object::Bool((lhs as f64) >= rhs),
-        }
-    }
-
-    fn eval_infix_float_int(&mut self, op: &Infix, lhs: f64, rhs: i64) -> Object {
-        match op {
-            Infix::Plus => Object::F64(lhs + (rhs as f64)),
-            Infix::Minus => Object::F64(lhs - (rhs as f64)),
-            Infix::Mul => Object::F64(lhs * (rhs as f64)),
-            Infix::Div => Object::F64(lhs / (rhs as f64)),
-            Infix::IntDiv => Object::F64((lhs / (rhs as f64)).floor()),
-            Infix::Mod => Object::F64(lhs % (rhs as f64)),
-            Infix::EQ => Object::Bool(lhs == (rhs as f64)),
-            Infix::NEQ => Object::Bool(lhs != (rhs as f64)),
-            Infix::LT => Object::Bool(lhs < (rhs as f64)),
-            Infix::LTE => Object::Bool(lhs <= (rhs as f64)),
-            Infix::GT => Object::Bool(lhs > (rhs as f64)),
-            Infix::GTE => Object::Bool(lhs >= (rhs as f64)),
-        }
-    }
-
-    fn eval_infix_float_float(&mut self, op: &Infix, lhs: f64, rhs: f64) -> Object {
-        match op {
-            Infix::Plus => Object::F64(lhs + rhs),
-            Infix::Minus => Object::F64(lhs - rhs),
-            Infix::Mul => Object::F64(lhs * rhs),
-            Infix::Div => Object::F64(lhs / rhs),
-            Infix::IntDiv => Object::F64((lhs / rhs).floor()),
-            Infix::Mod => Object::F64(lhs % rhs),
-            Infix::EQ => Object::Bool(lhs == rhs),
-            Infix::NEQ => Object::Bool(lhs != rhs),
-            Infix::LT => Object::Bool(lhs < rhs),
-            Infix::LTE => Object::Bool(lhs <= rhs),
-            Infix::GT => Object::Bool(lhs > rhs),
-            Infix::GTE => Object::Bool(lhs >= rhs),
-        }
-    }
-
-    fn eval_infix_str_str(
-        &mut self,
-        op: &Infix,
-        lhs: &str,
-        rhs: &str,
-        span: &Span,
-    ) -> Option<Object> {
-        match op {
-            Infix::Plus => Some(Object::Str(lhs.to_string() + rhs)),
+        let result = match op {
+            Infix::Plus => lhs + rhs,
+            Infix::Minus => lhs - rhs,
+            Infix::Mul => lhs * rhs,
+            Infix::Div => lhs / rhs,
+            Infix::IntDiv => lhs.int_div(rhs),
+            Infix::Rem => lhs % rhs,
             Infix::EQ => Some(Object::Bool(lhs == rhs)),
             Infix::NEQ => Some(Object::Bool(lhs != rhs)),
             Infix::LT => Some(Object::Bool(lhs < rhs)),
             Infix::LTE => Some(Object::Bool(lhs <= rhs)),
             Infix::GT => Some(Object::Bool(lhs > rhs)),
             Infix::GTE => Some(Object::Bool(lhs >= rhs)),
-            _ => Some(Object::Error {
-                message: format!("unsupported operation: {t} {op} {t}", t = Type::Str),
-                span: *span,
-            }),
-        }
-    }
+        };
 
-    fn eval_infix_str_int(
-        &mut self,
-        op: &Infix,
-        lhs: &str,
-        rhs: &i64,
-        span: &Span,
-    ) -> Option<Object> {
-        match op {
-            Infix::Mul => Some(Object::Str(lhs.repeat(*rhs as usize))),
-            Infix::EQ => Some(FALSE),
-            Infix::NEQ => Some(TRUE),
-            _ => Some(Object::Error {
-                message: format!("unsupported operation: {} {op} {}", Type::Str, Type::I64),
-                span: *span,
-            }),
-        }
-    }
-
-    fn eval_infix_bool_bool(&mut self, op: &Infix, lhs: &bool, rhs: &bool, span: &Span) -> Object {
-        match op {
-            Infix::EQ => Object::Bool(lhs == rhs),
-            Infix::NEQ => Object::Bool(lhs != rhs),
-            _ => Object::Error {
-                message: format!("unsupported operation: {t} {op} {t}", t = Type::Bool),
-                span: *span,
-            },
-        }
+        result.or(Some(Object::Error {
+            message: format!("unsupported operation: {lhs_t} {op} {rhs_t}"),
+            span: *span,
+        }))
     }
 
     fn eval_if_expr(
