@@ -1,4 +1,8 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{hash_map::Entry, HashMap},
+    rc::Rc,
+};
 
 use super::Object;
 
@@ -25,7 +29,20 @@ impl Env {
     }
 
     pub fn set(&mut self, name: String, value: Object) {
-        self.store.insert(name, value);
+        match self.store.entry(name.clone()) {
+            Entry::Occupied(mut entry) => {
+                entry.insert(value);
+            }
+            Entry::Vacant(vacant_entry) => {
+                if let Some(outer_env) = &self.outer {
+                    if outer_env.borrow().get(&name).is_some() {
+                        outer_env.borrow_mut().set(name, value);
+                        return;
+                    }
+                }
+                vacant_entry.insert(value);
+            }
+        }
     }
 
     pub fn extend(&mut self, other: Rc<RefCell<Env>>) {
