@@ -20,6 +20,15 @@ impl Env {
         }
     }
 
+    pub fn has(&self, key: &str) -> bool {
+        self.store.contains_key(key)
+            || self
+                .outer
+                .as_ref()
+                .and_then(|outer| outer.borrow().get(key))
+                .is_some()
+    }
+
     pub fn get(&self, key: &str) -> Option<Object> {
         self.store.get(key).cloned().or_else(|| {
             self.outer
@@ -35,7 +44,7 @@ impl Env {
             }
             Entry::Vacant(vacant_entry) => {
                 if let Some(outer_env) = &self.outer {
-                    if outer_env.borrow().get(&name).is_some() {
+                    if outer_env.borrow().has(&name) {
                         outer_env.borrow_mut().set(name, value);
                         return;
                     }

@@ -420,7 +420,7 @@ impl Evaluator {
         body: &Vec<Stmt>,
         span: &Span,
     ) -> Option<Object> {
-        if self.env.borrow_mut().get(name).is_some() {
+        if self.env.borrow_mut().has(name) {
             return Some(Object::Error {
                 message: format!("identifier '{name}' already exists"),
                 span: *span,
