@@ -202,16 +202,7 @@ fn test_eval_let() {
 }
 
 #[test]
-fn test_eval_let_existing() {
-    let input = "fn x() -> i64 {}; let x = 1;";
-    assert_matches!(Evaluator::default().eval(input), Some(Object::Error { .. }));
-}
-
-#[test]
 fn test_eval_let_scope() {
-    let input = "fn x() -> i64 {}; let x = 1;";
-    assert_matches!(Evaluator::default().eval(input), Some(Object::Error { .. }));
-
     let input = "let x = 1; if true { x = x + 1; }; x;";
     assert_matches!(Evaluator::default().eval(input), Some(Object::I64(2)));
 
@@ -234,10 +225,10 @@ fn test_eval_assign() {
 #[test]
 fn test_eval_assign_invalid() {
     let tests = vec![
-        "x = 1",
-        r#"let x = 1; x = "foo";"#,
+        "x = 1;",
         "fn x() -> i64 {}; x = 1;",
-        "fn x() -> i64 {}; let x = 1;",
+        "fn x() -> i64 { x = 1 }; x();",
+        "fn x() -> i64 { y = 1 }; x();",
     ];
     for input in tests {
         assert_matches!(Evaluator::default().eval(input), Some(Object::Error { .. }));

@@ -98,12 +98,6 @@ impl Evaluator {
 
     fn eval_let_stmt(&mut self, ident: &Ident, t: &Type, expr: &Expr) -> Option<Object> {
         let Ident(name) = ident;
-        if self.env.borrow_mut().get(name).is_some() {
-            return Some(Object::Error {
-                message: format!("identifier '{name}' already exists"),
-                span: expr.span(),
-            });
-        }
 
         let mut val = self.eval_expr(expr)?;
         if let Object::Error { .. } = val {
