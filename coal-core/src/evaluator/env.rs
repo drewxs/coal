@@ -8,8 +8,8 @@ use super::Object;
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Env {
-    store: HashMap<String, Object>,
-    outer: Option<Rc<RefCell<Env>>>,
+    pub store: HashMap<String, Object>,
+    pub outer: Option<Rc<RefCell<Env>>>,
 }
 
 impl Env {
@@ -37,15 +37,19 @@ impl Env {
         })
     }
 
-    pub fn set(&mut self, name: String, value: Object) {
-        match self.store.entry(name.clone()) {
+    pub fn set_in_store(&mut self, key: String, value: Object) {
+        self.store.insert(key, value);
+    }
+
+    pub fn set_in_scope(&mut self, key: String, value: Object) {
+        match self.store.entry(key.clone()) {
             Entry::Occupied(mut entry) => {
                 entry.insert(value);
             }
             Entry::Vacant(vacant_entry) => {
                 if let Some(outer_env) = &self.outer {
-                    if outer_env.borrow().has(&name) {
-                        outer_env.borrow_mut().set(name, value);
+                    if outer_env.borrow().has(&key) {
+                        outer_env.borrow_mut().set_in_scope(key, value);
                         return;
                     }
                 }

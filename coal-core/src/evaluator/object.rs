@@ -227,6 +227,7 @@ impl From<bool> for Object {
 impl From<&Literal> for Object {
     fn from(literal: &Literal) -> Self {
         match literal {
+            Literal::Bool(b) => Object::from(*b),
             Literal::Str(s) => Object::Str(s.clone()),
             Literal::U32(i) => Object::U32(*i),
             Literal::U64(i) => Object::U64(*i),
@@ -235,7 +236,6 @@ impl From<&Literal> for Object {
             Literal::I128(i) => Object::I128(*i),
             Literal::F32(f) => Object::F32(*f),
             Literal::F64(f) => Object::F64(*f),
-            Literal::Bool(b) => Object::from(*b),
             Literal::Nil => Object::Nil,
         }
     }
@@ -260,8 +260,8 @@ impl Hash for Object {
             Object::I128(i) => i.hash(state),
             Object::F32(f) => f.to_bits().hash(state),
             Object::F64(f) => f.to_bits().hash(state),
-            Object::Str(s) => s.hash(state),
             Object::Bool(b) => b.hash(state),
+            Object::Str(s) => s.hash(state),
             Object::List { data, .. } => data.hash(state),
             Object::Map { .. } => "map".hash(state),
             Object::Fn { name, .. } => name.hash(state),

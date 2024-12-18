@@ -1,0 +1,21 @@
+fn call_twice(x: u32, f: Fn(u32) -> u32) -> u32 {
+    return f(f(x));
+}
+
+fn add_one(x: u32) -> u32 {
+    return x + 1;
+}
+
+fn adder(x: u32) -> Fn(u32) -> u32 {
+    fn add(n: u32) -> u32 {
+        return x + n;
+    }
+    return add;
+}
+
+let x: u32 = 2;
+let add_two: Fn(u32) -> u32 = adder(x);
+
+return add_two(call_twice(3, add_one));
+// 7
+

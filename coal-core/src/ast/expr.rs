@@ -113,7 +113,7 @@ impl Expr {
                 for stmt in body {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
-                writeln!(f, "}}")
+                writeln!(f, "{}}}", indent)
             }
             Expr::Call { func, args, .. } => match func.as_ref() {
                 Expr::Ident(name, _) => {
@@ -122,7 +122,7 @@ impl Expr {
                         .map(|arg| format!("{arg}"))
                         .collect::<Vec<String>>()
                         .join(", ");
-                    write!(f, "{}{name}({args_str})", indent)
+                    write!(f, "{name}({args_str})")
                 }
                 _ => Err(fmt::Error),
             },

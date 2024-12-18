@@ -2,7 +2,7 @@ use std::{borrow::Borrow, fmt};
 
 use crate::{Object, Token};
 
-use super::{Expr, Ident, Literal, Stmt};
+use super::{Expr, Literal};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum Type {
@@ -11,7 +11,7 @@ pub enum Type {
     Num(Num),
     List(Box<Type>),
     Map(Box<(Type, Type)>),
-    Function(Vec<Ident>, Vec<Stmt>),
+    Fn(Vec<Type>, Box<Type>),
     UserDefined(String),
     #[default]
     Nil,
@@ -51,7 +51,10 @@ impl From<&Object> for Type {
             Object::Bool(_) => Type::Bool,
             Object::List { t, .. } => Type::List(Box::new(t.clone())),
             Object::Map { t, .. } => Type::Map(Box::new(t.clone())),
-            Object::Fn { ret_t, .. } => ret_t.clone(),
+            Object::Fn { args, ret_t, .. } => Type::Fn(
+                args.iter().map(|arg| arg.t.clone()).collect(),
+                Box::new(ret_t.clone()),
+            ),
             _ => Type::Nil,
         }
     }
@@ -85,7 +88,12 @@ impl TryFrom<&Expr> for Type {
     fn try_from(literal: &Expr) -> Result<Self, Self::Error> {
         match literal {
             Expr::Literal(Literal::Str(_), _) => Ok(Type::Str),
+            Expr::Literal(Literal::U32(_), _) => Ok(U32),
+            Expr::Literal(Literal::U64(_), _) => Ok(U64),
+            Expr::Literal(Literal::I32(_), _) => Ok(I32),
             Expr::Literal(Literal::I64(_), _) => Ok(I64),
+            Expr::Literal(Literal::I128(_), _) => Ok(I128),
+            Expr::Literal(Literal::F32(_), _) => Ok(F32),
             Expr::Literal(Literal::F64(_), _) => Ok(F64),
             Expr::Literal(Literal::Bool(_), _) => Ok(Type::Bool),
             Expr::Infix(_, lhs, rhs, _) => {
@@ -145,7 +153,14 @@ impl fmt::Display for Type {
                 let (k, v) = t.as_ref();
                 write!(f, "map[{k}, {v}]")
             }
-            Type::Function(idents, stmts) => write!(f, "fn({idents:?}) {{{stmts:?}}}"),
+            Type::Fn(args, ret_t) => {
+                let args_str = args
+                    .iter()
+                    .map(|arg| format!("{arg}"))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                write!(f, "Fn({args_str}) -> {ret_t}")
+            }
             Type::UserDefined(name) => write!(f, "{}", name),
             Type::Nil => write!(f, "nil"),
             Type::Unknown => write!(f, "unknown"),

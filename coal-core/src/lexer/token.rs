@@ -10,8 +10,6 @@ pub enum Token {
 
     // Identifiers + literals
     Ident(String),
-    Bool(bool),
-    Str(String),
     U32(u32),
     U64(u64),
     I32(i32),
@@ -19,6 +17,8 @@ pub enum Token {
     I128(i128),
     F32(f32),
     F64(f64),
+    Str(String),
+    Bool(bool),
 
     // Operators
     Add,
@@ -121,8 +121,6 @@ impl fmt::Display for Token {
             Token::Comment(s) => writeln!(f, "// {s}"),
             Token::NewLine => writeln!(f),
             Token::Ident(name) => write!(f, "{name}"),
-            Token::Bool(b) => write!(f, "{b}"),
-            Token::Str(s) => write!(f, "{s}"),
             Token::U32(i) => write!(f, "{i}"),
             Token::U64(i) => write!(f, "{i}"),
             Token::I32(i) => write!(f, "{i}"),
@@ -130,6 +128,8 @@ impl fmt::Display for Token {
             Token::I128(i) => write!(f, "{i}"),
             Token::F32(n) => write!(f, "{n}"),
             Token::F64(n) => write!(f, "{n}"),
+            Token::Str(s) => write!(f, "{s}"),
+            Token::Bool(b) => write!(f, "{b}"),
             Token::Add => write!(f, "+"),
             Token::Sub => write!(f, "-"),
             Token::Mul => write!(f, "*"),

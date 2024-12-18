@@ -121,7 +121,7 @@ impl Evaluator {
             }
         }
 
-        self.env.borrow_mut().set(name.to_owned(), val);
+        self.env.borrow_mut().set_in_scope(name.to_owned(), val);
 
         None
     }
@@ -153,7 +153,7 @@ impl Evaluator {
                 });
             }
 
-            self.env.borrow_mut().set(name.to_owned(), val);
+            self.env.borrow_mut().set_in_scope(name.to_owned(), val);
 
             None
         } else {
@@ -202,7 +202,9 @@ impl Evaluator {
                 _ => unimplemented!(),
             };
 
-            self.env.borrow_mut().set(name.to_owned(), updated_val?);
+            self.env
+                .borrow_mut()
+                .set_in_scope(name.to_owned(), updated_val?);
 
             None
         } else {
@@ -433,7 +435,9 @@ impl Evaluator {
             body: body.to_owned(),
             ret_t: ret_t.to_owned(),
         };
-        self.env.borrow_mut().set(name.to_owned(), func.to_owned());
+        self.env
+            .borrow_mut()
+            .set_in_scope(name.to_owned(), func.to_owned());
 
         Some(func)
     }
@@ -460,12 +464,29 @@ impl Evaluator {
             }
 
             let mut enclosed_env = Env::from(Rc::clone(&self.env));
-            fn_args
-                .iter()
-                .zip(resolved_args.iter())
-                .for_each(|(var, value)| {
-                    enclosed_env.set(var.name.to_owned(), value.to_owned());
-                });
+            for (var, value) in fn_args.iter().zip(resolved_args.iter()) {
+                if Type::from(value) == var.t {
+                    enclosed_env.set_in_store(var.name.to_owned(), value.to_owned());
+                } else if let Some(casted) = value.cast(&var.t) {
+                    enclosed_env.set_in_store(var.name.to_owned(), casted);
+                } else {
+                    let expected_t = fn_args
+                        .iter()
+                        .map(|arg| format!("{}", arg.t))
+                        .collect::<Vec<String>>()
+                        .join(", ");
+                    let resolved_t = resolved_args
+                        .iter()
+                        .map(|arg| format!("{}", Type::from(arg)))
+                        .collect::<Vec<String>>()
+                        .join(", ");
+
+                    return Some(Object::Error {
+                        message: format!("type mismatch: expected={expected_t}, got={resolved_t}"),
+                        span: *span,
+                    });
+                }
+            }
 
             let mut res =
                 self.eval_stmts_in_scope(fn_body.to_owned(), Rc::new(RefCell::new(enclosed_env)));

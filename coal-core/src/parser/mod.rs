@@ -151,11 +151,18 @@ impl Parser {
 
         let mut t = if self.next_node.token == Token::Colon {
             self.advance();
-            if let Token::Ident(_) = self.next_node.token {
-                self.advance();
-                Type::try_from(&self.curr_node.token).ok()
-            } else {
-                None
+            match &self.next_node.token {
+                Token::Ident(name) => match name.as_str() {
+                    "Fn" => {
+                        self.advance();
+                        self.parse_fn_type()
+                    }
+                    _ => {
+                        self.advance();
+                        Type::try_from(&self.curr_node.token).ok()
+                    }
+                },
+                _ => None,
             }
         } else {
             None
@@ -398,7 +405,10 @@ impl Parser {
         self.expect_next(Token::Arrow)?;
         self.advance();
 
-        let ret_t = Type::try_from(&self.curr_node.token).ok()?;
+        let ret_t = match &self.curr_node.token {
+            Token::Ident(s) if s == "Fn" => self.parse_fn_type()?,
+            _ => Type::try_from(&self.curr_node.token).ok()?,
+        };
         self.advance();
 
         let body = self.parse_block_stmt();
@@ -420,7 +430,11 @@ impl Parser {
             self.expect_next(Token::Colon)?;
             self.advance();
 
-            let t = Type::try_from(&self.curr_node.token).ok()?;
+            let t = match &self.curr_node.token {
+                Token::Ident(s) if s == "Fn" => self.parse_fn_type()?,
+                _ => Type::try_from(&self.curr_node.token).ok()?,
+            };
+
             self.consume(Token::Comma);
             self.advance();
 
@@ -428,6 +442,27 @@ impl Parser {
         }
 
         Some(args)
+    }
+
+    fn parse_fn_type(&mut self) -> Option<Type> {
+        self.advance();
+        self.advance();
+
+        let mut args = vec![];
+
+        while let Token::Ident(_) = self.curr_node.token.clone() {
+            let t = Type::try_from(&self.curr_node.token).ok()?;
+            self.consume(Token::Comma);
+            self.advance();
+            args.push(t);
+        }
+
+        self.advance();
+        self.advance();
+
+        let ret_t = Type::try_from(&self.curr_node.token).ok()?;
+
+        Some(Type::Fn(args, Box::new(ret_t)))
     }
 
     fn parse_expr_list(&mut self, end_tok: Token) -> Option<Vec<Expr>> {
