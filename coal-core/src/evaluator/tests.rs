@@ -184,6 +184,41 @@ fn test_eval_nested_if() {
 }
 
 #[test]
+fn test_eval_if_scope() {
+    let input = r#"
+        let x = 1;
+        if true {
+            let y = 2;
+            let z = 3;
+        }
+    "#;
+
+    let mut evaluator = Evaluator::default();
+    evaluator.eval(input);
+
+    assert_eq!(evaluator.env.borrow_mut().get("x"), Some(Object::I64(1)));
+    assert_eq!(evaluator.env.borrow_mut().get("y"), None);
+    assert_eq!(evaluator.env.borrow_mut().get("z"), None);
+}
+
+#[test]
+fn test_eval_while_scope() {
+    let input = r#"
+        let i = 1;
+        while i < 1000 {
+            let x = 1;
+            i = i + 1;
+        }
+    "#;
+
+    let mut evaluator = Evaluator::default();
+    evaluator.eval(input);
+
+    assert_eq!(evaluator.env.borrow_mut().get("i"), Some(Object::I64(1000)));
+    assert_eq!(evaluator.env.borrow_mut().get("x"), None);
+}
+
+#[test]
 fn test_eval_let() {
     let tests = vec![
         ("let x = 7; x;", Some(Object::I64(7))),
