@@ -15,6 +15,7 @@ pub enum Type {
     UserDefined(String),
     #[default]
     Nil,
+    Void,
     Unknown,
 }
 
@@ -55,7 +56,8 @@ impl From<&Object> for Type {
                 args.iter().map(|arg| arg.t.clone()).collect(),
                 Box::new(ret_t.clone()),
             ),
-            _ => Type::Nil,
+            Object::Nil => Type::Nil,
+            _ => Type::Void,
         }
     }
 }
@@ -170,6 +172,7 @@ impl fmt::Display for Type {
             }
             Type::UserDefined(name) => write!(f, "{}", name),
             Type::Nil => write!(f, "nil"),
+            Type::Void => write!(f, "void"),
             Type::Unknown => write!(f, "unknown"),
         }
     }

@@ -128,7 +128,6 @@ impl Parser {
     }
 
     fn parse_block_stmt(&mut self) -> Vec<Stmt> {
-        self.advance();
         let mut block = vec![];
         while self.curr_node.token != Token::Rbrace && self.curr_node.token != Token::EOF {
             if let Some(stmt) = self.parse_stmt() {
@@ -341,6 +340,7 @@ impl Parser {
 
         let cond = self.parse_expr(Precedence::Lowest)?;
         self.expect_next(Token::Lbrace)?;
+        self.advance();
 
         let then = self.parse_block_stmt();
 
@@ -351,6 +351,7 @@ impl Parser {
 
             let cond = self.parse_expr(Precedence::Lowest)?;
             self.expect_next(Token::Lbrace)?;
+            self.advance();
 
             elifs.push(IfExpr {
                 cond: Box::new(cond),
@@ -362,6 +363,7 @@ impl Parser {
         if self.next_node.token == Token::Else {
             self.advance();
             self.expect_next(Token::Lbrace)?;
+            self.advance();
             alt = Some(self.parse_block_stmt());
         }
 
@@ -382,6 +384,7 @@ impl Parser {
 
         let cond = self.parse_expr(Precedence::Lowest)?;
         self.expect_next(Token::Lbrace)?;
+        self.advance();
 
         let body = self.parse_block_stmt();
         let (_, end) = self.curr_node.span;
@@ -402,12 +405,22 @@ impl Parser {
         self.advance();
 
         let args = self.parse_decl_args()?;
-        self.expect_next(Token::Arrow)?;
-        self.advance();
 
-        let ret_t = match &self.curr_node.token {
-            Token::Ident(s) if s == "Fn" => self.parse_fn_type()?,
-            _ => Type::try_from(&self.curr_node.token).ok()?,
+        let ret_t = if self.next_node.token == Token::Arrow {
+            self.advance();
+            self.advance();
+
+            match &self.curr_node.token {
+                Token::Ident(s) if s == "Fn" => self.parse_fn_type()?,
+                Token::Lbrace => Type::Void,
+                _ => {
+                    let t = Type::try_from(&self.curr_node.token).unwrap_or(Type::Void);
+                    self.advance();
+                    t
+                }
+            }
+        } else {
+            Type::Void
         };
         self.advance();
 
