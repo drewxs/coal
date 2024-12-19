@@ -77,6 +77,13 @@ impl TryFrom<&Token> for Type {
                 "bool" => Ok(Type::Bool),
                 _ => Ok(Type::UserDefined(name.clone())),
             },
+            Token::U32(_) => Ok(U32),
+            Token::U64(_) => Ok(U64),
+            Token::I32(_) => Ok(I32),
+            Token::I64(_) => Ok(I64),
+            Token::I128(_) => Ok(I128),
+            Token::F32(_) => Ok(F32),
+            Token::F64(_) => Ok(F64),
             _ => Err(String::from("invalid type token")),
         }
     }
