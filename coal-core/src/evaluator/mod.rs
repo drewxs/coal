@@ -321,7 +321,10 @@ impl Evaluator {
                 _ => FALSE,
             },
             Prefix::Minus => match rhs {
+                Object::I32(i) => Object::I32(-i),
                 Object::I64(i) => Object::I64(-i),
+                Object::I128(i) => Object::I128(-i),
+                Object::F32(f) => Object::F32(-f),
                 Object::F64(f) => Object::F64(-f),
                 TRUE => Object::I64(-1),
                 FALSE => Object::I64(0),
