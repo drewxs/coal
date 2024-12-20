@@ -31,11 +31,15 @@ pub enum ParserErrorKind {
 impl fmt::Display for ParserErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ParserErrorKind::SyntaxError(token) => write!(f, "syntax error: '{token}'"),
+            ParserErrorKind::SyntaxError(token) => {
+                write!(f, "syntax error: '{token}'")
+            }
             ParserErrorKind::UnexpectedToken { expected, got } => {
                 write!(f, "unexpected token: '{got}', expected: '{expected}'")
             }
-            ParserErrorKind::TypeAnnotationsNeeded => write!(f, "type annotations needed"),
+            ParserErrorKind::TypeAnnotationsNeeded => {
+                write!(f, "type annotations needed")
+            }
         }
     }
 }

@@ -4,6 +4,8 @@ pub mod precedence;
 #[cfg(test)]
 mod tests;
 
+use std::collections::HashMap;
+
 use crate::{
     Comment, Expr, Ident, IfExpr, Infix, Lexer, LexicalToken, Literal, Prefix, Stmt, Token, Type,
     Var,
@@ -17,6 +19,7 @@ pub struct Parser {
     pub lexer: Lexer,
     pub curr_node: LexicalToken,
     pub next_node: LexicalToken,
+    pub symbols: HashMap<String, Type>,
     pub errors: Vec<ParserError>,
 }
 
@@ -26,6 +29,7 @@ impl Parser {
             lexer,
             curr_node: LexicalToken::default(),
             next_node: LexicalToken::default(),
+            symbols: HashMap::new(),
             errors: vec![],
         };
         parser.advance();
@@ -148,23 +152,24 @@ impl Parser {
         let ident = Ident::try_from(&self.curr_node.token).ok()?;
         let ident_span = self.curr_node.span;
 
-        let mut t = if self.next_node.token == Token::Colon {
-            self.advance();
-            match &self.next_node.token {
-                Token::Ident(name) => match name.as_str() {
-                    "Fn" => {
-                        self.advance();
-                        self.parse_fn_type()
-                    }
-                    _ => {
-                        self.advance();
-                        Type::try_from(&self.curr_node.token).ok()
-                    }
-                },
-                _ => None,
+        let mut t = match self.next_node.token {
+            Token::Colon => {
+                self.advance();
+                match &self.next_node.token {
+                    Token::Ident(name) => match name.as_str() {
+                        "Fn" => {
+                            self.advance();
+                            self.parse_fn_type()
+                        }
+                        _ => {
+                            self.advance();
+                            Type::try_from(&self.curr_node.token).ok()
+                        }
+                    },
+                    _ => None,
+                }
             }
-        } else {
-            None
+            _ => None,
         };
 
         self.expect_next(Token::Assign)?;
@@ -172,18 +177,32 @@ impl Parser {
 
         let expr = self.parse_expr(Precedence::Lowest)?;
 
+        if let Expr::Call { func, .. } = &expr {
+            if let Expr::Ident(Ident(name), _) = func.as_ref() {
+                if let Some(ret_t) = self.symbols.get(name) {
+                    t = Some(ret_t.clone());
+                }
+            }
+        }
+        if let Expr::Ident(Ident(name), _) = &expr {
+            if let Some(ret_t) = self.symbols.get(name) {
+                t = Some(ret_t.clone());
+            }
+        }
         if t.is_none() {
             t = Type::try_from(&expr).ok();
         }
 
         if let Some(t) = t {
             self.consume(Token::Semicolon);
+            self.symbols.insert(ident.name(), t.clone());
             Some(Stmt::Let(ident, t, expr))
         } else {
             self.errors.push(ParserError::new(
                 ParserErrorKind::TypeAnnotationsNeeded,
                 ident_span,
             ));
+            self.symbols.insert(ident.name(), Type::Unknown);
             Some(Stmt::Let(ident, Type::Unknown, expr))
         }
     }
@@ -433,6 +452,8 @@ impl Parser {
 
         let body = self.parse_block_stmt();
         let (_, end) = self.curr_node.span;
+
+        self.symbols.insert(ident.name(), ret_t.clone());
 
         Some(Expr::Fn {
             name: ident.name(),
