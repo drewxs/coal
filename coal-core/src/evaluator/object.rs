@@ -387,8 +387,6 @@ impl Rem for Object {
             (Object::I32(lhs), Object::I32(rhs)) => Some(Object::I32(lhs % rhs)),
             (Object::I64(lhs), Object::I64(rhs)) => Some(Object::I64(lhs % rhs)),
             (Object::I128(lhs), Object::I128(rhs)) => Some(Object::I128(lhs % rhs)),
-            (Object::F32(lhs), Object::F32(rhs)) => Some(Object::F32(lhs % rhs)),
-            (Object::F64(lhs), Object::F64(rhs)) => Some(Object::F64(lhs % rhs)),
             _ => None,
         }
     }
