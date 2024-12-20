@@ -19,7 +19,8 @@ pub struct Parser {
     pub lexer: Lexer,
     pub curr_node: LexicalToken,
     pub next_node: LexicalToken,
-    pub symbols: HashMap<String, Type>,
+    pub vars: HashMap<String, Type>,
+    pub fns: HashMap<String, (Vec<Type>, Type)>,
     pub errors: Vec<ParserError>,
 }
 
@@ -29,7 +30,8 @@ impl Parser {
             lexer,
             curr_node: LexicalToken::default(),
             next_node: LexicalToken::default(),
-            symbols: HashMap::new(),
+            vars: HashMap::new(),
+            fns: HashMap::new(),
             errors: vec![],
         };
         parser.advance();
@@ -89,8 +91,14 @@ impl Parser {
             .unwrap_or(LexicalToken::new(Token::EOF, self.next_node.span));
     }
 
-    fn consume(&mut self, token: Token) {
+    fn consume_curr(&mut self, token: Token) {
         if self.next_node.token == token {
+            self.advance();
+        }
+    }
+
+    fn consume_next(&mut self, token: Token) {
+        if self.curr_node.token == token {
             self.advance();
         }
     }
@@ -179,14 +187,16 @@ impl Parser {
 
         if let Expr::Call { func, .. } = &expr {
             if let Expr::Ident(Ident(name), _) = func.as_ref() {
-                if let Some(ret_t) = self.symbols.get(name) {
+                if let Some((_, ret_t)) = self.fns.get(name) {
                     t = Some(ret_t.clone());
                 }
             }
         }
         if let Expr::Ident(Ident(name), _) = &expr {
-            if let Some(ret_t) = self.symbols.get(name) {
+            if let Some(ret_t) = self.vars.get(name) {
                 t = Some(ret_t.clone());
+            } else if let Some((args, ret_t)) = self.fns.get(name) {
+                t = Some(Type::Fn(args.clone(), Box::new(ret_t.clone())))
             }
         }
         if t.is_none() {
@@ -194,15 +204,23 @@ impl Parser {
         }
 
         if let Some(t) = t {
-            self.consume(Token::Semicolon);
-            self.symbols.insert(ident.name(), t.clone());
+            self.consume_curr(Token::Semicolon);
+            if let Expr::Call { func, .. } = &expr {
+                if let Expr::Ident(Ident(name), _) = func.as_ref() {
+                    if let Some((_, ret_t)) = self.fns.get(name) {
+                        self.vars.insert(name.to_owned(), ret_t.clone());
+                    }
+                }
+            } else {
+                self.vars.insert(ident.name(), t.clone());
+            }
             Some(Stmt::Let(ident, t, expr))
         } else {
             self.errors.push(ParserError::new(
                 ParserErrorKind::TypeAnnotationsNeeded,
                 ident_span,
             ));
-            self.symbols.insert(ident.name(), Type::Unknown);
+            self.vars.insert(ident.name(), Type::Unknown);
             Some(Stmt::Let(ident, Type::Unknown, expr))
         }
     }
@@ -212,7 +230,7 @@ impl Parser {
         self.advance();
         self.advance();
         self.parse_expr(Precedence::Lowest).map(|expr| {
-            self.consume(Token::Semicolon);
+            self.consume_curr(Token::Semicolon);
             Stmt::Assign(ident, expr)
         })
     }
@@ -222,7 +240,7 @@ impl Parser {
         self.advance();
         self.advance();
         self.parse_expr(Precedence::Lowest).map(|expr| {
-            self.consume(Token::Semicolon);
+            self.consume_curr(Token::Semicolon);
             match op {
                 Infix::Add => Stmt::AddAssign(ident, expr),
                 Infix::Sub => Stmt::SubAssign(ident, expr),
@@ -237,7 +255,7 @@ impl Parser {
     fn parse_ret_stmt(&mut self) -> Option<Stmt> {
         self.advance();
         let expr = self.parse_expr(Precedence::Lowest).map(Stmt::Return);
-        self.consume(Token::Semicolon);
+        self.consume_curr(Token::Semicolon);
         expr
     }
 
@@ -300,7 +318,7 @@ impl Parser {
 
     fn parse_expr_stmt(&mut self) -> Option<Stmt> {
         self.parse_expr(Precedence::Lowest).map(|expr| {
-            self.consume(Token::Semicolon);
+            self.consume_curr(Token::Semicolon);
             Stmt::Expr(expr)
         })
     }
@@ -452,13 +470,15 @@ impl Parser {
         self.advance();
 
         let args = self.parse_decl_args()?;
+        let args_t = args.iter().map(|arg| arg.t.clone()).collect();
         let ret_t = self.parse_ret_type();
         self.advance();
+        self.consume_next(Token::Lbrace);
 
         let body = self.parse_block_stmt();
         let (_, end) = self.curr_node.span;
 
-        self.symbols.insert(ident.name(), ret_t.clone());
+        self.fns.insert(ident.name(), (args_t, ret_t.clone()));
 
         Some(Expr::Fn {
             name: ident.name(),
@@ -481,7 +501,7 @@ impl Parser {
                 _ => Type::try_from(&self.curr_node.token).ok()?,
             };
 
-            self.consume(Token::Comma);
+            self.consume_curr(Token::Comma);
             self.advance();
 
             args.push(Var { name, t });
@@ -500,7 +520,7 @@ impl Parser {
         while let Token::Ident(_) = self.curr_node.token.clone() {
             let t = self.parse_type().unwrap_or(Type::Unknown);
             self.advance();
-            self.consume(Token::Comma);
+            self.consume_curr(Token::Comma);
             self.advance();
             args.push(t);
         }

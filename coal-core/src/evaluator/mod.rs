@@ -131,7 +131,7 @@ impl Evaluator {
         let curr = self.env.borrow_mut().get(name);
 
         if let Some(curr) = curr {
-            let val = self.eval_expr(expr)?;
+            let mut val = self.eval_expr(expr)?;
             if let Object::Error { .. } = val {
                 return Some(val);
             }
@@ -144,13 +144,17 @@ impl Evaluator {
             }
 
             let curr_t = Type::from(&curr);
-            let new_t = Type::from(&val);
+            let resolved_t = Type::from(&val);
 
-            if curr_t != new_t {
-                return Some(Object::Error {
-                    message: format!("type mismatch: expected={curr_t}, got={new_t}"),
-                    span: expr.span(),
-                });
+            if curr_t != resolved_t {
+                if let Some(casted) = val.cast(&curr_t) {
+                    val = casted;
+                } else {
+                    return Some(Object::Error {
+                        message: format!("type mismatch: expected={curr_t}, got={resolved_t}"),
+                        span: expr.span(),
+                    });
+                }
             }
 
             self.env.borrow_mut().set_in_scope(name.to_owned(), val);
@@ -171,7 +175,7 @@ impl Evaluator {
         let span = expr.span();
 
         if let Some(curr) = curr {
-            let val = self.eval_expr(expr)?;
+            let mut val = self.eval_expr(expr)?;
             if let Object::Error { .. } = val {
                 return Some(val);
             }
@@ -184,13 +188,17 @@ impl Evaluator {
             }
 
             let curr_t = Type::from(&curr);
-            let val_t = Type::from(&val);
+            let resolved_t = Type::from(&val);
 
-            if curr_t != val_t {
-                return Some(Object::Error {
-                    message: format!("type mismatch: expected={curr_t}, got={val_t}"),
-                    span: expr.span(),
-                });
+            if curr_t != resolved_t {
+                if let Some(casted) = val.cast(&curr_t) {
+                    val = casted;
+                } else {
+                    return Some(Object::Error {
+                        message: format!("type mismatch: expected={curr_t}, got={resolved_t}"),
+                        span: expr.span(),
+                    });
+                }
             }
 
             let updated_val = self.eval_infix_objects(&op, curr, val, &span);
@@ -319,8 +327,8 @@ impl Evaluator {
                 Object::I128(i) => Object::I128(-i),
                 Object::F32(f) => Object::F32(-f),
                 Object::F64(f) => Object::F64(-f),
-                TRUE => Object::I64(-1),
-                FALSE => Object::I64(0),
+                TRUE => Object::I32(-1),
+                FALSE => Object::I32(0),
                 _ => Object::Error {
                     message: format!("bad operand type for unary -: '{}'", Type::from(&rhs)),
                     span: *span,

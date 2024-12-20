@@ -284,7 +284,7 @@ impl Iterator for Lexer {
                     )
                 } else {
                     LexicalToken::new(
-                        Token::I64(num_str.parse::<i64>().expect("invalid int literal")),
+                        Token::I32(num_str.parse::<i32>().expect("invalid int literal")),
                         (cursor, (line, col + num_str.len() - 1)),
                     )
                 }

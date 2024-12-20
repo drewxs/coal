@@ -2,14 +2,14 @@ use std::assert_matches::assert_matches;
 
 use test::Bencher;
 
-use crate::{Expr, Ident, Infix, Stmt, Var, I64};
+use crate::{Expr, Ident, Infix, Stmt, Var, I32};
 
 use super::{Evaluator, Object, FALSE, TRUE};
 
 #[test]
 fn test_eval_literal() {
     let tests = vec![
-        ("5", Some(Object::I64(5))),
+        ("5", Some(Object::I32(5))),
         ("3.14", Some(Object::F64(3.14))),
         ("true", Some(TRUE)),
         (r#""foo""#, Some(Object::Str(String::from("foo")))),
@@ -45,8 +45,8 @@ fn test_eval_str_interpolation() {
 #[test]
 fn test_eval_prefix() {
     let tests = vec![
-        ("-5", Some(Object::I64(-5))),
-        ("-10", Some(Object::I64(-10))),
+        ("-5", Some(Object::I32(-5))),
+        ("-10", Some(Object::I32(-10))),
         ("!true", Some(FALSE)),
         ("!!true", Some(TRUE)),
         ("!false", Some(TRUE)),
@@ -65,10 +65,10 @@ fn test_eval_prefix() {
 #[test]
 fn test_eval_infix() {
     let tests = vec![
-        ("(7 + 2 * 3 / 2) % 3", Some(Object::I64(1))),
-        ("1 + 2 * 3 + 4 / 5", Some(Object::I64(7))),
-        ("(1 + 2 * 3 + 4 / 5) * 2 + -10", Some(Object::I64(4))),
-        ("8 // 3", Some(Object::I64(2))),
+        ("(7 + 2 * 3 / 2) % 3", Some(Object::I32(1))),
+        ("1 + 2 * 3 + 4 / 5", Some(Object::I32(7))),
+        ("(1 + 2 * 3 + 4 / 5) * 2 + -10", Some(Object::I32(4))),
+        ("8 // 3", Some(Object::I32(2))),
         ("10.4 // 2", Some(Object::F64(5.0))),
         ("true == true", Some(TRUE)),
         ("false == false", Some(TRUE)),
@@ -115,13 +115,13 @@ fn test_eval_infix_invalid() {
 #[test]
 fn test_eval_if() {
     let tests = vec![
-        ("if true { 10 }", Some(Object::I64(10))),
+        ("if true { 10 }", Some(Object::I32(10))),
         ("if false { 10 }", None),
-        ("if 1 { 10 }", Some(Object::I64(10))),
-        ("if 1 < 2 { 10 }", Some(Object::I64(10))),
+        ("if 1 { 10 }", Some(Object::I32(10))),
+        ("if 1 < 2 { 10 }", Some(Object::I32(10))),
         ("if 1 > 2 { 10 }", None),
-        ("if 1 > 2 { 10 } else { 20 }", Some(Object::I64(20))),
-        ("if 1 < 2 { 10 } else { 20 }", Some(Object::I64(10))),
+        ("if 1 > 2 { 10 } else { 20 }", Some(Object::I32(20))),
+        ("if 1 < 2 { 10 } else { 20 }", Some(Object::I32(10))),
         (
             r#"if 1 < 2 {
                 let x = 999;
@@ -129,7 +129,7 @@ fn test_eval_if() {
             } else {
                 return 20;
             }"#,
-            Some(Object::I64(10)),
+            Some(Object::I32(10)),
         ),
         (
             r#"if 1 > 2 {
@@ -138,7 +138,7 @@ fn test_eval_if() {
                 return 2;
                 return 3;
             }"#,
-            Some(Object::I64(2)),
+            Some(Object::I32(2)),
         ),
     ];
 
@@ -161,7 +161,7 @@ fn test_eval_nested_if() {
             } else {
                 return 3;
             }"#,
-            Some(Object::I64(1)),
+            Some(Object::I32(1)),
         ),
         (
             r#"if true {
@@ -172,7 +172,7 @@ fn test_eval_nested_if() {
             } else {
                 return 3;
             }"#,
-            Some(Object::I64(2)),
+            Some(Object::I32(2)),
         ),
     ];
 
@@ -196,7 +196,7 @@ fn test_eval_if_scope() {
     let mut evaluator = Evaluator::default();
     evaluator.eval(input);
 
-    assert_eq!(evaluator.env.borrow_mut().get("x"), Some(Object::I64(1)));
+    assert_eq!(evaluator.env.borrow_mut().get("x"), Some(Object::I32(1)));
     assert_eq!(evaluator.env.borrow_mut().get("y"), None);
     assert_eq!(evaluator.env.borrow_mut().get("z"), None);
 }
@@ -214,20 +214,20 @@ fn test_eval_while_scope() {
     let mut evaluator = Evaluator::default();
     evaluator.eval(input);
 
-    assert_eq!(evaluator.env.borrow_mut().get("i"), Some(Object::I64(1000)));
+    assert_eq!(evaluator.env.borrow_mut().get("i"), Some(Object::I32(1000)));
     assert_eq!(evaluator.env.borrow_mut().get("x"), None);
 }
 
 #[test]
 fn test_eval_let() {
     let tests = vec![
-        ("let x = 7; x;", Some(Object::I64(7))),
-        ("let x = 2 * 3; x;", Some(Object::I64(6))),
-        ("let x = 7; let y = 10; x;", Some(Object::I64(7))),
-        ("let x = 7; let y = 10; y;", Some(Object::I64(10))),
+        ("let x = 7; x;", Some(Object::I32(7))),
+        ("let x = 2 * 3; x;", Some(Object::I32(6))),
+        ("let x = 7; let y = 10; x;", Some(Object::I32(7))),
+        ("let x = 7; let y = 10; y;", Some(Object::I32(10))),
         (
-            "let x = 7; let y = 10; let z: i64 = x + y + 3; z;",
-            Some(Object::I64(20)),
+            "let x = 7; let y = 10; let z: i32 = x + y + 3; z;",
+            Some(Object::I32(20)),
         ),
     ];
 
@@ -239,22 +239,22 @@ fn test_eval_let() {
 #[test]
 fn test_eval_let_scope() {
     let input = "let x = 1; if true { x = x + 1; }; x;";
-    assert_matches!(Evaluator::default().eval(input), Some(Object::I64(2)));
+    assert_matches!(Evaluator::default().eval(input), Some(Object::I32(2)));
 
-    let input = "let x = 1; fn foo() -> i64 { x = x + 1; }; foo(); x;";
-    assert_matches!(Evaluator::default().eval(input), Some(Object::I64(2)));
+    let input = "let x = 1; fn foo() -> i32 { x = x + 1; }; foo(); x;";
+    assert_matches!(Evaluator::default().eval(input), Some(Object::I32(2)));
 }
 
 #[test]
 fn test_eval_assign() {
     let tests = vec![
-        ("let x = 1; x = 2; x;", Some(Object::I64(2))),
-        ("let x = 1; x = x + x + x; x;", Some(Object::I64(3))),
-        ("let x = 1; x += 1; x;", Some(Object::I64(2))),
-        ("let x = 4; x -= 1; x;", Some(Object::I64(3))),
-        ("let x = 2; x *= 3; x;", Some(Object::I64(6))),
-        ("let x = 8; x /= 2; x;", Some(Object::I64(4))),
-        ("let x = 10; x %= 3; x;", Some(Object::I64(1))),
+        ("let x = 1; x = 2; x;", Some(Object::I32(2))),
+        ("let x = 1; x = x + x + x; x;", Some(Object::I32(3))),
+        ("let x = 1; x += 1; x;", Some(Object::I32(2))),
+        ("let x = 4; x -= 1; x;", Some(Object::I32(3))),
+        ("let x = 2; x *= 3; x;", Some(Object::I32(6))),
+        ("let x = 8; x /= 2; x;", Some(Object::I32(4))),
+        ("let x = 10; x %= 3; x;", Some(Object::I32(1))),
     ];
 
     for (expr, expected) in tests {
@@ -266,9 +266,9 @@ fn test_eval_assign() {
 fn test_eval_assign_invalid() {
     let tests = vec![
         "x = 1;",
-        "fn x() -> i64 {}; x = 1;",
-        "fn x() -> i64 { x = 1 }; x();",
-        "fn x() -> i64 { y = 1 }; x();",
+        "fn x() -> i32 {}; x = 1;",
+        "fn x() -> i32 { x = 1 }; x();",
+        "fn x() -> i32 { y = 1 }; x();",
     ];
     for input in tests {
         assert_matches!(Evaluator::default().eval(input), Some(Object::Error { .. }));
@@ -278,7 +278,7 @@ fn test_eval_assign_invalid() {
 #[test]
 fn test_eval_function() {
     let tests = vec![(
-        r#"fn add(x: i64, y: i64) -> i64 {
+        r#"fn add(x: i32, y: i32) -> i32 {
             if x > y {
                 return x - y;
             } else {
@@ -287,7 +287,7 @@ fn test_eval_function() {
         }"#,
         Some(Object::Fn {
             name: String::from("add"),
-            args: vec![Var::new("x", I64), Var::new("y", I64)],
+            args: vec![Var::new("x", I32), Var::new("y", I32)],
             body: vec![Stmt::Expr(Expr::If {
                 cond: Box::new(Expr::Infix(
                     Infix::GT,
@@ -310,7 +310,7 @@ fn test_eval_function() {
                 ))]),
                 span: ((2, 1), (6, 1)),
             })],
-            ret_t: I64,
+            ret_t: I32,
         }),
     )];
     let mut evaluator = Evaluator::default();

@@ -101,8 +101,8 @@ mod tests {
                             return   0;
                          }
             ";
-        let expected = "let x: i64 = 5;
-let y: i64 = 10;
+        let expected = "let x: i32 = 5;
+let y: i32 = 10;
 
 if x > y {
     if x > 1 {

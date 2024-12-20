@@ -1,5 +1,5 @@
-let x: i64 = 5;
-let y: i64 = 10;
+let x: i32 = 5;
+let y: i32 = 10;
 let z: f64 = 12.34;
 
 let result: f64 = -x + y / z;

@@ -1,5 +1,5 @@
-fn fib(n: i64) -> i128 {
-    let i: i64 = 0;
+fn fib(n: u32) -> i128 {
+    let i: u32 = 0;
     let x: i128 = 0;
     let y: i128 = 1;
 
