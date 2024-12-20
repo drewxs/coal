@@ -144,11 +144,11 @@ impl Evaluator {
             }
 
             let curr_t = Type::from(&curr);
-            let val_t = Type::from(&val);
+            let new_t = Type::from(&val);
 
-            if curr_t != val_t {
+            if curr_t != new_t {
                 return Some(Object::Error {
-                    message: format!("type mismatch: expected={curr_t}, got={val_t}"),
+                    message: format!("type mismatch: expected={curr_t}, got={new_t}"),
                     span: expr.span(),
                 });
             }
