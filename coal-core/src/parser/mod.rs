@@ -247,7 +247,12 @@ impl Parser {
             Token::Ident(_) => Ident::try_from(&self.curr_node.token)
                 .map(|ident| Expr::Ident(ident, *span))
                 .ok(),
+            Token::U32(i) => Some(Expr::Literal(Literal::U32(*i), *span)),
+            Token::U64(i) => Some(Expr::Literal(Literal::U64(*i), *span)),
+            Token::I32(i) => Some(Expr::Literal(Literal::I32(*i), *span)),
             Token::I64(i) => Some(Expr::Literal(Literal::I64(*i), *span)),
+            Token::I128(i) => Some(Expr::Literal(Literal::I128(*i), *span)),
+            Token::F32(f) => Some(Expr::Literal(Literal::F32(*f), *span)),
             Token::F64(f) => Some(Expr::Literal(Literal::F64(*f), *span)),
             Token::Str(s) => Some(Expr::Literal(Literal::Str(s.clone()), *span)),
             Token::Bool(b) => Some(Expr::Literal(Literal::Bool(*b), *span)),
