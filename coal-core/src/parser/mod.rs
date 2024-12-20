@@ -327,6 +327,29 @@ impl Parser {
         })
     }
 
+    fn parse_expr_list(&mut self, end_tok: Token) -> Option<Vec<Expr>> {
+        let mut list = vec![];
+
+        if self.next_node.token == end_tok {
+            self.advance();
+            return Some(list);
+        }
+
+        self.advance();
+
+        let expr = self.parse_expr(Precedence::Lowest)?;
+        list.push(expr);
+
+        while self.next_node.token == Token::Comma {
+            self.advance();
+            self.advance();
+            let expr = self.parse_expr(Precedence::Lowest)?;
+            list.push(expr);
+        }
+
+        self.expect_next(end_tok).map(|_| list)
+    }
+
     fn parse_grouped_expr(&mut self) -> Option<Expr> {
         self.advance();
         let expr = self.parse_expr(Precedence::Lowest);
@@ -405,23 +428,7 @@ impl Parser {
         self.advance();
 
         let args = self.parse_decl_args()?;
-
-        let ret_t = if self.next_node.token == Token::Arrow {
-            self.advance();
-            self.advance();
-
-            match &self.curr_node.token {
-                Token::Ident(s) if s == "Fn" => self.parse_fn_type()?,
-                Token::Lbrace => Type::Void,
-                _ => {
-                    let t = Type::try_from(&self.curr_node.token).unwrap_or(Type::Void);
-                    self.advance();
-                    t
-                }
-            }
-        } else {
-            Type::Void
-        };
+        let ret_t = self.parse_ret_type();
         self.advance();
 
         let body = self.parse_block_stmt();
@@ -454,6 +461,8 @@ impl Parser {
             args.push(Var { name, t });
         }
 
+        self.advance();
+
         Some(args)
     }
 
@@ -462,43 +471,44 @@ impl Parser {
         self.advance();
 
         let mut args = vec![];
-
         while let Token::Ident(_) = self.curr_node.token.clone() {
-            let t = Type::try_from(&self.curr_node.token).ok()?;
+            let t = self.parse_type().unwrap_or(Type::Unknown);
             self.consume(Token::Comma);
             self.advance();
             args.push(t);
         }
 
         self.advance();
-        self.advance();
-
-        let ret_t = Type::try_from(&self.curr_node.token).ok()?;
+        let ret_t = self.parse_ret_type();
 
         Some(Type::Fn(args, Box::new(ret_t)))
     }
 
-    fn parse_expr_list(&mut self, end_tok: Token) -> Option<Vec<Expr>> {
-        let mut list = vec![];
-
-        if self.next_node.token == end_tok {
-            self.advance();
-            return Some(list);
+    fn parse_ret_type(&mut self) -> Type {
+        match self.curr_node.token {
+            Token::Lbrace => Type::Void,
+            _ => {
+                if !matches!(self.curr_node.token, Token::Ident(_)) {
+                    self.advance();
+                }
+                self.parse_type().unwrap_or(Type::Void)
+            }
         }
+    }
 
-        self.advance();
-
-        let expr = self.parse_expr(Precedence::Lowest)?;
-        list.push(expr);
-
-        while self.next_node.token == Token::Comma {
-            self.advance();
-            self.advance();
-            let expr = self.parse_expr(Precedence::Lowest)?;
-            list.push(expr);
+    fn parse_type(&mut self) -> Option<Type> {
+        match &self.curr_node.token {
+            Token::Lbrace => None,
+            Token::Ident(s) => match s.as_str() {
+                "Fn" => self.parse_fn_type(),
+                _ => {
+                    let t = Type::try_from(&self.curr_node.token).ok();
+                    self.advance();
+                    t
+                }
+            },
+            _ => None,
         }
-
-        self.expect_next(end_tok).map(|_| list)
     }
 }
 

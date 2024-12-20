@@ -1,4 +1,4 @@
-use crate::{F64, I64};
+use crate::{F64, I64, U32};
 
 use super::*;
 
@@ -786,6 +786,31 @@ fn test_parse_while_expression() {
 fn test_parse_function_expressions() {
     let tests = [
         (
+            "fn foo() {}",
+            Stmt::Expr(Expr::Fn {
+                name: String::from("foo"),
+                args: vec![],
+                ret_t: Type::Void,
+                body: vec![],
+                span: ((1, 1), (1, 11)),
+            }),
+        ),
+        (
+            r#"fn foo() {
+                   return 0;
+               }"#,
+            Stmt::Expr(Expr::Fn {
+                name: String::from("foo"),
+                args: vec![],
+                ret_t: Type::Void,
+                body: vec![Stmt::Return(Expr::Literal(
+                    Literal::I64(0),
+                    ((2, 8), (2, 8)),
+                ))],
+                span: ((1, 1), (3, 1)),
+            }),
+        ),
+        (
             r#"fn foo() -> i64 {
                    return 0;
                }"#,
@@ -817,12 +842,35 @@ fn test_parse_function_expressions() {
                 span: ((1, 1), (3, 1)),
             }),
         ),
+        (
+            r#"fn add(x: u32, f: Fn(u32, u32) -> u32) -> u32 {
+                   return f(x, 0);
+               }"#,
+            Stmt::Expr(Expr::Fn {
+                name: String::from("add"),
+                args: vec![
+                    Var::new("x", U32),
+                    Var::new("f", Type::Fn(vec![U32, U32], Box::new(U32))),
+                ],
+                ret_t: U32,
+                body: vec![Stmt::Return(Expr::Call {
+                    func: Box::new(Expr::Ident(Ident::from("f"), ((2, 8), (2, 8)))),
+                    args: vec![
+                        Expr::Ident(Ident::from("x"), ((2, 10), (2, 10))),
+                        Expr::Literal(Literal::I64(0), ((2, 13), (2, 13))),
+                    ],
+                    span: ((2, 8), (2, 14)),
+                })],
+                span: ((1, 1), (3, 1)),
+            }),
+        ),
     ];
 
     for (input, expected) in tests {
-        dbg!(input);
         let actual = Parser::from(input).parse();
-        assert_eq!(expected, actual[0]);
+        if expected != actual[0] {
+            panic!("expected:\n{:?}\nactual:\n{:?}", expected, actual[0]);
+        }
     }
 }
 
