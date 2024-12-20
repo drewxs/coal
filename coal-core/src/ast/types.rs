@@ -4,7 +4,7 @@ use crate::{Object, Token};
 
 use super::{Expr, Literal};
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Type {
     Bool,
     Str,
@@ -13,7 +13,6 @@ pub enum Type {
     Map(Box<(Type, Type)>),
     Fn(Vec<Type>, Box<Type>),
     UserDefined(String),
-    #[default]
     Nil,
     Void,
     Unknown,
