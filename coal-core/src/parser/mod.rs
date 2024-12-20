@@ -499,6 +499,7 @@ impl Parser {
         let mut args = vec![];
         while let Token::Ident(_) = self.curr_node.token.clone() {
             let t = self.parse_type().unwrap_or(Type::Unknown);
+            self.advance();
             self.consume(Token::Comma);
             self.advance();
             args.push(t);
@@ -527,11 +528,7 @@ impl Parser {
             Token::Lbrace => None,
             Token::Ident(s) => match s.as_str() {
                 "Fn" => self.parse_fn_type(),
-                _ => {
-                    let t = Type::try_from(&self.curr_node.token).ok();
-                    self.advance();
-                    t
-                }
+                _ => Type::try_from(&self.curr_node.token).ok(),
             },
             _ => None,
         }
