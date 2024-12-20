@@ -28,10 +28,10 @@ impl Parser {
     pub fn new(lexer: Lexer) -> Self {
         let mut parser = Parser {
             lexer,
-            curr_node: LexicalToken::default(),
-            next_node: LexicalToken::default(),
             vars: HashMap::new(),
             fns: HashMap::new(),
+            curr_node: LexicalToken::new(Token::Illegal, Span::default()),
+            next_node: LexicalToken::new(Token::Illegal, Span::default()),
             errors: vec![],
         };
         parser.advance();
