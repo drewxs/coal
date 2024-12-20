@@ -193,14 +193,7 @@ impl Evaluator {
                 });
             }
 
-            let updated_val = match op {
-                Infix::Add => self.eval_infix_objects(&op, curr, val, &span),
-                Infix::Sub => self.eval_infix_objects(&op, curr, val, &span),
-                Infix::Mul => self.eval_infix_objects(&op, curr, val, &span),
-                Infix::Div => self.eval_infix_objects(&op, curr, val, &span),
-                Infix::Rem => self.eval_infix_objects(&op, curr, val, &span),
-                _ => unimplemented!(),
-            };
+            let updated_val = self.eval_infix_objects(&op, curr, val, &span);
 
             self.env
                 .borrow_mut()
