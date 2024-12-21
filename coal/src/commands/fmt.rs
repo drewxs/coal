@@ -5,13 +5,21 @@ use std::{
     time::Instant,
 };
 
-use coal_core::Parser;
+use coal_core::{trim_input, Parser};
 
 use crate::path::program_files;
 
 pub fn fmt(input: &str) -> String {
     let mut out = String::new();
-    for stmt in Parser::from(input).parse() {
+    let mut parser = Parser::from(input);
+    let stmts = parser.parse();
+
+    if !parser.errors.is_empty() {
+        let _ = writeln!(&mut out, "{}", trim_input(input));
+        return out;
+    }
+
+    for stmt in stmts {
         let _ = write!(&mut out, "{}", stmt);
     }
     out
