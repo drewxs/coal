@@ -12,7 +12,7 @@ pub enum Type {
     List(Box<Type>),
     Map(Box<(Type, Type)>),
     Fn(Vec<Type>, Box<Type>),
-    UserDefined(String),
+    UserDefined(String, Box<Type>),
     Nil,
     Void,
     Unknown,
@@ -82,7 +82,7 @@ impl TryFrom<&Token> for Type {
                 "f64" => Ok(F64),
                 "str" => Ok(Type::Str),
                 "bool" => Ok(Type::Bool),
-                _ => Ok(Type::UserDefined(name.to_owned())),
+                _ => Err(String::from("invalid identifier")),
             },
             Token::U32(_) => Ok(U32),
             Token::U64(_) => Ok(U64),
@@ -170,7 +170,7 @@ impl fmt::Display for Type {
                     .join(", ");
                 write!(f, "Fn({args_str}) -> {ret_t}")
             }
-            Type::UserDefined(name) => write!(f, "{name}"),
+            Type::UserDefined(name, _) => write!(f, "{name}"),
             Type::Nil => write!(f, "nil"),
             Type::Void => write!(f, "void"),
             Type::Unknown => write!(f, "unknown"),

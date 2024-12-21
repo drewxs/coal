@@ -30,10 +30,10 @@ fn test_parse_let_statements() {
             ),
         ),
         (
-            "let foo: Foo = 0;",
+            "let foo: f64 = 0;",
             Stmt::Let(
                 Ident(String::from("foo")),
-                I32,
+                F64,
                 Expr::Literal(Literal::I32(0), ((1, 16), (1, 16))),
             ),
         ),
