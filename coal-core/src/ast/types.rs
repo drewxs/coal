@@ -37,6 +37,12 @@ pub const I128: Type = Type::Num(Num::I128);
 pub const F32: Type = Type::Num(Num::F32);
 pub const F64: Type = Type::Num(Num::F64);
 
+impl Type {
+    pub fn is_numeric(&self) -> bool {
+        matches!(self, Type::Num(_))
+    }
+}
+
 impl From<&Object> for Type {
     fn from(obj: &Object) -> Self {
         match obj {

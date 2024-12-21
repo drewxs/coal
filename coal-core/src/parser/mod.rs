@@ -215,7 +215,13 @@ impl Parser {
                 declared_t = Some(t.clone());
             }
         } else if let Ok(inferred_t) = Type::try_from(&expr) {
-            declared_t = Some(inferred_t);
+            if let Some(t) = &declared_t {
+                if !t.is_numeric() && !inferred_t.is_numeric() {
+                    declared_t = Some(inferred_t);
+                }
+            } else {
+                declared_t = Some(inferred_t);
+            }
         }
 
         let t = declared_t.unwrap_or_else(|| {
