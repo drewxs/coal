@@ -208,7 +208,6 @@ impl Parser {
 
         let expr = self.parse_expr(Precedence::Lowest)?;
 
-        dbg!(&expr);
         if let Expr::Ident(Ident(name), _, _) = &expr {
             if let Some(t) = self.symbol_table.borrow().get(name) {
                 declared_t = Some(t.clone());

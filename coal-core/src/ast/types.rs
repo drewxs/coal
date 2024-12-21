@@ -127,9 +127,12 @@ fn infer_infix_type(lhs: &Expr, rhs: &Expr) -> Result<Type, String> {
     let lhs_t = Type::try_from(lhs)?;
     let rhs_t = Type::try_from(rhs)?;
 
-    if let Type::Num(lhs_num) = lhs_t {
-        if let Type::Num(rhs_num) = rhs_t {
-            return Ok(Type::Num(lhs_num.max(rhs_num)));
+    if let Type::Num(lhs_num) = &lhs_t {
+        if let Type::Num(rhs_num) = &rhs_t {
+            if lhs_t == I32 && rhs_t == U64 || lhs_t == U64 && rhs_t == I32 {
+                return Ok(I64);
+            }
+            return Ok(Type::Num(lhs_num.max(rhs_num).clone()));
         }
     }
 

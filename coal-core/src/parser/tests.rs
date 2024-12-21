@@ -1,4 +1,4 @@
-use crate::{F64, I32, U32};
+use crate::{F64, I32, I64, U32, U64};
 
 use super::*;
 
@@ -1114,4 +1114,26 @@ fn test_parse_infer_type_from_call() {
     );
     let actual = Parser::from(input).parse();
     assert_eq!(expected, actual[1]);
+}
+
+#[test]
+fn test_parse_promote_infix_i32_u64() {
+    let input = "fn foo() -> u64 { return 1 }; let x = 2; let y = foo() + x;";
+    let expected = Stmt::Let(
+        Ident(String::from("y")),
+        I64,
+        Expr::Infix(
+            Infix::Add,
+            Box::new(Expr::Call {
+                name: String::from("foo"),
+                args: vec![],
+                ret_t: U64,
+                span: ((1, 50), (1, 54)),
+            }),
+            Box::new(Expr::Ident(Ident::from("x"), I32, ((1, 58), (1, 58)))),
+            ((1, 50), (1, 58)),
+        ),
+    );
+    let actual = Parser::from(input).parse();
+    assert_eq!(expected, *actual.last().unwrap());
 }
