@@ -6,7 +6,7 @@ use super::{Ident, Infix, Literal, Prefix, Stmt, Type, Var};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    Ident(Ident, Span),
+    Ident(Ident, Type, Span),
     Literal(Literal, Span),
     Prefix(Prefix, Box<Expr>, Span),
     Infix(Infix, Box<Expr>, Box<Expr>, Span),
@@ -30,8 +30,9 @@ pub enum Expr {
         span: Span,
     },
     Call {
-        func: Box<Expr>,
+        name: String,
         args: Vec<Expr>,
+        ret_t: Type,
         span: Span,
     },
 }
@@ -45,7 +46,7 @@ pub struct IfExpr {
 impl Expr {
     pub fn span(&self) -> Span {
         match self {
-            Expr::Ident(_, span) => *span,
+            Expr::Ident(_, _, span) => *span,
             Expr::Literal(_, span) => *span,
             Expr::Prefix(_, _, span) => *span,
             Expr::Infix(_, _, _, span) => *span,
@@ -60,7 +61,7 @@ impl Expr {
         let indent = "    ".repeat(indent_level);
 
         match self {
-            Expr::Ident(ident, _) => write!(f, "{ident}"),
+            Expr::Ident(ident, _, _) => write!(f, "{ident}"),
             Expr::Literal(literal, _) => write!(f, "{literal}"),
             Expr::Prefix(prefix, expr, _) => write!(f, "{prefix}{expr}"),
             Expr::Infix(infix, lhs, rhs, _) => write!(f, "{lhs} {infix} {rhs}"),
@@ -115,17 +116,14 @@ impl Expr {
                 }
                 writeln!(f, "{}}}", indent)
             }
-            Expr::Call { func, args, .. } => match func.as_ref() {
-                Expr::Ident(name, _) => {
-                    let args_str = args
-                        .iter()
-                        .map(|arg| format!("{arg}"))
-                        .collect::<Vec<String>>()
-                        .join(", ");
-                    write!(f, "{name}({args_str})")
-                }
-                _ => Err(fmt::Error),
-            },
+            Expr::Call { name, args, .. } => {
+                let args_str = args
+                    .iter()
+                    .map(|arg| format!("{arg}"))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                write!(f, "{name}({args_str})")
+            }
         }
     }
 }

@@ -232,7 +232,13 @@ fn test_eval_let() {
     ];
 
     for (expr, expected) in tests {
-        assert_eq!(expected, Evaluator::default().eval(expr));
+        let actual = Evaluator::default().eval(expr);
+        if expected != actual {
+            panic!(
+                "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
+                expr, expected, actual
+            );
+        }
     }
 }
 
@@ -291,21 +297,21 @@ fn test_eval_function() {
             body: vec![Stmt::Expr(Expr::If {
                 cond: Box::new(Expr::Infix(
                     Infix::GT,
-                    Box::new(Expr::Ident(Ident::from("x"), ((2, 4), (2, 4)))),
-                    Box::new(Expr::Ident(Ident::from("y"), ((2, 8), (2, 8)))),
+                    Box::new(Expr::Ident(Ident::from("x"), I32, ((2, 4), (2, 4)))),
+                    Box::new(Expr::Ident(Ident::from("y"), I32, ((2, 8), (2, 8)))),
                     ((2, 4), (2, 8)),
                 )),
                 then: vec![Stmt::Return(Expr::Infix(
                     Infix::Sub,
-                    Box::new(Expr::Ident(Ident::from("x"), ((3, 8), (3, 8)))),
-                    Box::new(Expr::Ident(Ident::from("y"), ((3, 12), (3, 12)))),
+                    Box::new(Expr::Ident(Ident::from("x"), I32, ((3, 8), (3, 8)))),
+                    Box::new(Expr::Ident(Ident::from("y"), I32, ((3, 12), (3, 12)))),
                     ((3, 8), (3, 12)),
                 ))],
                 elifs: vec![],
                 alt: Some(vec![Stmt::Return(Expr::Infix(
                     Infix::Add,
-                    Box::new(Expr::Ident(Ident::from("x"), ((5, 8), (5, 8)))),
-                    Box::new(Expr::Ident(Ident::from("y"), ((5, 12), (5, 12)))),
+                    Box::new(Expr::Ident(Ident::from("x"), I32, ((5, 8), (5, 8)))),
+                    Box::new(Expr::Ident(Ident::from("y"), I32, ((5, 12), (5, 12)))),
                     ((5, 8), (5, 12)),
                 ))]),
                 span: ((2, 1), (6, 1)),

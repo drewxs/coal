@@ -57,10 +57,6 @@ impl Env {
             }
         }
     }
-
-    pub fn extend(&mut self, other: Rc<RefCell<Env>>) {
-        self.store.extend(other.borrow().store.clone());
-    }
 }
 
 impl From<Rc<RefCell<Env>>> for Env {

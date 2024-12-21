@@ -1,0 +1,53 @@
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
+
+use crate::Type;
+
+/// Keys of shape `__name__` are return types for functions
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct SymbolTable {
+    pub scope: String,
+    pub store: HashMap<String, Type>,
+    pub outer: Option<Rc<RefCell<SymbolTable>>>,
+}
+
+impl SymbolTable {
+    pub fn new(store: HashMap<String, Type>, outer: Rc<RefCell<SymbolTable>>) -> Self {
+        SymbolTable {
+            scope: String::from("global"),
+            store,
+            outer: Some(outer),
+        }
+    }
+
+    pub fn has(&self, key: &str) -> bool {
+        self.store.contains_key(key)
+            || self
+                .outer
+                .as_ref()
+                .and_then(|outer| outer.borrow().get(key))
+                .is_some()
+    }
+
+    pub fn get(&self, key: &str) -> Option<Type> {
+        self.store.get(key).cloned().or_else(|| {
+            self.outer
+                .as_ref()
+                .and_then(|outer| outer.borrow().get(key))
+        })
+    }
+
+    pub fn set(&mut self, key: String, value: Type) {
+        self.store.insert(key, value);
+    }
+}
+
+impl From<Rc<RefCell<SymbolTable>>> for SymbolTable {
+    fn from(outer: Rc<RefCell<SymbolTable>>) -> Self {
+        let SymbolTable { scope, .. } = outer.borrow().clone();
+        Self {
+            scope,
+            store: HashMap::new(),
+            outer: Some(outer),
+        }
+    }
+}

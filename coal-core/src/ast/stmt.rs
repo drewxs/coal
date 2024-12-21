@@ -55,7 +55,7 @@ impl Stmt {
                 writeln!(f, ";")
             }
             Stmt::Expr(expr) => match expr {
-                Expr::Ident(_, _)
+                Expr::Ident(_, _, _)
                 | Expr::Literal(_, _)
                 | Expr::Prefix(_, _, _)
                 | Expr::Infix(_, _, _, _)

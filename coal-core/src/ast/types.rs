@@ -2,7 +2,7 @@ use std::{borrow::Borrow, fmt};
 
 use crate::{Object, Token};
 
-use super::{Expr, Literal};
+use super::{Expr, Literal, Prefix};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Type {
@@ -49,11 +49,11 @@ impl From<&Object> for Type {
             Object::F64(_) => F64,
             Object::Str(_) => Type::Str,
             Object::Bool(_) => Type::Bool,
-            Object::List { t, .. } => Type::List(Box::new(t.clone())),
-            Object::Map { t, .. } => Type::Map(Box::new(t.clone())),
+            Object::List { t, .. } => Type::List(Box::new(t.to_owned())),
+            Object::Map { t, .. } => Type::Map(Box::new(t.to_owned())),
             Object::Fn { args, ret_t, .. } => Type::Fn(
-                args.iter().map(|arg| arg.t.clone()).collect(),
-                Box::new(ret_t.clone()),
+                args.iter().map(|arg| arg.t.to_owned()).collect(),
+                Box::new(ret_t.to_owned()),
             ),
             Object::Nil => Type::Nil,
             _ => Type::Void,
@@ -76,7 +76,7 @@ impl TryFrom<&Token> for Type {
                 "f64" => Ok(F64),
                 "str" => Ok(Type::Str),
                 "bool" => Ok(Type::Bool),
-                _ => Ok(Type::UserDefined(name.clone())),
+                _ => Ok(Type::UserDefined(name.to_owned())),
             },
             Token::U32(_) => Ok(U32),
             Token::U64(_) => Ok(U64),
@@ -93,8 +93,8 @@ impl TryFrom<&Token> for Type {
 impl TryFrom<&Expr> for Type {
     type Error = String;
 
-    fn try_from(literal: &Expr) -> Result<Self, Self::Error> {
-        match literal {
+    fn try_from(expr: &Expr) -> Result<Self, Self::Error> {
+        match expr {
             Expr::Literal(Literal::Str(_), _) => Ok(Type::Str),
             Expr::Literal(Literal::U32(_), _) => Ok(U32),
             Expr::Literal(Literal::U64(_), _) => Ok(U64),
@@ -104,56 +104,36 @@ impl TryFrom<&Expr> for Type {
             Expr::Literal(Literal::F32(_), _) => Ok(F32),
             Expr::Literal(Literal::F64(_), _) => Ok(F64),
             Expr::Literal(Literal::Bool(_), _) => Ok(Type::Bool),
-            Expr::Infix(_, lhs, rhs, _) => {
-                infer_infix_type(lhs, rhs).ok_or(String::from("unable to infer type"))
+            Expr::Infix(_, lhs, rhs, _) => infer_infix_type(lhs, rhs),
+            Expr::Prefix(prefix, rhs, _) => {
+                if prefix == &Prefix::Not {
+                    Ok(Type::Bool)
+                } else {
+                    Type::try_from(Borrow::<Expr>::borrow(rhs))
+                }
             }
-            Expr::Prefix(_, rhs, _) => Type::try_from(Borrow::<Expr>::borrow(rhs)),
-            Expr::Ident(ident, _) => Ok(Type::UserDefined(ident.name())),
-            Expr::Fn { ret_t, .. } => Ok(ret_t.clone()),
-            Expr::Call { func, .. } => Type::try_from(Borrow::<Expr>::borrow(func)),
-            _ => Err(String::from("invaild literal")),
+            Expr::Ident(_, t, _) => Ok(t.to_owned()),
+            Expr::Fn { args, ret_t, .. } => {
+                let args_t = args.iter().map(|arg| arg.t.to_owned()).collect();
+                Ok(Type::Fn(args_t, Box::new(ret_t.to_owned())))
+            }
+            Expr::Call { ret_t, .. } => Ok(ret_t.to_owned()),
+            _ => Err(String::from("unable to infer type")),
         }
     }
 }
 
-fn infer_infix_type(lhs: &Expr, rhs: &Expr) -> Option<Type> {
-    let lhs_t = infer_expr_type(lhs)?;
-    let rhs_t = infer_expr_type(rhs)?;
+fn infer_infix_type(lhs: &Expr, rhs: &Expr) -> Result<Type, String> {
+    let lhs_t = Type::try_from(lhs)?;
+    let rhs_t = Type::try_from(rhs)?;
 
-    match lhs_t {
-        Type::Num(lhs_num) => match rhs_t {
-            Type::Num(rhs_num) => Some(Type::Num(lhs_num.max(rhs_num))),
-            _ => None,
-        },
-        _ => None,
+    if let Type::Num(lhs_num) = lhs_t {
+        if let Type::Num(rhs_num) = rhs_t {
+            return Ok(Type::Num(lhs_num.max(rhs_num)));
+        }
     }
-}
 
-fn infer_expr_type(expr: &Expr) -> Option<Type> {
-    match expr {
-        Expr::Infix(_, lhs, rhs, _) => infer_infix_type(lhs, rhs),
-        Expr::Prefix(_, rhs, _) => match rhs.borrow() {
-            Expr::Infix(_, i_lhs, i_rhs, _) => infer_infix_type(i_lhs, i_rhs),
-            Expr::Literal(Literal::U32(_), _) => Some(U32),
-            Expr::Literal(Literal::U64(_), _) => Some(U64),
-            Expr::Literal(Literal::I32(_), _) => Some(I32),
-            Expr::Literal(Literal::I64(_), _) => Some(I64),
-            Expr::Literal(Literal::I128(_), _) => Some(I128),
-            Expr::Literal(Literal::F32(_), _) => Some(F32),
-            Expr::Literal(Literal::F64(_), _) => Some(F64),
-            _ => None,
-        },
-        Expr::Literal(Literal::U32(_), _) => Some(U32),
-        Expr::Literal(Literal::U64(_), _) => Some(U64),
-        Expr::Literal(Literal::I32(_), _) => Some(I32),
-        Expr::Literal(Literal::I64(_), _) => Some(I64),
-        Expr::Literal(Literal::I128(_), _) => Some(I128),
-        Expr::Literal(Literal::F32(_), _) => Some(F32),
-        Expr::Literal(Literal::F64(_), _) => Some(F64),
-        Expr::Call { func, .. } => infer_expr_type(func),
-        Expr::Fn { ret_t, .. } => Some(ret_t.clone()),
-        _ => None,
-    }
+    Err(String::from("unable to infer type"))
 }
 
 impl fmt::Display for Type {
@@ -181,7 +161,7 @@ impl fmt::Display for Type {
                     .join(", ");
                 write!(f, "Fn({args_str}) -> {ret_t}")
             }
-            Type::UserDefined(name) => write!(f, "{}", name),
+            Type::UserDefined(name) => write!(f, "{name}"),
             Type::Nil => write!(f, "nil"),
             Type::Void => write!(f, "void"),
             Type::Unknown => write!(f, "unknown"),

@@ -226,7 +226,7 @@ impl Evaluator {
 
     fn eval_expr(&mut self, expr: &Expr) -> Option<Object> {
         match expr {
-            Expr::Ident(Ident(name), _) => self.env.borrow_mut().get(name).or_else(|| {
+            Expr::Ident(Ident(name), _, _) => self.env.borrow_mut().get(name).or_else(|| {
                 Some(Object::Error {
                     message: format!("identifier not found: {name}"),
                     span: expr.span(),
@@ -250,7 +250,16 @@ impl Evaluator {
                 body,
                 span,
             } => self.eval_fn_expr(name, args, ret_t, body, span),
-            Expr::Call { func, args, span } => self.eval_call_expr(func, args, span),
+            Expr::Call {
+                name,
+                args,
+                ret_t,
+                span,
+            } => self.eval_call_expr(
+                &Expr::Ident(Ident::from(name), ret_t.clone(), *span),
+                args,
+                span,
+            ),
         }
     }
 
@@ -456,13 +465,12 @@ impl Evaluator {
             ..
         } = resolved_fn
         {
-            if fn_args.len() != resolved_args.len() {
+            let expected_n_args = fn_args.len();
+            let actual_n_args = resolved_args.len();
+
+            if expected_n_args != actual_n_args {
                 return Some(Object::Error {
-                    message: format!(
-                        "expected {} arguments, got {}",
-                        fn_args.len(),
-                        resolved_args.len()
-                    ),
+                    message: format!("expected {expected_n_args} arguments, got {actual_n_args}",),
                     span: *span,
                 });
             }

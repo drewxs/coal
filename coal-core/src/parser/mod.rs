@@ -1,26 +1,27 @@
 pub mod error;
 pub mod precedence;
+pub mod symbol_table;
 
 #[cfg(test)]
 mod tests;
 
-use std::collections::HashMap;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    Comment, Expr, Ident, IfExpr, Infix, Lexer, LexicalToken, Literal, Prefix, Stmt, Token, Type,
-    Var,
+    Comment, Expr, Ident, IfExpr, Infix, Lexer, LexicalToken, Literal, Prefix, Span, Stmt, Token,
+    Type, Var,
 };
 
 pub use error::{ParserError, ParserErrorKind};
 pub use precedence::Precedence;
+pub use symbol_table::SymbolTable;
 
 #[derive(Clone, Debug)]
 pub struct Parser {
     pub lexer: Lexer,
     pub curr_node: LexicalToken,
     pub next_node: LexicalToken,
-    pub vars: HashMap<String, Type>,
-    pub fns: HashMap<String, (Vec<Type>, Type)>,
+    pub symbol_table: Rc<RefCell<SymbolTable>>,
     pub errors: Vec<ParserError>,
 }
 
@@ -28,10 +29,9 @@ impl Parser {
     pub fn new(lexer: Lexer) -> Self {
         let mut parser = Parser {
             lexer,
-            vars: HashMap::new(),
-            fns: HashMap::new(),
             curr_node: LexicalToken::new(Token::Illegal, Span::default()),
             next_node: LexicalToken::new(Token::Illegal, Span::default()),
+            symbol_table: Rc::new(RefCell::new(SymbolTable::default())),
             errors: vec![],
         };
         parser.advance();
@@ -113,11 +113,45 @@ impl Parser {
             self.advance();
             return Some(());
         }
+
         self.error(ParserErrorKind::UnexpectedToken {
             expected: token,
             got: self.next_node.token.clone(),
         });
+
         None
+    }
+
+    fn parse_block(&mut self) -> Vec<Stmt> {
+        let curr_st = Rc::clone(&self.symbol_table);
+        self.symbol_table = Rc::new(RefCell::new(SymbolTable::from(Rc::clone(
+            &self.symbol_table,
+        ))));
+        let res = self.parse_stmts();
+        self.symbol_table = curr_st;
+
+        res
+    }
+
+    fn parse_block_in_scope(&mut self, scope: Rc<RefCell<SymbolTable>>) -> Vec<Stmt> {
+        let curr_st = Rc::clone(&self.symbol_table);
+        self.symbol_table = scope;
+        let res = self.parse_stmts();
+        self.symbol_table = curr_st;
+
+        res
+    }
+
+    fn parse_stmts(&mut self) -> Vec<Stmt> {
+        let mut block = vec![];
+        while self.curr_node.token != Token::Rbrace && self.curr_node.token != Token::EOF {
+            if let Some(stmt) = self.parse_stmt() {
+                block.push(stmt)
+            }
+            self.advance();
+        }
+
+        block
     }
 
     fn parse_stmt(&mut self) -> Option<Stmt> {
@@ -139,17 +173,6 @@ impl Parser {
         }
     }
 
-    fn parse_block_stmt(&mut self) -> Vec<Stmt> {
-        let mut block = vec![];
-        while self.curr_node.token != Token::Rbrace && self.curr_node.token != Token::EOF {
-            if let Some(stmt) = self.parse_stmt() {
-                block.push(stmt)
-            }
-            self.advance();
-        }
-        block
-    }
-
     fn parse_let_stmt(&mut self) -> Option<Stmt> {
         if let Token::Ident(_) = self.next_node.token {
             self.advance();
@@ -160,7 +183,7 @@ impl Parser {
         let ident = Ident::try_from(&self.curr_node.token).ok()?;
         let ident_span = self.curr_node.span;
 
-        let mut t = match self.next_node.token {
+        let mut declared_t = match self.next_node.token {
             Token::Colon => {
                 self.advance();
                 match &self.next_node.token {
@@ -185,44 +208,29 @@ impl Parser {
 
         let expr = self.parse_expr(Precedence::Lowest)?;
 
-        if let Expr::Call { func, .. } = &expr {
-            if let Expr::Ident(Ident(name), _) = func.as_ref() {
-                if let Some((_, ret_t)) = self.fns.get(name) {
-                    t = Some(ret_t.clone());
-                }
+        dbg!(&expr);
+        if let Expr::Ident(Ident(name), _, _) = &expr {
+            if let Some(t) = self.symbol_table.borrow().get(name) {
+                declared_t = Some(t.clone());
+            } else if let Some(t) = self.symbol_table.borrow().get(&format!("__{name}__")) {
+                declared_t = Some(t.clone());
             }
-        }
-        if let Expr::Ident(Ident(name), _) = &expr {
-            if let Some(ret_t) = self.vars.get(name) {
-                t = Some(ret_t.clone());
-            } else if let Some((args, ret_t)) = self.fns.get(name) {
-                t = Some(Type::Fn(args.clone(), Box::new(ret_t.clone())))
-            }
-        }
-        if t.is_none() {
-            t = Type::try_from(&expr).ok();
+        } else if let Ok(inferred_t) = Type::try_from(&expr) {
+            declared_t = Some(inferred_t);
         }
 
-        if let Some(t) = t {
-            self.consume_curr(Token::Semicolon);
-            if let Expr::Call { func, .. } = &expr {
-                if let Expr::Ident(Ident(name), _) = func.as_ref() {
-                    if let Some((_, ret_t)) = self.fns.get(name) {
-                        self.vars.insert(name.to_owned(), ret_t.clone());
-                    }
-                }
-            } else {
-                self.vars.insert(ident.name(), t.clone());
-            }
-            Some(Stmt::Let(ident, t, expr))
-        } else {
+        let t = declared_t.unwrap_or_else(|| {
             self.errors.push(ParserError::new(
                 ParserErrorKind::TypeAnnotationsNeeded,
                 ident_span,
             ));
-            self.vars.insert(ident.name(), Type::Unknown);
-            Some(Stmt::Let(ident, Type::Unknown, expr))
-        }
+            Type::Unknown
+        });
+
+        self.symbol_table.borrow_mut().set(ident.name(), t.clone());
+        self.consume_curr(Token::Semicolon);
+
+        Some(Stmt::Let(ident, t, expr))
     }
 
     fn parse_assign_stmt(&mut self) -> Option<Stmt> {
@@ -262,8 +270,17 @@ impl Parser {
     fn parse_expr(&mut self, precedence: Precedence) -> Option<Expr> {
         let LexicalToken { token, span } = &self.curr_node;
         let mut lhs = match token {
-            Token::Ident(_) => Ident::try_from(&self.curr_node.token)
-                .map(|ident| Expr::Ident(ident, *span))
+            Token::Ident(name) => Ident::try_from(&self.curr_node.token)
+                .map(|ident| {
+                    Expr::Ident(
+                        ident,
+                        self.symbol_table
+                            .borrow()
+                            .get(name)
+                            .unwrap_or(Type::Unknown),
+                        *span,
+                    )
+                })
                 .ok(),
             Token::U32(i) => Some(Expr::Literal(Literal::U32(*i), *span)),
             Token::U64(i) => Some(Expr::Literal(Literal::U64(*i), *span)),
@@ -304,7 +321,9 @@ impl Parser {
                     lhs = self.parse_infix_expr(&lhs?);
                 }
                 Token::Lparen => {
-                    lhs = self.parse_call_expr(&lhs?);
+                    if let Some(Expr::Ident(Ident(name), _, _)) = &lhs {
+                        lhs = self.parse_call_expr(name.to_owned());
+                    }
                 }
                 Token::Lbracket => {
                     self.advance();
@@ -355,16 +374,22 @@ impl Parser {
         ))
     }
 
-    fn parse_call_expr(&mut self, func: &Expr) -> Option<Expr> {
+    fn parse_call_expr(&mut self, name: String) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
         self.advance();
 
         let args = self.parse_expr_list(Token::Rparen)?;
         let (_, end) = self.curr_node.span;
+        let ret_t = self
+            .symbol_table
+            .borrow()
+            .get(&format!("__{name}__"))
+            .unwrap_or(Type::Unknown);
 
         Some(Expr::Call {
-            func: Box::new(func.clone()),
+            name,
             args,
+            ret_t,
             span: (start, end),
         })
     }
@@ -407,7 +432,7 @@ impl Parser {
         self.expect_next(Token::Lbrace)?;
         self.advance();
 
-        let then = self.parse_block_stmt();
+        let then = self.parse_block();
 
         let mut elifs = vec![];
         while self.next_node.token == Token::Elif {
@@ -420,7 +445,7 @@ impl Parser {
 
             elifs.push(IfExpr {
                 cond: Box::new(cond),
-                then: self.parse_block_stmt(),
+                then: self.parse_block(),
             });
         }
 
@@ -429,7 +454,7 @@ impl Parser {
             self.advance();
             self.expect_next(Token::Lbrace)?;
             self.advance();
-            alt = Some(self.parse_block_stmt());
+            alt = Some(self.parse_block());
         }
 
         let (_, end) = self.curr_node.span;
@@ -451,7 +476,7 @@ impl Parser {
         self.expect_next(Token::Lbrace)?;
         self.advance();
 
-        let body = self.parse_block_stmt();
+        let body = self.parse_block();
         let (_, end) = self.curr_node.span;
 
         Some(Expr::While {
@@ -475,10 +500,23 @@ impl Parser {
         self.advance();
         self.consume_next(Token::Lbrace);
 
-        let body = self.parse_block_stmt();
+        let mut st = SymbolTable::from(Rc::clone(&self.symbol_table));
+        for arg in args.iter() {
+            st.set(arg.name.clone(), arg.t.clone());
+            if let Type::Fn(_, t) = &arg.t {
+                st.set(format!("__{}__", arg.name), *t.clone());
+            }
+        }
+
+        let body = self.parse_block_in_scope(Rc::new(RefCell::new(st)));
         let (_, end) = self.curr_node.span;
 
-        self.fns.insert(ident.name(), (args_t, ret_t.clone()));
+        self.symbol_table
+            .borrow_mut()
+            .set(format!("__{}__", ident.name()), ret_t.clone());
+        self.symbol_table
+            .borrow_mut()
+            .set(ident.name(), Type::Fn(args_t, Box::new(ret_t.clone())));
 
         Some(Expr::Fn {
             name: ident.name(),
