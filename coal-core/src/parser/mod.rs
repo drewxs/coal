@@ -233,6 +233,12 @@ impl Parser {
         });
 
         self.symbol_table.borrow_mut().set(ident.name(), t.clone());
+        if let Type::Fn(_, ret_t) = &t {
+            self.symbol_table
+                .borrow_mut()
+                .set(format!("__{}__", ident.name()), *ret_t.clone());
+        }
+
         self.consume_curr(Token::Semicolon);
 
         Some(Stmt::Let(ident, t, expr))
