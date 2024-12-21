@@ -507,7 +507,7 @@ impl Parser {
 
         let args = self.parse_decl_args()?;
         let args_t = args.iter().map(|arg| arg.t.clone()).collect();
-        let ret_t = self.parse_ret_type();
+        let declared_ret_t = self.parse_ret_type();
         self.advance();
         self.consume_next(Token::Lbrace);
 
@@ -521,6 +521,15 @@ impl Parser {
 
         let body = self.parse_block_in_scope(Rc::new(RefCell::new(st)));
         let (_, end) = self.curr_node.span;
+
+        let ret_t = declared_ret_t.unwrap_or_else(|| {
+            if let Some(Stmt::Return(expr)) = body.last() {
+                if let Ok(t) = Type::try_from(expr) {
+                    return t;
+                }
+            }
+            Type::Void
+        });
 
         self.symbol_table
             .borrow_mut()
@@ -577,7 +586,7 @@ impl Parser {
         let ret_t = match self.curr_node.token {
             Token::Arrow => {
                 self.advance();
-                self.parse_ret_type()
+                self.parse_ret_type().unwrap_or(Type::Void)
             }
             _ => Type::Void,
         };
@@ -585,14 +594,14 @@ impl Parser {
         Some(Type::Fn(args, Box::new(ret_t)))
     }
 
-    fn parse_ret_type(&mut self) -> Type {
+    fn parse_ret_type(&mut self) -> Option<Type> {
         match self.curr_node.token {
-            Token::Lbrace | Token::EQ => Type::Void,
+            Token::Lbrace | Token::EQ => None,
             _ => {
                 if !matches!(self.curr_node.token, Token::Ident(_)) {
                     self.advance();
                 }
-                self.parse_type().unwrap_or(Type::Void)
+                self.parse_type()
             }
         }
     }

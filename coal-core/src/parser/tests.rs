@@ -967,7 +967,7 @@ fn test_parse_function_expressions() {
             Stmt::Expr(Expr::Fn {
                 name: String::from("foo"),
                 args: vec![],
-                ret_t: Type::Void,
+                ret_t: I32,
                 body: vec![Stmt::Return(Expr::Literal(
                     Literal::I32(0),
                     ((2, 8), (2, 8)),
