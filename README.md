@@ -9,10 +9,18 @@ Examples [here](/docs/examples.md).
 
 ## Installation
 
-Install using [Cargo](https://www.rust-lang.org/tools/install):
+Install using [Cargo](https://www.rust-lang.org/tools/install) (requires nightly rust):
 
 ```sh
 cargo install --git https://github.com/drewxs/coal.git
+```
+
+Build from source (also requires nightly rust):
+
+```sh
+git clone https://github.com/drewxs/coal.git
+cd coal
+make
 ```
 
 ## Usage
