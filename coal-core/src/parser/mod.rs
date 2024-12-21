@@ -608,7 +608,6 @@ impl Parser {
 
     fn parse_type(&mut self) -> Option<Type> {
         match &self.curr_node.token {
-            Token::Lbrace => None,
             Token::Ident(s) => match s.as_str() {
                 "Fn" => self.parse_fn_type(),
                 _ => Type::try_from(&self.curr_node.token).ok(),
