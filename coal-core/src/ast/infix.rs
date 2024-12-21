@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::Token;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq)]
 pub enum Infix {
     // Operators
     Add,

@@ -1,9 +1,9 @@
-pub mod error;
-pub mod precedence;
-pub mod symbol_table;
-
 #[cfg(test)]
 mod tests;
+
+mod error;
+pub mod precedence;
+pub mod symbol_table;
 
 use std::{cell::RefCell, rc::Rc};
 

@@ -1,15 +1,17 @@
-pub mod env;
-pub mod object;
-
 #[cfg(test)]
 mod tests;
 
-pub use env::*;
-pub use object::*;
+pub mod env;
+mod error;
+pub mod object;
 
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{Expr, Ident, IfExpr, Infix, Literal, Parser, Prefix, Span, Stmt, Type, Var};
+
+pub use env::Env;
+pub use error::{RuntimeError, RuntimeErrorKind};
+pub use object::{Object, FALSE, TRUE};
 
 #[derive(Clone, Debug)]
 pub struct Evaluator {
@@ -38,9 +40,7 @@ impl Evaluator {
 
             match self.eval_stmt(stmt) {
                 Some(Object::Return(val)) => return Some(*val),
-                Some(Object::Error { message, span }) => {
-                    return Some(Object::Error { message, span })
-                }
+                Some(Object::Error(e)) => return Some(Object::Error(e)),
                 obj => res = obj,
             }
         }
@@ -73,9 +73,7 @@ impl Evaluator {
 
             match self.eval_stmt(stmt) {
                 Some(Object::Return(val)) => return Some(Object::Return(val)),
-                Some(Object::Error { message, span }) => {
-                    return Some(Object::Error { message, span })
-                }
+                Some(Object::Error(e)) => return Some(Object::Error(e)),
                 obj => res = obj,
             }
         }
@@ -114,10 +112,10 @@ impl Evaluator {
             if let Some(casted) = val.cast(t) {
                 val = casted;
             } else {
-                return Some(Object::Error {
-                    message: format!("type mismatch: expected={t}, got={resolved_t}"),
-                    span: expr.span(),
-                });
+                return Some(Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::TypeMismatch(t.to_owned(), resolved_t),
+                    expr.span(),
+                )));
             }
         }
 
@@ -137,10 +135,10 @@ impl Evaluator {
             }
 
             if let Object::Fn { .. } = curr {
-                return Some(Object::Error {
-                    message: String::from("cannot assign to function"),
-                    span: expr.span(),
-                });
+                return Some(Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::ReassignmentToFunction,
+                    expr.span(),
+                )));
             }
 
             let curr_t = Type::from(&curr);
@@ -150,10 +148,10 @@ impl Evaluator {
                 if let Some(casted) = val.cast(&curr_t) {
                     val = casted;
                 } else {
-                    return Some(Object::Error {
-                        message: format!("type mismatch: expected={curr_t}, got={resolved_t}"),
-                        span: expr.span(),
-                    });
+                    return Some(Object::Error(RuntimeError::new(
+                        RuntimeErrorKind::TypeMismatch(curr_t, resolved_t),
+                        expr.span(),
+                    )));
                 }
             }
 
@@ -162,10 +160,10 @@ impl Evaluator {
             None
         } else {
             let ((line, _), _) = expr.span();
-            Some(Object::Error {
-                message: format!("identifier not found: {name}"),
-                span: ((line, 1), (line, name.len())),
-            })
+            Some(Object::Error(RuntimeError::new(
+                RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
+                ((line, 1), (line, name.len())),
+            )))
         }
     }
 
@@ -181,10 +179,10 @@ impl Evaluator {
             }
 
             if let Object::Fn { .. } = curr {
-                return Some(Object::Error {
-                    message: String::from("cannot assign to function"),
-                    span: expr.span(),
-                });
+                return Some(Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::ReassignmentToFunction,
+                    expr.span(),
+                )));
             }
 
             let curr_t = Type::from(&curr);
@@ -194,10 +192,10 @@ impl Evaluator {
                 if let Some(casted) = val.cast(&curr_t) {
                     val = casted;
                 } else {
-                    return Some(Object::Error {
-                        message: format!("type mismatch: expected={curr_t}, got={resolved_t}"),
-                        span: expr.span(),
-                    });
+                    return Some(Object::Error(RuntimeError::new(
+                        RuntimeErrorKind::TypeMismatch(curr_t, resolved_t),
+                        expr.span(),
+                    )));
                 }
             }
 
@@ -210,10 +208,10 @@ impl Evaluator {
             None
         } else {
             let ((line, _), _) = expr.span();
-            Some(Object::Error {
-                message: format!("identifier not found: {name}"),
-                span: ((line, 1), (line, name.len())),
-            })
+            Some(Object::Error(RuntimeError::new(
+                RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
+                ((line, 1), (line, name.len())),
+            )))
         }
     }
 
@@ -227,10 +225,10 @@ impl Evaluator {
     fn eval_expr(&mut self, expr: &Expr) -> Option<Object> {
         match expr {
             Expr::Ident(Ident(name), _, _) => self.env.borrow_mut().get(name).or_else(|| {
-                Some(Object::Error {
-                    message: format!("identifier not found: {name}"),
-                    span: expr.span(),
-                })
+                Some(Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
+                    expr.span(),
+                )))
             }),
             Expr::Literal(literal, _) => self.eval_literal_expr(literal, &expr.span()),
             Expr::Prefix(prefix, rhs, span) => self.eval_prefix_expr(prefix, rhs, span),
@@ -291,16 +289,13 @@ impl Evaluator {
                 expr.clear();
             } else if c == '}' && in_expr {
                 match self.eval(&expr) {
-                    Some(Object::Error {
-                        message,
-                        span: err_span,
-                    }) => {
-                        let ((l1, c1), (l2, c2)) = err_span;
+                    Some(Object::Error(e)) => {
+                        let ((l1, c1), (l2, c2)) = e.span;
                         let ((_, offset), (_, _)) = *span;
-                        return Some(Object::Error {
-                            message,
-                            span: ((l1, c1 + offset + 1), (l2, c2 + offset + 1)),
-                        });
+                        return Some(Object::Error(RuntimeError::new(
+                            e.kind,
+                            ((l1, c1 + offset + 1), (l2, c2 + offset + 1)),
+                        )));
                     }
                     Some(obj) => {
                         res.push_str(&obj.to_string());
@@ -338,10 +333,10 @@ impl Evaluator {
                 Object::F64(f) => Object::F64(-f),
                 TRUE => Object::I32(-1),
                 FALSE => Object::I32(0),
-                _ => Object::Error {
-                    message: format!("bad operand type for unary -: '{}'", Type::from(&rhs)),
-                    span: *span,
-                },
+                _ => Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::BadOperandTypeForUnary('-', Type::from(&rhs)),
+                    *span,
+                )),
             },
         };
 
@@ -372,10 +367,10 @@ impl Evaluator {
             Infix::GTE => Some(Object::Bool(lhs >= rhs)),
         };
 
-        result.or(Some(Object::Error {
-            message: format!("unsupported operation: {lhs_t} {op} {rhs_t}"),
-            span: *span,
-        }))
+        result.or(Some(Object::Error(RuntimeError::new(
+            RuntimeErrorKind::UnsupportedOperation(op.clone(), lhs_t, rhs_t),
+            *span,
+        ))))
     }
 
     fn eval_infix_expr(
@@ -436,10 +431,10 @@ impl Evaluator {
         span: &Span,
     ) -> Option<Object> {
         if self.env.borrow_mut().has(name) {
-            return Some(Object::Error {
-                message: format!("identifier '{name}' already exists"),
-                span: *span,
-            });
+            return Some(Object::Error(RuntimeError::new(
+                RuntimeErrorKind::IdentifierExists(name.to_owned()),
+                *span,
+            )));
         }
 
         let func = Object::Fn {
@@ -469,10 +464,10 @@ impl Evaluator {
             let actual_n_args = resolved_args.len();
 
             if expected_n_args != actual_n_args {
-                return Some(Object::Error {
-                    message: format!("expected {expected_n_args} arguments, got {actual_n_args}",),
-                    span: *span,
-                });
+                return Some(Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::IncorrectNumberOfArguments(expected_n_args, actual_n_args),
+                    *span,
+                )));
             }
 
             let mut enclosed_env = Env::from(Rc::clone(&self.env));
@@ -493,10 +488,10 @@ impl Evaluator {
                         .collect::<Vec<String>>()
                         .join(", ");
 
-                    return Some(Object::Error {
-                        message: format!("type mismatch: expected={expected_t}, got={resolved_t}"),
-                        span: *span,
-                    });
+                    return Some(Object::Error(RuntimeError::new(
+                        RuntimeErrorKind::InvalidArguments(expected_t, resolved_t),
+                        *span,
+                    )));
                 }
             }
 
@@ -508,10 +503,10 @@ impl Evaluator {
 
             res
         } else {
-            Some(Object::Error {
-                message: format!("expected function, got {resolved_fn}"),
-                span: *span,
-            })
+            Some(Object::Error(RuntimeError::new(
+                RuntimeErrorKind::Mismatch(String::from("function"), resolved_fn.t()),
+                *span,
+            )))
         }
     }
 }

@@ -6,7 +6,9 @@ use std::{
     ops::{Add, Div, Mul, Rem, Sub},
 };
 
-use crate::{Literal, ParserError, Span, Stmt, Type, Var, F32, F64, I128, I32, I64, U32, U64};
+use crate::{Literal, ParserError, Stmt, Type, Var, F32, F64, I128, I32, I64, U32, U64};
+
+use super::error::{RuntimeError, RuntimeErrorKind};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Object {
@@ -33,12 +35,9 @@ pub enum Object {
         body: Vec<Stmt>,
         ret_t: Type,
     },
-    Nil,
     Return(Box<Object>),
-    Error {
-        message: String,
-        span: Span,
-    },
+    Error(RuntimeError),
+    Nil,
 }
 
 pub const TRUE: Object = Object::Bool(true);
@@ -53,6 +52,28 @@ impl Object {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
         hasher.finish()
+    }
+
+    pub fn t(&self) -> Type {
+        match self {
+            Object::U32(_) => U32,
+            Object::U64(_) => U64,
+            Object::I32(_) => I32,
+            Object::I64(_) => I64,
+            Object::I128(_) => I128,
+            Object::F32(_) => F32,
+            Object::F64(_) => F64,
+            Object::Str(_) => Type::Str,
+            Object::Bool(_) => Type::Bool,
+            Object::List { t, .. } => Type::List(Box::new(t.to_owned())),
+            Object::Map { t, .. } => Type::Map(Box::new(t.to_owned())),
+            Object::Fn { args, ret_t, .. } => Type::Fn(
+                args.iter().map(|arg| arg.t.to_owned()).collect(),
+                Box::new(ret_t.to_owned()),
+            ),
+            Object::Return(v) => v.t(),
+            Object::Nil | Object::Error(_) => Type::Nil,
+        }
     }
 
     pub fn int_div(self, rhs: Self) -> Option<Object> {
@@ -243,10 +264,10 @@ impl From<&Literal> for Object {
 
 impl From<&ParserError> for Object {
     fn from(value: &ParserError) -> Self {
-        Object::Error {
-            message: value.kind.to_string(),
+        Object::Error(RuntimeError {
+            kind: RuntimeErrorKind::Custom(value.kind.to_string()),
             span: value.span,
-        }
+        })
     }
 }
 
@@ -267,38 +288,7 @@ impl Hash for Object {
             Object::Fn { name, .. } => name.hash(state),
             Object::Nil => {}
             Object::Return(v) => v.hash(state),
-            Object::Error { message, span } => {
-                message.hash(state);
-                span.hash(state);
-            }
-        }
-    }
-}
-
-impl fmt::Display for Object {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Object::U32(i) => write!(f, "{i}"),
-            Object::U64(i) => write!(f, "{i}"),
-            Object::I32(i) => write!(f, "{i}"),
-            Object::I64(i) => write!(f, "{i}"),
-            Object::I128(i) => write!(f, "{i}"),
-            Object::F32(x) => write!(f, "{x:?}"),
-            Object::F64(x) => write!(f, "{x:?}"),
-            Object::Str(s) => write!(f, "{s}"),
-            Object::Bool(b) => write!(f, "{b}"),
-            Object::List { data, .. } => write!(f, "{data:?}"),
-            Object::Map { data, .. } => write!(f, "{data:?}"),
-            Object::Fn { .. } => write!(f, "Fn[{}]", self.calculate_hash()),
-            Object::Nil => write!(f, "nil"),
-            Object::Return(v) => write!(f, "{v}"),
-            Object::Error {
-                message,
-                span: trace,
-            } => {
-                let ((l1, c1), (l2, c2)) = trace;
-                write!(f, "{l1}:{c1}-{l2}:{c2} {}", message)
-            }
+            Object::Error(e) => e.hash(state),
         }
     }
 }
@@ -405,6 +395,28 @@ impl PartialOrd for Object {
             (Object::F32(lhs), Object::F32(rhs)) => lhs.partial_cmp(rhs),
             (Object::F64(lhs), Object::F64(rhs)) => lhs.partial_cmp(rhs),
             _ => None,
+        }
+    }
+}
+
+impl fmt::Display for Object {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Object::U32(i) => write!(f, "{i}"),
+            Object::U64(i) => write!(f, "{i}"),
+            Object::I32(i) => write!(f, "{i}"),
+            Object::I64(i) => write!(f, "{i}"),
+            Object::I128(i) => write!(f, "{i}"),
+            Object::F32(x) => write!(f, "{x:?}"),
+            Object::F64(x) => write!(f, "{x:?}"),
+            Object::Str(s) => write!(f, "{s}"),
+            Object::Bool(b) => write!(f, "{b}"),
+            Object::List { data, .. } => write!(f, "{data:?}"),
+            Object::Map { data, .. } => write!(f, "{data:?}"),
+            Object::Fn { .. } => write!(f, "Fn[{}]", self.calculate_hash()),
+            Object::Return(v) => write!(f, "{v}"),
+            Object::Error(e) => write!(f, "{e}"),
+            Object::Nil => write!(f, "nil"),
         }
     }
 }
