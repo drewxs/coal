@@ -574,15 +574,20 @@ impl Parser {
             args.push(t);
         }
 
-        self.advance();
-        let ret_t = self.parse_ret_type();
+        let ret_t = match self.curr_node.token {
+            Token::Arrow => {
+                self.advance();
+                self.parse_ret_type()
+            }
+            _ => Type::Void,
+        };
 
         Some(Type::Fn(args, Box::new(ret_t)))
     }
 
     fn parse_ret_type(&mut self) -> Type {
         match self.curr_node.token {
-            Token::Lbrace => Type::Void,
+            Token::Lbrace | Token::EQ => Type::Void,
             _ => {
                 if !matches!(self.curr_node.token, Token::Ident(_)) {
                     self.advance();
