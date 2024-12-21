@@ -60,8 +60,7 @@ impl Stmt {
                 | Expr::Prefix(_, _, _)
                 | Expr::Infix(_, _, _, _)
                 | Expr::Call { .. } => {
-                    expr.fmt_with_indent(f, indent_level)?;
-                    writeln!(f, ";")
+                    writeln!(f, "{}{expr};", indent)
                 }
                 _ => expr.fmt_with_indent(f, indent_level),
             },
