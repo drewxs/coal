@@ -1,0 +1,24 @@
+let x: i32 = 1;
+let y: f64 = 2.0;
+let z: f64 = x + y;
+let z: f64 = z - y % 2;
+
+let a: bool = true;
+let b: bool = !a;
+let c: bool = !x == y;
+
+fn adder(x: u32) -> Fn(u32) -> u32 {
+    fn add(n: u32) -> u32 {
+        return x + n;
+    }
+    return add;
+}
+
+let add_two: Fn(u32) -> u32 = adder(2);
+let add_two_copy: Fn(u32) -> u32 = add_two;
+
+let result: u32 = add_two(2) + add_two_copy(2);
+let result_copy: u32 = add_two_copy(2);
+
+return result;
+
