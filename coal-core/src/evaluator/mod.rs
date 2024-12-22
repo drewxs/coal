@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+pub mod builtins;
 pub mod env;
 mod error;
 pub mod object;
@@ -16,19 +17,25 @@ pub use object::{Object, FALSE, TRUE};
 #[derive(Clone, Debug)]
 pub struct Evaluator {
     pub env: Rc<RefCell<Env>>,
+    pub parser: Parser,
 }
 
 impl Evaluator {
     pub fn new(env: Rc<RefCell<Env>>) -> Self {
-        Self { env }
+        Self {
+            env,
+            parser: Parser::default(),
+        }
     }
 
     pub fn eval(&mut self, input: &str) -> Option<Object> {
-        let mut parser = Parser::from(input);
-        let stmts = parser.parse();
+        self.parser = self
+            .parser
+            .new_with(input, Rc::clone(&self.parser.symbol_table));
+        let stmts = self.parser.parse();
 
-        if !parser.errors.is_empty() {
-            return Some(Object::from(&parser.errors[0]));
+        if !self.parser.errors.is_empty() {
+            return Some(Object::from(&self.parser.errors[0]));
         }
 
         let mut res = None;

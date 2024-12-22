@@ -1,7 +1,8 @@
 use std::fmt;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub enum Token {
+    #[default]
     Illegal,
     EOF,
     Comment(String),
@@ -177,7 +178,7 @@ impl fmt::Display for Token {
 pub type Position = (usize, usize);
 pub type Span = (Position, Position);
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct LexicalToken {
     pub token: Token,
     pub span: Span,

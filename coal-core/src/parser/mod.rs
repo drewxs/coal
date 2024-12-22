@@ -8,15 +8,15 @@ pub mod symbol_table;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    Comment, Expr, Ident, IfExpr, Infix, Lexer, LexicalToken, Literal, Prefix, Span, Stmt, Token,
-    Type, Var,
+    Comment, Expr, Ident, IfExpr, Infix, Lexer, LexicalToken, Literal, Prefix, Stmt, Token, Type,
+    Var,
 };
 
 pub use error::{ParserError, ParserErrorKind};
 pub use precedence::Precedence;
 pub use symbol_table::SymbolTable;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Parser {
     pub lexer: Lexer,
     pub curr_node: LexicalToken,
@@ -29,9 +29,22 @@ impl Parser {
     pub fn new(lexer: Lexer) -> Self {
         let mut parser = Parser {
             lexer,
-            curr_node: LexicalToken::new(Token::Illegal, Span::default()),
-            next_node: LexicalToken::new(Token::Illegal, Span::default()),
+            curr_node: LexicalToken::default(),
+            next_node: LexicalToken::default(),
             symbol_table: Rc::new(RefCell::new(SymbolTable::default())),
+            errors: vec![],
+        };
+        parser.advance();
+        parser.advance();
+        parser
+    }
+
+    pub fn new_with(&self, input: &str, symbol_table: Rc<RefCell<SymbolTable>>) -> Self {
+        let mut parser = Parser {
+            lexer: Lexer::new(input),
+            curr_node: LexicalToken::default(),
+            next_node: LexicalToken::default(),
+            symbol_table,
             errors: vec![],
         };
         parser.advance();

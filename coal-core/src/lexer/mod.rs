@@ -7,7 +7,7 @@ use crate::clean_input;
 
 pub use token::{LexicalToken, Span, Token};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Lexer {
     pub input: String,
     pub pos: usize,
