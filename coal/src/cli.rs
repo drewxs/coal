@@ -37,6 +37,9 @@ pub enum Command {
 
         #[arg(short = 'a', long, action)]
         ast: bool,
+
+        #[arg(short = 'e', long, action)]
+        errors: bool,
     },
 
     #[command(about = "Format files")]

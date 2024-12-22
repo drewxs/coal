@@ -21,11 +21,18 @@ fn main() {
                 }
                 Err(err) => eprintln!("{err}"),
             },
-            Command::Eval { input, tokens, ast } => {
+            Command::Eval {
+                input,
+                tokens,
+                ast,
+                errors,
+            } => {
                 if tokens {
                     coal::print_tokens(&input);
                 } else if ast {
                     coal::print_ast(&input);
+                } else if errors {
+                    coal::print_errors(&input);
                 } else {
                     coal::eval(&input);
                 }
