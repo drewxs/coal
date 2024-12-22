@@ -258,6 +258,13 @@ impl Evaluator {
                 args,
                 span,
             ),
+            Expr::MethodCall {
+                lhs,
+                name,
+                args,
+                span,
+                ..
+            } => self.eval_method_call(lhs, name, args, span),
         }
     }
 
@@ -465,7 +472,7 @@ impl Evaluator {
 
             if expected_n_args != actual_n_args {
                 return Some(Object::Error(RuntimeError::new(
-                    RuntimeErrorKind::IncorrectNumberOfArguments(expected_n_args, actual_n_args),
+                    RuntimeErrorKind::InvalidArgumentsLength(expected_n_args, actual_n_args),
                     *span,
                 )));
             }
@@ -504,10 +511,30 @@ impl Evaluator {
             res
         } else {
             Some(Object::Error(RuntimeError::new(
-                RuntimeErrorKind::Mismatch(String::from("function"), resolved_fn.t()),
+                RuntimeErrorKind::Mismatch(String::from("function"), Type::from(&resolved_fn)),
                 *span,
             )))
         }
+    }
+
+    fn eval_method_call(
+        &mut self,
+        lhs: &Expr,
+        name: &str,
+        args: &[Expr],
+        span: &Span,
+    ) -> Option<Object> {
+        let args = args
+            .iter()
+            .map(|expr| {
+                self.eval_expr(expr)
+                    .unwrap_or(Object::Error(RuntimeError::new(
+                        RuntimeErrorKind::FailedToEvaluate,
+                        expr.span(),
+                    )))
+            })
+            .collect::<Vec<Object>>();
+        self.eval_expr(lhs)?.call(name, &args, span)
     }
 }
 

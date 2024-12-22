@@ -21,7 +21,7 @@ impl From<&Token> for Precedence {
             Token::Add | Token::Sub => Precedence::Sum,
             Token::Mul | Token::Div | Token::IntDiv | Token::Rem => Precedence::Product,
             Token::Lbracket => Precedence::Index,
-            Token::Lparen => Precedence::Call,
+            Token::Lparen | Token::Dot => Precedence::Call,
             _ => Precedence::Lowest,
         }
     }

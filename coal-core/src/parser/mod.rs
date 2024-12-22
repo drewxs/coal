@@ -114,10 +114,10 @@ impl Parser {
             return Some(());
         }
 
-        self.error(ParserErrorKind::UnexpectedToken {
-            expected: token,
-            got: self.next_node.token.clone(),
-        });
+        self.error(ParserErrorKind::UnexpectedToken(
+            token,
+            self.next_node.token.clone(),
+        ));
 
         None
     }
@@ -280,6 +280,7 @@ impl Parser {
 
     fn parse_expr(&mut self, precedence: Precedence) -> Option<Expr> {
         let LexicalToken { token, span } = &self.curr_node;
+
         let mut lhs = match token {
             Token::Ident(name) => Ident::try_from(&self.curr_node.token)
                 .map(|ident| {
@@ -338,6 +339,9 @@ impl Parser {
                 }
                 Token::Lbracket => {
                     self.advance();
+                }
+                Token::Dot => {
+                    lhs = self.parse_method_call(lhs?);
                 }
                 _ => break,
             }
@@ -426,6 +430,60 @@ impl Parser {
         }
 
         self.expect_next(end_tok).map(|_| list)
+    }
+
+    fn parse_method_call(&mut self, lhs: Expr) -> Option<Expr> {
+        let (start, _) = self.curr_node.span;
+        self.advance();
+        self.advance();
+
+        let method_name = if let Token::Ident(name) = &self.curr_node.token {
+            name.clone()
+        } else {
+            self.error(ParserErrorKind::SyntaxError(self.curr_node.token.clone()));
+            return None;
+        };
+
+        let mut args = vec![];
+        if self.next_node.token == Token::Lparen {
+            self.advance();
+            args = self.parse_expr_list(Token::Rparen)?;
+        }
+
+        let lhs_t = Type::try_from(&lhs).unwrap_or(Type::Unknown);
+
+        if let Some(method) = lhs_t.signature(&method_name) {
+            if args.len() != method.args_t.len() {
+                self.error(ParserErrorKind::InvalidArgumentsLength(
+                    method.args_t.len(),
+                    args.len(),
+                ));
+                return None;
+            }
+
+            let (_, end) = self.curr_node.span;
+
+            Some(Expr::MethodCall {
+                lhs: Box::new(lhs),
+                name: method_name,
+                args,
+                ret_t: method.ret_t,
+                span: (start, end),
+            })
+        } else {
+            self.advance();
+            self.advance();
+            self.consume_curr(Token::Lparen);
+
+            let (_, end) = self.curr_node.span;
+
+            self.errors.push(ParserError::new(
+                ParserErrorKind::MethodNotFound(lhs_t, String::from(&method_name)),
+                (start, end),
+            ));
+
+            None
+        }
     }
 
     fn parse_grouped_expr(&mut self) -> Option<Expr> {

@@ -1,11 +1,11 @@
-pub mod token;
-
 #[cfg(test)]
 mod tests;
 
-pub use token::{LexicalToken, Span, Token};
+pub mod token;
 
 use crate::clean_input;
+
+pub use token::{LexicalToken, Span, Token};
 
 #[derive(Clone, Debug)]
 pub struct Lexer {
@@ -268,27 +268,54 @@ impl Iterator for Lexer {
                     (cursor, (self.line, self.col.saturating_sub(1))),
                 )
             }
-            '0'..='9' | '.' => {
+            '0'..='9' => {
                 let pos = self.pos;
                 let (line, col) = cursor;
 
+                let mut is_float = false;
                 while self.ch.is_ascii_digit() || self.ch == '.' {
                     self.read_char();
+                    if self.ch == '.' {
+                        is_float = true;
+                    }
                 }
 
-                let num_str = &self.input[pos..self.pos];
-                if num_str.contains('.') {
+                let s = &self.input[pos..self.pos];
+                if is_float {
                     LexicalToken::new(
-                        Token::F64(num_str.parse::<f64>().expect("invalid float literal")),
-                        (cursor, (line, col + num_str.len() - 1)),
+                        Token::F64(s.parse::<f64>().expect("invalid float literal")),
+                        (cursor, (line, col + s.len() - 1)),
                     )
                 } else {
                     LexicalToken::new(
-                        Token::I32(num_str.parse::<i32>().expect("invalid int literal")),
-                        (cursor, (line, col + num_str.len() - 1)),
+                        Token::I32(s.parse::<i32>().expect("invalid int literal")),
+                        (cursor, (line, col + s.len() - 1)),
                     )
                 }
             }
+            '.' => match self.next_char() {
+                '0'..='9' => {
+                    let pos = self.pos;
+                    let (line, col) = cursor;
+
+                    while self.ch.is_ascii_digit() || self.ch == '.' {
+                        self.read_char();
+                    }
+
+                    LexicalToken::new(
+                        Token::F64(
+                            self.input[pos..self.pos]
+                                .parse::<f64>()
+                                .expect("invalid float literal"),
+                        ),
+                        (cursor, (line, col + self.pos - pos)),
+                    )
+                }
+                _ => {
+                    self.read_char();
+                    LexicalToken::new(Token::Dot, (cursor, cursor))
+                }
+            },
             '\n' => {
                 self.read_char();
                 LexicalToken::new(
@@ -296,9 +323,7 @@ impl Iterator for Lexer {
                     ((self.line - 1, self.col), (self.line - 1, self.col)),
                 )
             }
-            '\0' => {
-                return None;
-            }
+            '\0' => return None,
             _ => {
                 self.read_char();
                 LexicalToken::new(Token::Illegal, (cursor, (self.line, self.col)))

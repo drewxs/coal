@@ -35,6 +35,13 @@ pub enum Expr {
         ret_t: Type,
         span: Span,
     },
+    MethodCall {
+        lhs: Box<Expr>,
+        name: String,
+        args: Vec<Expr>,
+        ret_t: Type,
+        span: Span,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -54,6 +61,7 @@ impl Expr {
             Expr::While { span, .. } => *span,
             Expr::Fn { span, .. } => *span,
             Expr::Call { span, .. } => *span,
+            Expr::MethodCall { span, .. } => *span,
         }
     }
 
@@ -105,24 +113,34 @@ impl Expr {
                 ..
             } => {
                 write!(f, "{}fn {name}(", indent)?;
-                let args_str = args
+                let args = args
                     .iter()
                     .map(|arg| format!("{arg}"))
                     .collect::<Vec<String>>()
                     .join(", ");
-                writeln!(f, "{args_str}) -> {ret_t} {{")?;
+                writeln!(f, "{args}) -> {ret_t} {{")?;
                 for stmt in body {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
                 writeln!(f, "{}}}", indent)
             }
             Expr::Call { name, args, .. } => {
-                let args_str = args
+                let args = args
                     .iter()
                     .map(|arg| format!("{arg}"))
                     .collect::<Vec<String>>()
                     .join(", ");
-                write!(f, "{name}({args_str})")
+                write!(f, "{name}({args})")
+            }
+            Expr::MethodCall {
+                lhs, name, args, ..
+            } => {
+                let args = args
+                    .iter()
+                    .map(|arg| format!("{arg}"))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                write!(f, "{lhs}.{name}({args})")
             }
         }
     }

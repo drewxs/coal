@@ -1117,6 +1117,27 @@ fn test_parse_infer_type_from_call() {
 }
 
 #[test]
+fn test_parse_infer_type_from_method() {
+    let input = r#"let x = "foo".len()"#;
+    let expected = Stmt::Let(
+        Ident(String::from("x")),
+        U64,
+        Expr::MethodCall {
+            lhs: Box::new(Expr::Literal(
+                Literal::Str(String::from("foo")),
+                ((1, 9), (1, 13)),
+            )),
+            name: String::from("len"),
+            args: vec![],
+            ret_t: U64,
+            span: ((1, 9), (1, 19)),
+        },
+    );
+    let actual = Parser::from(input).parse();
+    assert_eq!(expected, actual[0]);
+}
+
+#[test]
 fn test_parse_promote_infix_i32_u64() {
     let input = "fn foo() -> u64 { return 1 }; let x = 2; let y = foo() + x;";
     let expected = Stmt::Let(

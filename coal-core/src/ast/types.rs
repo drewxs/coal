@@ -37,9 +37,32 @@ pub const I128: Type = Type::Num(Num::I128);
 pub const F32: Type = Type::Num(Num::F32);
 pub const F64: Type = Type::Num(Num::F64);
 
+#[derive(Clone, Debug, Hash, PartialEq)]
+pub struct MethodSignature {
+    pub args_t: Vec<Type>,
+    pub ret_t: Type,
+}
+
 impl Type {
     pub fn is_numeric(&self) -> bool {
         matches!(self, Type::Num(_))
+    }
+
+    pub fn signature(&self, method: &str) -> Option<MethodSignature> {
+        match self {
+            Type::Str => match method {
+                "len" => Some(MethodSignature {
+                    args_t: vec![],
+                    ret_t: U64,
+                }),
+                "split" => Some(MethodSignature {
+                    args_t: vec![Type::Str],
+                    ret_t: Type::List(Box::new(Type::Str)),
+                }),
+                _ => None,
+            },
+            _ => None,
+        }
     }
 }
 
@@ -124,6 +147,7 @@ impl TryFrom<&Expr> for Type {
                 Ok(Type::Fn(args_t, Box::new(ret_t.to_owned())))
             }
             Expr::Call { ret_t, .. } => Ok(ret_t.to_owned()),
+            Expr::MethodCall { ret_t, .. } => Ok(ret_t.to_owned()),
             _ => Err(String::from("unable to infer type")),
         }
     }

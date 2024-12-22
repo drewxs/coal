@@ -28,11 +28,13 @@ pub enum RuntimeErrorKind {
     TypeMismatch(Type, Type),
     IdentifierNotFound(String),
     IdentifierExists(String),
+    MethodNotFound(String),
     BadOperandTypeForUnary(char, Type),
     UnsupportedOperation(Infix, Type, Type),
     ReassignmentToFunction,
     InvalidArguments(String, String),
-    IncorrectNumberOfArguments(usize, usize),
+    InvalidArgumentsLength(usize, usize),
+    FailedToEvaluate,
 }
 
 impl fmt::Display for RuntimeErrorKind {
@@ -51,6 +53,9 @@ impl fmt::Display for RuntimeErrorKind {
             RuntimeErrorKind::IdentifierExists(name) => {
                 write!(f, "identifier already exists: {name}")
             }
+            RuntimeErrorKind::MethodNotFound(name) => {
+                write!(f, "method not found: {name}")
+            }
             RuntimeErrorKind::BadOperandTypeForUnary(op, t) => {
                 write!(f, "bad operand type for unary {op}: {t}")
             }
@@ -63,12 +68,15 @@ impl fmt::Display for RuntimeErrorKind {
             RuntimeErrorKind::InvalidArguments(expected, got) => {
                 write!(f, "invalid arguments: expected={expected}, got={got}")
             }
-            RuntimeErrorKind::IncorrectNumberOfArguments(x, y) => {
+            RuntimeErrorKind::InvalidArgumentsLength(x, y) => {
                 write!(
                     f,
                     "expected {x} argument{}, got {y}",
                     if *x > 1 { "s" } else { "" },
                 )
+            }
+            RuntimeErrorKind::FailedToEvaluate => {
+                write!(f, "failed to evaluate expression")
             }
         }
     }

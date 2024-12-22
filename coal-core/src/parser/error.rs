@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{Span, Token};
+use crate::{Span, Token, Type};
 
 #[derive(Clone, Debug)]
 pub struct ParserError {
@@ -24,8 +24,11 @@ impl fmt::Display for ParserError {
 #[derive(Clone, Debug)]
 pub enum ParserErrorKind {
     SyntaxError(Token),
-    UnexpectedToken { expected: Token, got: Token },
+    UnexpectedToken(Token, Token),
+    NotFound(String),
+    MethodNotFound(Type, String),
     TypeAnnotationsNeeded,
+    InvalidArgumentsLength(usize, usize),
 }
 
 impl fmt::Display for ParserErrorKind {
@@ -34,11 +37,20 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::SyntaxError(token) => {
                 write!(f, "syntax error: '{token}'")
             }
-            ParserErrorKind::UnexpectedToken { expected, got } => {
-                write!(f, "unexpected token: '{got}', expected: '{expected}'")
+            ParserErrorKind::UnexpectedToken(t1, t2) => {
+                write!(f, "unexpected token: '{t1}', expected: '{t2}'")
+            }
+            ParserErrorKind::NotFound(name) => {
+                write!(f, "not found: {name}")
+            }
+            ParserErrorKind::MethodNotFound(t, name) => {
+                write!(f, "method not found: {t}.{name}()")
             }
             ParserErrorKind::TypeAnnotationsNeeded => {
                 write!(f, "type annotations needed")
+            }
+            ParserErrorKind::InvalidArgumentsLength(t1, t2) => {
+                write!(f, "invalid number of arguments: expected={t1}, got={t2}")
             }
         }
     }

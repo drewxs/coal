@@ -1,7 +1,7 @@
 let x: i32 = 1;
 let y: f64 = 2.0;
 let z: f64 = x + y;
-let z: f64 = z - y % 2;
+z -= y / 2;
 
 let a: bool = true;
 let b: bool = !a;

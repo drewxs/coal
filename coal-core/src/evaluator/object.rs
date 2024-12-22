@@ -6,9 +6,9 @@ use std::{
     ops::{Add, Div, Mul, Rem, Sub},
 };
 
-use crate::{Literal, ParserError, Stmt, Type, Var, F32, F64, I128, I32, I64, U32, U64};
+use crate::{Literal, ParserError, Span, Stmt, Type, Var, F32, F64, I128, I32, I64, U32, U64};
 
-use super::error::{RuntimeError, RuntimeErrorKind};
+use super::{RuntimeError, RuntimeErrorKind};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Object {
@@ -48,32 +48,68 @@ impl Object {
         !matches!(self, Object::Bool(false) | Object::Nil)
     }
 
+    pub fn call(&self, name: &str, args: &[Object], span: &Span) -> Option<Object> {
+        if let Err(e) = self.validate_call_args(name, args, span) {
+            return Some(e);
+        }
+
+        match self {
+            Object::Str(s) => match name {
+                "len" => Some(Object::U64(s.len() as u64)),
+                "split" => {
+                    if let Object::Str(ch) = &args[0] {
+                        Some(Object::List {
+                            data: s
+                                .split(ch.as_str())
+                                .map(|s| Object::Str(s.to_owned()))
+                                .collect(),
+                            t: Type::Str,
+                        })
+                    } else {
+                        None
+                    }
+                }
+                _ => Some(Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::MethodNotFound(name.to_owned()),
+                    *span,
+                ))),
+            },
+            _ => Some(Object::Error(RuntimeError::new(
+                RuntimeErrorKind::MethodNotFound(name.to_owned()),
+                *span,
+            ))),
+        }
+    }
+
+    fn validate_call_args(&self, name: &str, args: &[Object], span: &Span) -> Result<(), Object> {
+        if let Some(method) = Type::from(self).signature(name) {
+            for (arg, t) in args.iter().zip(method.args_t.iter()) {
+                if Type::from(arg) != *t {
+                    let args = args
+                        .iter()
+                        .map(|arg| arg.to_string())
+                        .collect::<Vec<String>>();
+
+                    return Err(Object::Error(RuntimeError::new(
+                        RuntimeErrorKind::InvalidArguments(name.to_owned(), format!("{args:?}")),
+                        *span,
+                    )));
+                }
+            }
+
+            Ok(())
+        } else {
+            Err(Object::Error(RuntimeError::new(
+                RuntimeErrorKind::MethodNotFound(name.to_owned()),
+                *span,
+            )))
+        }
+    }
+
     pub fn calculate_hash(&self) -> u64 {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
         hasher.finish()
-    }
-
-    pub fn t(&self) -> Type {
-        match self {
-            Object::U32(_) => U32,
-            Object::U64(_) => U64,
-            Object::I32(_) => I32,
-            Object::I64(_) => I64,
-            Object::I128(_) => I128,
-            Object::F32(_) => F32,
-            Object::F64(_) => F64,
-            Object::Str(_) => Type::Str,
-            Object::Bool(_) => Type::Bool,
-            Object::List { t, .. } => Type::List(Box::new(t.to_owned())),
-            Object::Map { t, .. } => Type::Map(Box::new(t.to_owned())),
-            Object::Fn { args, ret_t, .. } => Type::Fn(
-                args.iter().map(|arg| arg.t.to_owned()).collect(),
-                Box::new(ret_t.to_owned()),
-            ),
-            Object::Return(v) => v.t(),
-            Object::Nil | Object::Error(_) => Type::Nil,
-        }
     }
 
     pub fn int_div(self, rhs: Self) -> Option<Object> {
@@ -411,7 +447,14 @@ impl fmt::Display for Object {
             Object::F64(x) => write!(f, "{x:?}"),
             Object::Str(s) => write!(f, "{s}"),
             Object::Bool(b) => write!(f, "{b}"),
-            Object::List { data, .. } => write!(f, "{data:?}"),
+            Object::List { data, .. } => write!(
+                f,
+                "[{}]",
+                data.iter()
+                    .map(|x| format!("\"{x}\""))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             Object::Map { data, .. } => write!(f, "{data:?}"),
             Object::Fn { .. } => write!(f, "Fn[{}]", self.calculate_hash()),
             Object::Return(v) => write!(f, "{v}"),

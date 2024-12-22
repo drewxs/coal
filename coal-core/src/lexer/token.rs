@@ -6,6 +6,7 @@ pub enum Token {
     EOF,
     Comment(String),
     NewLine,
+    Dot,
 
     // Identifiers + literals
     Ident(String),
@@ -69,6 +70,9 @@ pub enum Token {
 impl From<&str> for Token {
     fn from(s: &str) -> Self {
         match s {
+            "\0" => Token::EOF,
+            "\n" => Token::NewLine,
+            "." => Token::Dot,
             "true" => Token::Bool(true),
             "false" => Token::Bool(false),
             "+" => Token::Add,
@@ -119,6 +123,7 @@ impl fmt::Display for Token {
             Token::EOF => write!(f, "EOF"),
             Token::Comment(s) => writeln!(f, "// {s}"),
             Token::NewLine => writeln!(f),
+            Token::Dot => write!(f, "."),
             Token::Ident(name) => write!(f, "{name}"),
             Token::U32(i) => write!(f, "{i}"),
             Token::U64(i) => write!(f, "{i}"),
