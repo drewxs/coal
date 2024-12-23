@@ -108,7 +108,20 @@ mod tests {
                   return y; } else {
                             return   0;
                          }
+
+  fn  adder (x :  u32 ) ->  Fn ( u32  ) ->    u32  {
+      fn add(n: u32) -> u32 { 
+let i = 0
+  while  1 < n  { i   +=  1  }
+return 
+x + n;
+        }
+ return  add; }
+
+        let    x :   u32  =         2
+  let  add_two :   Fn ( u32  )  ->    u32  =   adder( x )
             ";
+
         let expected = "let x: i32 = 5;
 let y: i32 = 10;
 
@@ -124,6 +137,20 @@ if x > y {
 } else {
     return 0;
 }
+
+fn adder(x: u32) -> Fn(u32) -> u32 {
+    fn add(n: u32) -> u32 {
+        let i: i32 = 0;
+        while 1 < n {
+            i += 1;
+        }
+        return x + n;
+    }
+    return add;
+}
+
+let x: u32 = 2;
+let add_two: Fn(u32) -> u32 = adder(x);
 ";
 
         assert_eq!(expected, fmt(input));
