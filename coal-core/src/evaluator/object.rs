@@ -8,7 +8,7 @@ use std::{
 
 use crate::{Literal, ParserError, Span, Stmt, Type, Var, F32, F64, I128, I32, I64, U32, U64};
 
-use super::{RuntimeError, RuntimeErrorKind};
+use super::{Builtin, RuntimeError, RuntimeErrorKind};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Object {
@@ -35,6 +35,7 @@ pub enum Object {
         body: Vec<Stmt>,
         ret_t: Type,
     },
+    Builtin(Builtin),
     Return(Box<Object>),
     Error(RuntimeError),
     Nil,
@@ -106,10 +107,11 @@ impl Object {
         }
     }
 
-    pub fn calculate_hash(&self) -> u64 {
+    pub fn calculate_hash(&self) -> String {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
-        hasher.finish()
+        let hash = hasher.finish();
+        format!("0x{:x?}", hash)
     }
 
     pub fn int_div(self, rhs: Self) -> Option<Object> {
@@ -322,6 +324,7 @@ impl Hash for Object {
             Object::List { data, .. } => data.hash(state),
             Object::Map { .. } => "map".hash(state),
             Object::Fn { name, .. } => name.hash(state),
+            Object::Builtin(b) => b.func.hash(state),
             Object::Nil => {}
             Object::Return(v) => v.hash(state),
             Object::Error(e) => e.hash(state),
@@ -456,7 +459,8 @@ impl fmt::Display for Object {
                     .join(", ")
             ),
             Object::Map { data, .. } => write!(f, "{data:?}"),
-            Object::Fn { .. } => write!(f, "Fn[{}]", self.calculate_hash()),
+            Object::Fn { .. } => write!(f, "<fn_{}>", self.calculate_hash()),
+            Object::Builtin(_) => write!(f, "<builtin_{}>", self.calculate_hash()),
             Object::Return(v) => write!(f, "{v}"),
             Object::Error(e) => write!(f, "{e}"),
             Object::Nil => write!(f, "nil"),

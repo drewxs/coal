@@ -8,14 +8,14 @@ use super::{Evaluator, Object, FALSE, TRUE};
 
 #[test]
 fn test_eval_literal() {
+    let mut evaluator = Evaluator::default();
+
     let tests = vec![
         ("5", Some(Object::I32(5))),
         ("3.14", Some(Object::F64(3.14))),
         ("true", Some(TRUE)),
         (r#""foo""#, Some(Object::Str(String::from("foo")))),
     ];
-
-    let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
         assert_eq!(expected, evaluator.eval(expr));
@@ -24,6 +24,8 @@ fn test_eval_literal() {
 
 #[test]
 fn test_eval_str_interpolation() {
+    let mut evaluator = Evaluator::default();
+
     let tests = vec![
         (
             r#""not {!false} or {!!false}""#,
@@ -35,8 +37,6 @@ fn test_eval_str_interpolation() {
         ),
     ];
 
-    let mut evaluator = Evaluator::default();
-
     for (expr, expected) in tests {
         assert_eq!(expected, evaluator.eval(expr));
     }
@@ -44,6 +44,8 @@ fn test_eval_str_interpolation() {
 
 #[test]
 fn test_eval_prefix() {
+    let mut evaluator = Evaluator::default();
+
     let tests = vec![
         ("-5", Some(Object::I32(-5))),
         ("-10", Some(Object::I32(-10))),
@@ -55,8 +57,6 @@ fn test_eval_prefix() {
         ("!!5", Some(TRUE)),
     ];
 
-    let mut evaluator = Evaluator::default();
-
     for (expr, expected) in tests {
         assert_eq!(expected, evaluator.eval(expr));
     }
@@ -64,6 +64,8 @@ fn test_eval_prefix() {
 
 #[test]
 fn test_eval_infix() {
+    let mut evaluator = Evaluator::default();
+
     let tests = vec![
         ("(7 + 2 * 3 / 2) % 3", Some(Object::I32(1))),
         ("1 + 2 * 3 + 4 / 5", Some(Object::I32(7))),
@@ -84,8 +86,6 @@ fn test_eval_infix() {
         (r#""a" * 3"#, Some(Object::Str(String::from("aaa")))),
         (r#""a" < "b""#, Some(TRUE)),
     ];
-
-    let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
         assert_eq!(expected, evaluator.eval(expr));
@@ -114,6 +114,8 @@ fn test_eval_infix_invalid() {
 
 #[test]
 fn test_eval_if() {
+    let mut evaluator = Evaluator::default();
+
     let tests = vec![
         ("if true { 10 }", Some(Object::I32(10))),
         ("if false { 10 }", None),
@@ -142,8 +144,6 @@ fn test_eval_if() {
         ),
     ];
 
-    let mut evaluator = Evaluator::default();
-
     for (expr, expected) in tests {
         assert_eq!(expected, evaluator.eval(expr));
     }
@@ -151,6 +151,8 @@ fn test_eval_if() {
 
 #[test]
 fn test_eval_nested_if() {
+    let mut evaluator = Evaluator::default();
+
     let tests = vec![
         (
             r#"if true {
@@ -175,8 +177,6 @@ fn test_eval_nested_if() {
             Some(Object::I32(2)),
         ),
     ];
-
-    let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
         assert_eq!(expected, evaluator.eval(expr));
@@ -283,6 +283,8 @@ fn test_eval_assign_invalid() {
 
 #[test]
 fn test_eval_function() {
+    let mut evaluator = Evaluator::default();
+
     let tests = vec![(
         r#"fn add(x: i32, y: i32) -> i32 {
             if x > y {
@@ -319,16 +321,59 @@ fn test_eval_function() {
             ret_t: I32,
         }),
     )];
-    let mut evaluator = Evaluator::default();
 
     for (expr, expected) in tests {
         assert_eq!(expected, evaluator.eval(expr));
     }
 }
 
+#[test]
+fn test_eval_methods() {
+    let mut evaluator = Evaluator::default();
+
+    let tests = vec![
+        (r#""".len()"#, Some(Object::U64(0))),
+        (r#"let s = "asdf"; s.len()"#, Some(Object::U64(4))),
+        (r#""{1 + 9}".len()"#, Some(Object::U64(2))),
+    ];
+
+    for (expr, expected) in tests {
+        assert_eq!(expected, evaluator.eval(expr));
+    }
+}
+
+#[test]
+fn test_eval_builtins() {
+    let mut evaluator = Evaluator::default();
+
+    let tests = vec![
+        (r#"print("asdf")"#, None),
+        (r#"println("asdf")"#, None),
+        (r#"dbg("asdf")"#, None),
+    ];
+
+    for (expr, expected) in tests {
+        assert_eq!(expected, evaluator.eval(expr));
+    }
+
+    let tests = vec![
+        r#"print()"#,
+        r#"print(x, y)"#,
+        r#"println()"#,
+        r#"println(x, y, z)"#,
+        r#"dbg()"#,
+        r#"dbg(1, 2, 3)"#,
+    ];
+
+    for input in tests {
+        assert_matches!(evaluator.eval(input), Some(Object::Error { .. }));
+    }
+}
+
 #[bench]
 fn bench_eval_math(b: &mut Bencher) {
     let mut evaluator = Evaluator::default();
+
     let test =
         "(((9876 * 5432) // 123 + (8765 % 34) * (4321 // 2)) * 1987) % 567 + (3456 * 7890) // 234";
 

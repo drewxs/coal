@@ -6,25 +6,29 @@ pub mod env;
 mod error;
 pub mod object;
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{Expr, Ident, IfExpr, Infix, Literal, Parser, Prefix, Span, Stmt, Type, Var};
 
+use builtins::builtins;
+pub use builtins::Builtin;
 pub use env::Env;
 pub use error::{RuntimeError, RuntimeErrorKind};
 pub use object::{Object, FALSE, TRUE};
 
 #[derive(Clone, Debug)]
-pub struct Evaluator {
+pub struct Evaluator<'s> {
     pub env: Rc<RefCell<Env>>,
     pub parser: Parser,
+    pub builtins: HashMap<&'s str, Builtin>,
 }
 
-impl Evaluator {
+impl Evaluator<'_> {
     pub fn new(env: Rc<RefCell<Env>>) -> Self {
         Self {
             env,
             parser: Parser::default(),
+            builtins: builtins(),
         }
     }
 
@@ -260,11 +264,14 @@ impl Evaluator {
                 args,
                 ret_t,
                 span,
-            } => self.eval_call_expr(
-                &Expr::Ident(Ident::from(name), ret_t.clone(), *span),
-                args,
-                span,
-            ),
+            } => {
+                let expr = Expr::Ident(Ident::from(name), ret_t.clone(), *span);
+                if self.builtins.contains_key(name.as_str()) {
+                    self.eval_builtin(&expr, args, span)
+                } else {
+                    self.eval_call_expr(&expr, args, span)
+                }
+            }
             Expr::MethodCall {
                 lhs,
                 name,
@@ -474,12 +481,12 @@ impl Evaluator {
             ..
         } = resolved_fn
         {
-            let expected_n_args = fn_args.len();
-            let actual_n_args = resolved_args.len();
+            let expected_arity = fn_args.len();
+            let actual_arity = resolved_args.len();
 
-            if expected_n_args != actual_n_args {
+            if expected_arity != actual_arity {
                 return Some(Object::Error(RuntimeError::new(
-                    RuntimeErrorKind::InvalidArgumentsLength(expected_n_args, actual_n_args),
+                    RuntimeErrorKind::InvalidArgumentsLength(expected_arity, actual_arity),
                     *span,
                 )));
             }
@@ -491,16 +498,8 @@ impl Evaluator {
                 } else if let Some(casted) = value.cast(&var.t) {
                     enclosed_env.set_in_store(var.name.to_owned(), casted);
                 } else {
-                    let expected_t = fn_args
-                        .iter()
-                        .map(|arg| format!("{}", arg.t))
-                        .collect::<Vec<String>>()
-                        .join(", ");
-                    let resolved_t = resolved_args
-                        .iter()
-                        .map(|arg| format!("{}", Type::from(arg)))
-                        .collect::<Vec<String>>()
-                        .join(", ");
+                    let expected_t = self.vars_str(&fn_args);
+                    let resolved_t = self.objects_str(&resolved_args);
 
                     return Some(Object::Error(RuntimeError::new(
                         RuntimeErrorKind::InvalidArguments(expected_t, resolved_t),
@@ -524,6 +523,73 @@ impl Evaluator {
         }
     }
 
+    fn eval_builtin(&mut self, expr: &Expr, args: &[Expr], span: &Span) -> Option<Object> {
+        let resolved_args: Vec<_> = args.iter().filter_map(|arg| self.eval_expr(arg)).collect();
+        let resolved_fn = self.eval_expr(expr)?;
+
+        if let Object::Builtin(Builtin {
+            func,
+            args: fn_args,
+            ..
+        }) = resolved_fn
+        {
+            let expected_arity = fn_args.len();
+            let actual_arity = resolved_args.len();
+
+            if expected_arity != actual_arity {
+                return Some(Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::InvalidArgumentsLength(expected_arity, actual_arity),
+                    *span,
+                )));
+            }
+
+            let mut enclosed_env = Env::from(Rc::clone(&self.env));
+            for (var, value) in fn_args.iter().zip(resolved_args.iter()) {
+                let t = Type::from(value);
+                if matches!(var.t, Type::Any) || matches!(t, Type::Any) || t == var.t {
+                    enclosed_env.set_in_store(var.name.to_owned(), value.to_owned());
+                } else if let Some(casted) = value.cast(&var.t) {
+                    enclosed_env.set_in_store(var.name.to_owned(), casted);
+                } else {
+                    let expected_t = self.vars_str(&fn_args);
+                    let resolved_t = self.objects_str(&resolved_args);
+
+                    return Some(Object::Error(RuntimeError::new(
+                        RuntimeErrorKind::InvalidArguments(expected_t, resolved_t),
+                        *span,
+                    )));
+                }
+            }
+
+            let mut res = func(&resolved_args);
+
+            if let Some(Object::Return(val)) = res {
+                res = Some(*val);
+            }
+
+            res
+        } else {
+            Some(Object::Error(RuntimeError::new(
+                RuntimeErrorKind::Mismatch(String::from("function"), Type::from(&resolved_fn)),
+                *span,
+            )))
+        }
+    }
+
+    fn vars_str(&self, args: &[Var]) -> String {
+        args.iter()
+            .map(|arg| format!("{}", arg.t))
+            .collect::<Vec<String>>()
+            .join(", ")
+    }
+
+    fn objects_str(&self, args: &[Object]) -> String {
+        args.iter()
+            .map(|arg| format!("{}", Type::from(arg)))
+            .collect::<Vec<String>>()
+            .join(", ")
+    }
+
     fn eval_method_call(
         &mut self,
         lhs: &Expr,
@@ -545,7 +611,7 @@ impl Evaluator {
     }
 }
 
-impl Default for Evaluator {
+impl Default for Evaluator<'_> {
     fn default() -> Self {
         Self::new(Rc::new(RefCell::new(Env::default())))
     }

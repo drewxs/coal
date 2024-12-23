@@ -44,7 +44,7 @@ impl Parser {
             lexer: Lexer::new(input),
             curr_node: LexicalToken::default(),
             next_node: LexicalToken::default(),
-            symbol_table,
+            symbol_table: Rc::new(RefCell::new(SymbolTable::from(symbol_table))),
             errors: vec![],
         };
         parser.advance();

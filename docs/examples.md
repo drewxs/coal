@@ -3,7 +3,7 @@
 Hello, World!:
 
 ```rs
-print("Hello, World!");
+println("Hello, World!");
 ```
 
 Variables:

@@ -42,7 +42,7 @@ impl fmt::Display for RuntimeErrorKind {
         match self {
             RuntimeErrorKind::Custom(s) => write!(f, "{s}"),
             RuntimeErrorKind::Mismatch(t1, t2) => {
-                write!(f, "type mismatch: expected={t1}, got={t2}")
+                write!(f, "mismatch: expected={t1}, got={t2}")
             }
             RuntimeErrorKind::TypeMismatch(t1, t2) => {
                 write!(f, "type mismatch: expected={t1}, got={t2}")
@@ -65,15 +65,11 @@ impl fmt::Display for RuntimeErrorKind {
             RuntimeErrorKind::ReassignmentToFunction => {
                 write!(f, "cannot assign to function")
             }
-            RuntimeErrorKind::InvalidArguments(expected, got) => {
-                write!(f, "invalid arguments: expected={expected}, got={got}")
+            RuntimeErrorKind::InvalidArguments(n1, n2) => {
+                write!(f, "invalid args: expected={n1}, got={n2}")
             }
-            RuntimeErrorKind::InvalidArgumentsLength(x, y) => {
-                write!(
-                    f,
-                    "expected {x} argument{}, got {y}",
-                    if *x > 1 { "s" } else { "" },
-                )
+            RuntimeErrorKind::InvalidArgumentsLength(n1, n2) => {
+                write!(f, "invalid # args: expected={n1}, got={n2}",)
             }
             RuntimeErrorKind::FailedToEvaluate => {
                 write!(f, "failed to evaluate expression")

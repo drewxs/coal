@@ -4,9 +4,9 @@ use std::{
     rc::Rc,
 };
 
-use super::Object;
+use super::{builtins, Object};
 
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Env {
     pub store: HashMap<String, Object>,
     pub outer: Option<Rc<RefCell<Env>>>,
@@ -59,10 +59,25 @@ impl Env {
     }
 }
 
+impl Default for Env {
+    fn default() -> Self {
+        Env {
+            store: builtins()
+                .into_iter()
+                .map(|(k, b)| (k.to_owned(), Object::Builtin(b)))
+                .collect(),
+            outer: None,
+        }
+    }
+}
+
 impl From<Rc<RefCell<Env>>> for Env {
     fn from(outer: Rc<RefCell<Env>>) -> Self {
         Self {
-            store: HashMap::new(),
+            store: builtins()
+                .into_iter()
+                .map(|(k, b)| (k.to_owned(), Object::Builtin(b)))
+                .collect(),
             outer: Some(outer),
         }
     }

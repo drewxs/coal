@@ -14,6 +14,7 @@ pub enum Type {
     Fn(Vec<Type>, Box<Type>),
     UserDefined(String, Box<Type>),
     Nil,
+    Any,
     Void,
     Unknown,
 }
@@ -196,6 +197,7 @@ impl fmt::Display for Type {
             }
             Type::UserDefined(name, _) => write!(f, "{name}"),
             Type::Nil => write!(f, "nil"),
+            Type::Any => write!(f, "any"),
             Type::Void => write!(f, "void"),
             Type::Unknown => write!(f, "unknown"),
         }

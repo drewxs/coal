@@ -15,13 +15,14 @@ fn adder(x: u32) -> Fn(u32) -> u32 {
 
 let x: u32 = 2;
 let add_two: Fn(u32) -> u32 = adder(x);
+let y: u32 = add_two(call_twice(3, add_one));
 
-add_two(call_twice(3, add_one));
+println(y);
 // 7
 
 let s: str = "asdf";
 let s_len: u64 = s.len();
 
-return s_len;
+println(s_len);
 // 4
 

@@ -4,3 +4,5 @@ let z: f64 = 12.34;
 
 let result: f64 = -x + y / z;
 
+println(result);
+
