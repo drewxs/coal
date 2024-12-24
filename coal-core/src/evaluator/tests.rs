@@ -2,7 +2,7 @@ use std::assert_matches::assert_matches;
 
 use test::Bencher;
 
-use crate::{Expr, Ident, Infix, Stmt, Var, I32};
+use crate::{Expr, Ident, Infix, Stmt, Type, Var, I32};
 
 use super::{Evaluator, Object, FALSE, TRUE};
 
@@ -367,6 +367,43 @@ fn test_eval_builtins() {
 
     for input in tests {
         assert_matches!(evaluator.eval(input), Some(Object::Error { .. }));
+    }
+}
+
+#[test]
+fn test_eval_lists() {
+    let mut evaluator = Evaluator::default();
+
+    let tests = vec![
+        (
+            "[]",
+            Some(Object::List {
+                data: vec![],
+                t: Type::Unknown,
+            }),
+        ),
+        (
+            "[1, 2, 3]",
+            Some(Object::List {
+                data: vec![Object::I32(1), Object::I32(2), Object::I32(3)],
+                t: I32,
+            }),
+        ),
+        (
+            r#"["one", "two", "three"]"#,
+            Some(Object::List {
+                data: vec![
+                    Object::Str(String::from("one")),
+                    Object::Str(String::from("two")),
+                    Object::Str(String::from("three")),
+                ],
+                t: Type::Str,
+            }),
+        ),
+    ];
+
+    for (expr, expected) in tests {
+        assert_eq!(expected, evaluator.eval(expr));
     }
 }
 

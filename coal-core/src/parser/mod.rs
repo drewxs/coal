@@ -318,6 +318,7 @@ impl Parser {
             Token::Bool(b) => Some(Expr::Literal(Literal::Bool(*b), *span)),
             Token::Bang | Token::Add | Token::Sub => self.parse_prefix_expr(),
             Token::Lparen => self.parse_grouped_expr(),
+            Token::Lbracket => self.parse_list_expr(),
             Token::If => self.parse_if_expr(),
             Token::While => self.parse_while_expr(),
             Token::Fn => self.parse_fn_expr(),
@@ -445,6 +446,35 @@ impl Parser {
         self.expect_next(end_tok).map(|_| list)
     }
 
+    fn parse_uniform_expr_list(&mut self, end_tok: Token) -> Option<(Vec<Expr>, Type)> {
+        let mut list = vec![];
+
+        if self.next_node.token == end_tok {
+            self.advance();
+            return Some((list, Type::Unknown));
+        }
+
+        self.advance();
+
+        let expr = self.parse_expr(Precedence::Lowest)?;
+        let t = Type::try_from(&expr).ok()?;
+        list.push(expr);
+
+        while self.next_node.token == Token::Comma {
+            self.advance();
+            self.advance();
+            let expr = self.parse_expr(Precedence::Lowest)?;
+            let curr_t = Type::try_from(&expr).ok()?;
+            if curr_t != t {
+                self.error(ParserErrorKind::TypeMismatch(t, curr_t));
+                return None;
+            }
+            list.push(expr);
+        }
+
+        self.expect_next(end_tok).map(|_| (list, t))
+    }
+
     fn parse_method_call(&mut self, lhs: Expr) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
         self.advance();
@@ -504,6 +534,14 @@ impl Parser {
         let expr = self.parse_expr(Precedence::Lowest);
         self.expect_next(Token::Rparen)?;
         expr
+    }
+
+    fn parse_list_expr(&mut self) -> Option<Expr> {
+        let (start, _) = self.curr_node.span;
+        let (items, t) = self.parse_uniform_expr_list(Token::Rbracket)?;
+        let (_, end) = self.curr_node.span;
+
+        Some(Expr::Literal(Literal::List(items, t), (start, end)))
     }
 
     fn parse_if_expr(&mut self) -> Option<Expr> {

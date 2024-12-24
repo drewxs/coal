@@ -238,6 +238,14 @@ impl Iterator for Lexer {
                 self.read_char();
                 LexicalToken::new(Token::Rbrace, (cursor, cursor))
             }
+            '[' => {
+                self.read_char();
+                LexicalToken::new(Token::Lbracket, (cursor, cursor))
+            }
+            ']' => {
+                self.read_char();
+                LexicalToken::new(Token::Rbracket, (cursor, cursor))
+            }
             ':' => {
                 self.read_char();
                 LexicalToken::new(Token::Colon, (cursor, cursor))

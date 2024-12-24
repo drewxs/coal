@@ -1080,6 +1080,7 @@ fn test_parse_infer_type_from_var() {
         Expr::Ident(Ident::from("x"), I32, ((1, 20), (1, 20))),
     );
     let actual = Parser::from(input).parse();
+
     assert_eq!(expected, actual[1]);
 }
 
@@ -1096,6 +1097,7 @@ fn test_parse_infer_type_from_fn() {
         ),
     );
     let actual = Parser::from(input).parse();
+
     assert_eq!(expected, actual[1]);
 }
 
@@ -1113,6 +1115,7 @@ fn test_parse_infer_type_from_call() {
         },
     );
     let actual = Parser::from(input).parse();
+
     assert_eq!(expected, actual[1]);
 }
 
@@ -1134,6 +1137,7 @@ fn test_parse_infer_type_from_method() {
         },
     );
     let actual = Parser::from(input).parse();
+
     assert_eq!(expected, actual[0]);
 }
 
@@ -1156,5 +1160,51 @@ fn test_parse_promote_infix_i32_u64() {
         ),
     );
     let actual = Parser::from(input).parse();
+
     assert_eq!(expected, *actual.last().unwrap());
+}
+
+#[test]
+fn test_parse_lists() {
+    let tests = vec![
+        (
+            "[]",
+            Stmt::Expr(Expr::Literal(
+                Literal::List(vec![], Type::Unknown),
+                ((1, 1), (1, 2)),
+            )),
+        ),
+        (
+            "[1, 2]",
+            Stmt::Expr(Expr::Literal(
+                Literal::List(
+                    vec![
+                        Expr::Literal(Literal::I32(1), ((1, 2), (1, 2))),
+                        Expr::Literal(Literal::I32(2), ((1, 5), (1, 5))),
+                    ],
+                    I32,
+                ),
+                ((1, 1), (1, 6)),
+            )),
+        ),
+    ];
+
+    for (input, expected) in tests {
+        let actual = Parser::from(input).parse();
+        if expected != actual[0] {
+            panic!(
+                "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
+                input, expected, actual[0]
+            );
+        }
+    }
+
+    let tests = vec![r#"[1, "2"]"#, r#"["1", 2]"#, r#"[1, 2.0]"#];
+
+    for input in tests {
+        let actual = Parser::from(input).parse();
+        if !actual.is_empty() {
+            panic!("expected invalid:\n{}", input);
+        }
+    }
 }

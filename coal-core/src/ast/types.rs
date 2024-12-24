@@ -62,6 +62,29 @@ impl Type {
                 }),
                 _ => None,
             },
+            Type::List(t) => match method {
+                "len" => Some(MethodSignature {
+                    args_t: vec![],
+                    ret_t: U64,
+                }),
+                "push" => Some(MethodSignature {
+                    args_t: vec![*t.clone()],
+                    ret_t: Type::Void,
+                }),
+                "pop" => Some(MethodSignature {
+                    args_t: vec![],
+                    ret_t: *t.clone(),
+                }),
+                "get" => Some(MethodSignature {
+                    args_t: vec![U64],
+                    ret_t: *t.clone(),
+                }),
+                "join" => Some(MethodSignature {
+                    args_t: vec![Type::Str],
+                    ret_t: Type::Str,
+                }),
+                _ => None,
+            },
             _ => None,
         }
     }
@@ -134,6 +157,7 @@ impl TryFrom<&Expr> for Type {
             Expr::Literal(Literal::F32(_), _) => Ok(F32),
             Expr::Literal(Literal::F64(_), _) => Ok(F64),
             Expr::Literal(Literal::Bool(_), _) => Ok(Type::Bool),
+            Expr::Literal(Literal::List(_, t), _) => Ok(Type::List(Box::new(t.to_owned()))),
             Expr::Infix(_, lhs, rhs, _) => infer_infix_type(lhs, rhs),
             Expr::Prefix(prefix, rhs, _) => {
                 if prefix == &Prefix::Not {

@@ -29,6 +29,7 @@ pub enum ParserErrorKind {
     MethodNotFound(Type, String),
     TypeAnnotationsNeeded,
     InvalidArgumentsLength(usize, usize),
+    TypeMismatch(Type, Type),
 }
 
 impl fmt::Display for ParserErrorKind {
@@ -51,6 +52,9 @@ impl fmt::Display for ParserErrorKind {
             }
             ParserErrorKind::InvalidArgumentsLength(t1, t2) => {
                 write!(f, "invalid number of arguments: expected={t1}, got={t2}")
+            }
+            ParserErrorKind::TypeMismatch(t1, t2) => {
+                write!(f, "type mismatch: expected={t1}, got={t2}")
             }
         }
     }

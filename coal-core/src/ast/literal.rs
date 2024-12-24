@@ -1,5 +1,7 @@
 use std::fmt;
 
+use super::{Expr, Type};
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
     U32(u32),
@@ -11,6 +13,7 @@ pub enum Literal {
     F64(f64),
     Str(String),
     Bool(bool),
+    List(Vec<Expr>, Type),
     Nil,
 }
 
@@ -84,6 +87,7 @@ impl fmt::Display for Literal {
             Literal::F32(x) => write!(f, "{x:?}"),
             Literal::F64(x) => write!(f, "{x:?}"),
             Literal::Bool(b) => write!(f, "{b}"),
+            Literal::List(l, _) => write!(f, "{l:?}"),
             Literal::Nil => write!(f, "nil"),
         }
     }

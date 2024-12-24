@@ -597,6 +597,7 @@ impl Evaluator<'_> {
         args: &[Expr],
         span: &Span,
     ) -> Option<Object> {
+        let var = lhs.to_string();
         let args = args
             .iter()
             .map(|expr| {
@@ -607,6 +608,25 @@ impl Evaluator<'_> {
                     )))
             })
             .collect::<Vec<Object>>();
+
+        {
+            let env_ref = self.env.borrow_mut();
+            let mut store_ref = env_ref.store.borrow_mut();
+
+            if let Some(obj) = store_ref.get_mut(&var) {
+                return obj.call(name, &args, span);
+            }
+
+            if let Some(outer_rc) = &env_ref.outer {
+                let outer_ref = outer_rc.borrow_mut();
+                let mut store_ref = outer_ref.store.borrow_mut();
+
+                if let Some(obj) = store_ref.get_mut(&var) {
+                    return obj.call(name, &args, span);
+                }
+            }
+        }
+
         self.eval_expr(lhs)?.call(name, &args, span)
     }
 }

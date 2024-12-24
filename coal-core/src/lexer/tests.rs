@@ -92,6 +92,7 @@ fn test_next_tok() {
 
         10 == 10;
         10 != 9;
+        [1, 2]
         "#;
 
     let mut lexer = Lexer::new(input);
@@ -189,6 +190,11 @@ fn test_next_tok() {
         Token::NEQ,
         Token::I32(9),
         Token::Semicolon,
+        Token::Lbracket,
+        Token::I32(1),
+        Token::Comma,
+        Token::I32(2),
+        Token::Rbracket,
         Token::EOF,
     ];
 

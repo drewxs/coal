@@ -6,7 +6,9 @@ use std::{
     ops::{Add, Div, Mul, Rem, Sub},
 };
 
-use crate::{Literal, ParserError, Span, Stmt, Type, Var, F32, F64, I128, I32, I64, U32, U64};
+use crate::{
+    Expr, Literal, ParserError, Span, Stmt, Type, Var, F32, F64, I128, I32, I64, U32, U64,
+};
 
 use super::{Builtin, RuntimeError, RuntimeErrorKind};
 
@@ -49,7 +51,7 @@ impl Object {
         !matches!(self, Object::Bool(false) | Object::Nil)
     }
 
-    pub fn call(&self, name: &str, args: &[Object], span: &Span) -> Option<Object> {
+    pub fn call(&mut self, name: &str, args: &[Object], span: &Span) -> Option<Object> {
         if let Err(e) = self.validate_call_args(name, args, span) {
             return Some(e);
         }
@@ -75,6 +77,61 @@ impl Object {
                     *span,
                 ))),
             },
+            Object::List { data, t } => match name {
+                "len" => Some(Object::U64(data.len() as u64)),
+                "push" => {
+                    let new_t = Type::from(&args[0]);
+                    if new_t != *t {
+                        return Some(Object::Error(RuntimeError::new(
+                            RuntimeErrorKind::TypeMismatch(t.to_owned(), new_t),
+                            *span,
+                        )));
+                    }
+
+                    data.push(args[0].to_owned());
+
+                    None
+                }
+                "pop" => {
+                    if data.is_empty() {
+                        None
+                    } else {
+                        Some(data.pop().unwrap())
+                    }
+                }
+                "get" => {
+                    let t = Type::from(&args[0]);
+
+                    if let Some(Object::U64(idx)) = args[0].cast(&U64) {
+                        data.get(idx as usize).cloned().or(Some(Object::Nil))
+                    } else {
+                        Some(Object::Error(RuntimeError::new(
+                            RuntimeErrorKind::TypeMismatch(U64, t),
+                            *span,
+                        )))
+                    }
+                }
+                "join" => {
+                    if let Object::Str(sep) = &args[0] {
+                        let result = data
+                            .iter()
+                            .map(|item| item.to_string())
+                            .collect::<Vec<_>>()
+                            .join(sep);
+
+                        Some(Object::Str(result))
+                    } else {
+                        Some(Object::Error(RuntimeError::new(
+                            RuntimeErrorKind::TypeMismatch(Type::Str, Type::from(&args[0])),
+                            *span,
+                        )))
+                    }
+                }
+                _ => Some(Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::MethodNotFound(name.to_owned()),
+                    *span,
+                ))),
+            },
             _ => Some(Object::Error(RuntimeError::new(
                 RuntimeErrorKind::MethodNotFound(name.to_owned()),
                 *span,
@@ -86,13 +143,20 @@ impl Object {
         if let Some(method) = Type::from(self).signature(name) {
             for (arg, t) in args.iter().zip(method.args_t.iter()) {
                 if Type::from(arg) != *t {
-                    let args = args
+                    let method_args_t = method
+                        .args_t
                         .iter()
                         .map(|arg| arg.to_string())
-                        .collect::<Vec<String>>();
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    let args_t = args
+                        .iter()
+                        .map(|arg| Type::from(arg).to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
 
                     return Err(Object::Error(RuntimeError::new(
-                        RuntimeErrorKind::InvalidArguments(name.to_owned(), format!("{args:?}")),
+                        RuntimeErrorKind::InvalidArguments(method_args_t, args_t),
                         *span,
                     )));
                 }
@@ -295,7 +359,20 @@ impl From<&Literal> for Object {
             Literal::I128(i) => Object::I128(*i),
             Literal::F32(f) => Object::F32(*f),
             Literal::F64(f) => Object::F64(*f),
+            Literal::List(l, t) => Object::List {
+                data: l.iter().map(Object::from).collect(),
+                t: t.clone(),
+            },
             Literal::Nil => Object::Nil,
+        }
+    }
+}
+
+impl From<&Expr> for Object {
+    fn from(expr: &Expr) -> Self {
+        match expr {
+            Expr::Literal(l, _) => Object::from(l),
+            _ => Object::Nil,
         }
     }
 }
@@ -448,16 +525,17 @@ impl fmt::Display for Object {
             Object::I128(i) => write!(f, "{i}"),
             Object::F32(x) => write!(f, "{x:?}"),
             Object::F64(x) => write!(f, "{x:?}"),
-            Object::Str(s) => write!(f, "{s}"),
+            Object::Str(s) => write!(f, "\"{s}\""),
             Object::Bool(b) => write!(f, "{b}"),
-            Object::List { data, .. } => write!(
-                f,
-                "[{}]",
-                data.iter()
-                    .map(|x| format!("\"{x}\""))
+            Object::List { data, .. } => {
+                let items = data
+                    .iter()
+                    .map(|x| x.to_string())
                     .collect::<Vec<_>>()
-                    .join(", ")
-            ),
+                    .join(", ");
+
+                write!(f, "[{items}]")
+            }
             Object::Map { data, .. } => write!(f, "{data:?}"),
             Object::Fn { .. } => write!(f, "<fn_{}>", self.calculate_hash()),
             Object::Builtin(_) => write!(f, "<builtin_{}>", self.calculate_hash()),
