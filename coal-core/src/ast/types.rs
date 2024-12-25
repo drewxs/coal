@@ -231,7 +231,11 @@ impl fmt::Display for Type {
                     .map(|arg| format!("{arg}"))
                     .collect::<Vec<String>>()
                     .join(", ");
-                write!(f, "Fn({args_str}) -> {ret_t}")
+                if **ret_t == Type::Void {
+                    write!(f, "Fn({args_str})")
+                } else {
+                    write!(f, "Fn({args_str}) -> {ret_t}")
+                }
             }
             Type::UserDefined(name, _) => write!(f, "{name}"),
             Type::Nil => write!(f, "nil"),

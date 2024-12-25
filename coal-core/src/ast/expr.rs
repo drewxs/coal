@@ -118,7 +118,11 @@ impl Expr {
                     .map(|arg| format!("{arg}"))
                     .collect::<Vec<String>>()
                     .join(", ");
-                writeln!(f, "{args}) -> {ret_t} {{")?;
+                if *ret_t == Type::Void {
+                    writeln!(f, "{args}) {{")?;
+                } else {
+                    writeln!(f, "{args}) -> {ret_t} {{")?;
+                }
                 for stmt in body {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
