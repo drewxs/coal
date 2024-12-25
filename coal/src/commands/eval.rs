@@ -1,10 +1,10 @@
 use coal_core::{clean_input, Evaluator, Object};
 
 pub fn eval(input: &str) {
-    eval_with(&mut Evaluator::default(), input);
+    eval_with(&mut Evaluator::default(), input, true);
 }
 
-pub fn eval_with(evaluator: &mut Evaluator, input: &str) {
+pub fn eval_with(evaluator: &mut Evaluator, input: &str, print: bool) {
     match evaluator.eval(input) {
         Some(Object::Error(e)) => {
             let ((l1, c1), (l2, c2)) = e.span;
@@ -28,7 +28,7 @@ pub fn eval_with(evaluator: &mut Evaluator, input: &str) {
                 println!("{}\n", e.kind);
             }
         }
-        Some(obj) => println!("{obj}"),
+        Some(obj) if print => println!("{obj}"),
         _ => {}
     }
 }

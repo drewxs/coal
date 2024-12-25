@@ -104,14 +104,14 @@ impl Parser {
             .unwrap_or(LexicalToken::new(Token::EOF, self.next_node.span));
     }
 
-    fn consume_curr(&mut self, token: Token) {
-        if self.next_node.token == token {
+    fn consume(&mut self, token: Token) {
+        if self.curr_node.token == token {
             self.advance();
         }
     }
 
     fn consume_next(&mut self, token: Token) {
-        if self.curr_node.token == token {
+        if self.next_node.token == token {
             self.advance();
         }
     }
@@ -200,16 +200,10 @@ impl Parser {
             Token::Colon => {
                 self.advance();
                 match &self.next_node.token {
-                    Token::Ident(name) => match name.as_str() {
-                        "Fn" => {
-                            self.advance();
-                            self.parse_fn_type()
-                        }
-                        _ => {
-                            self.advance();
-                            Type::try_from(&self.curr_node.token).ok()
-                        }
-                    },
+                    Token::Ident(_) => {
+                        self.advance();
+                        self.parse_type()
+                    }
                     _ => None,
                 }
             }
@@ -252,7 +246,7 @@ impl Parser {
                 .set(format!("__{}__", ident.name()), *ret_t.clone());
         }
 
-        self.consume_curr(Token::Semicolon);
+        self.consume_next(Token::Semicolon);
 
         Some(Stmt::Let(ident, t, expr))
     }
@@ -262,7 +256,7 @@ impl Parser {
         self.advance();
         self.advance();
         self.parse_expr(Precedence::Lowest).map(|expr| {
-            self.consume_curr(Token::Semicolon);
+            self.consume_next(Token::Semicolon);
             Stmt::Assign(ident, expr)
         })
     }
@@ -272,7 +266,7 @@ impl Parser {
         self.advance();
         self.advance();
         self.parse_expr(Precedence::Lowest).map(|expr| {
-            self.consume_curr(Token::Semicolon);
+            self.consume_next(Token::Semicolon);
             match op {
                 Infix::Add => Stmt::AddAssign(ident, expr),
                 Infix::Sub => Stmt::SubAssign(ident, expr),
@@ -287,7 +281,7 @@ impl Parser {
     fn parse_ret_stmt(&mut self) -> Option<Stmt> {
         self.advance();
         let expr = self.parse_expr(Precedence::Lowest).map(Stmt::Return);
-        self.consume_curr(Token::Semicolon);
+        self.consume_next(Token::Semicolon);
         expr
     }
 
@@ -366,7 +360,7 @@ impl Parser {
 
     fn parse_expr_stmt(&mut self) -> Option<Stmt> {
         self.parse_expr(Precedence::Lowest).map(|expr| {
-            self.consume_curr(Token::Semicolon);
+            self.consume_next(Token::Semicolon);
             Stmt::Expr(expr)
         })
     }
@@ -514,7 +508,7 @@ impl Parser {
         } else {
             self.advance();
             self.advance();
-            self.consume_curr(Token::Lparen);
+            self.consume_next(Token::Lparen);
 
             let (_, end) = self.curr_node.span;
 
@@ -616,7 +610,7 @@ impl Parser {
         let args_t = args.iter().map(|arg| arg.t.clone()).collect();
         let declared_ret_t = self.parse_ret_type();
         self.advance();
-        self.consume_next(Token::Lbrace);
+        self.consume(Token::Lbrace);
 
         let mut st = SymbolTable::from(Rc::clone(&self.symbol_table));
         for arg in args.iter() {
@@ -661,12 +655,9 @@ impl Parser {
             self.expect_next(Token::Colon)?;
             self.advance();
 
-            let t = match &self.curr_node.token {
-                Token::Ident(s) if s == "Fn" => self.parse_fn_type()?,
-                _ => Type::try_from(&self.curr_node.token).ok()?,
-            };
+            let t = self.parse_type()?;
 
-            self.consume_curr(Token::Comma);
+            self.consume_next(Token::Comma);
             self.advance();
 
             args.push(Var { name, t });
@@ -675,30 +666,6 @@ impl Parser {
         self.advance();
 
         Some(args)
-    }
-
-    fn parse_fn_type(&mut self) -> Option<Type> {
-        self.advance();
-        self.advance();
-
-        let mut args = vec![];
-        while let Token::Ident(_) = self.curr_node.token.clone() {
-            let t = self.parse_type().unwrap_or(Type::Unknown);
-            self.advance();
-            self.consume_curr(Token::Comma);
-            self.advance();
-            args.push(t);
-        }
-
-        let ret_t = match self.curr_node.token {
-            Token::Arrow => {
-                self.advance();
-                self.parse_ret_type().unwrap_or(Type::Void)
-            }
-            _ => Type::Void,
-        };
-
-        Some(Type::Fn(args, Box::new(ret_t)))
     }
 
     fn parse_ret_type(&mut self) -> Option<Type> {
@@ -717,10 +684,44 @@ impl Parser {
         match &self.curr_node.token {
             Token::Ident(s) => match s.as_str() {
                 "Fn" => self.parse_fn_type(),
+                "list" => self.parse_list_type(),
                 _ => Type::try_from(&self.curr_node.token).ok(),
             },
             _ => None,
         }
+    }
+
+    fn parse_fn_type(&mut self) -> Option<Type> {
+        self.advance();
+        self.advance();
+
+        let mut args = vec![];
+        while let Token::Ident(_) = self.curr_node.token.clone() {
+            let t = self.parse_type().unwrap_or(Type::Unknown);
+            self.advance();
+            self.consume_next(Token::Comma);
+            self.advance();
+            args.push(t);
+        }
+
+        let ret_t = match self.curr_node.token {
+            Token::Arrow => {
+                self.advance();
+                self.parse_ret_type().unwrap_or(Type::Void)
+            }
+            _ => Type::Void,
+        };
+
+        Some(Type::Fn(args, Box::new(ret_t)))
+    }
+
+    fn parse_list_type(&mut self) -> Option<Type> {
+        self.advance();
+        self.consume(Token::Lbracket);
+        let t = self.parse_type().unwrap_or(Type::Unknown);
+        self.consume_next(Token::Rbracket);
+
+        Some(Type::List(Box::new(t)))
     }
 }
 

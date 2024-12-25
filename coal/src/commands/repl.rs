@@ -31,7 +31,7 @@ pub fn repl() {
                 "exit" | "quit" => break,
                 "clear" => println!("\x1B[2J\x1B[1;1H"),
                 input => {
-                    eval_with(&mut evaluator, input);
+                    eval_with(&mut evaluator, input, true);
                     let _ = rl.add_history_entry(input);
                 }
             },
