@@ -525,12 +525,15 @@ impl fmt::Display for Object {
             Object::I128(i) => write!(f, "{i}"),
             Object::F32(x) => write!(f, "{x:?}"),
             Object::F64(x) => write!(f, "{x:?}"),
-            Object::Str(s) => write!(f, "\"{s}\""),
+            Object::Str(s) => write!(f, "{s}"),
             Object::Bool(b) => write!(f, "{b}"),
             Object::List { data, .. } => {
                 let items = data
                     .iter()
-                    .map(|x| x.to_string())
+                    .map(|x| match x {
+                        Object::Str(s) => format!("\"{s}\""),
+                        _ => x.to_string(),
+                    })
                     .collect::<Vec<_>>()
                     .join(", ");
 
