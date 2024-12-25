@@ -284,6 +284,18 @@ impl Evaluator<'_> {
     fn eval_literal_expr(&mut self, literal: &Literal, span: &Span) -> Option<Object> {
         match literal {
             Literal::Str(s) => self.eval_str(s, span),
+            Literal::List(list, t) => {
+                let mut data = vec![];
+                for item in list {
+                    if let Some(val) = self.eval_expr(item) {
+                        if let Object::Error { .. } = val {
+                            return Some(val);
+                        }
+                        data.push(val);
+                    }
+                }
+                Some(Object::List { data, t: t.clone() })
+            }
             _ => Some(Object::from(literal)),
         }
     }
