@@ -323,6 +323,18 @@ impl Parser {
             }
         };
 
+        if !matches!(
+            lhs,
+            Some(Expr::Ident(_, _, _))
+                | Some(Expr::Literal(_, _))
+                | Some(Expr::Prefix { .. })
+                | Some(Expr::Infix(_, _, _, _))
+                | Some(Expr::Call { .. })
+                | Some(Expr::MethodCall { .. })
+        ) {
+            return lhs;
+        }
+
         while self.next_node.token != Token::Semicolon
             && precedence < Precedence::from(&self.next_node.token)
         {
