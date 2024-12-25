@@ -439,7 +439,6 @@ impl Parser {
         }
 
         self.advance();
-
         list.push(self.parse_expr(Precedence::Lowest)?);
 
         while self.next_node.token == Token::Comma {
@@ -447,8 +446,9 @@ impl Parser {
             self.advance();
             list.push(self.parse_expr(Precedence::Lowest)?);
         }
+        self.expect_next(end_tok);
 
-        self.expect_next(end_tok).map(|_| list)
+        Some(list)
     }
 
     fn parse_uniform_expr_list(&mut self, end_tok: Token) -> Option<(Vec<Expr>, Type)> {
@@ -477,7 +477,9 @@ impl Parser {
             list.push(expr);
         }
 
-        self.expect_next(end_tok).map(|_| (list, t))
+        self.expect_next(end_tok)?;
+
+        Some((list, t))
     }
 
     fn parse_method_call(&mut self, lhs: Expr) -> Option<Expr> {
@@ -716,6 +718,7 @@ impl Parser {
             self.advance();
             args.push(t);
         }
+        self.consume(Token::Rparen);
 
         let ret_t = match self.curr_node.token {
             Token::Arrow => {
