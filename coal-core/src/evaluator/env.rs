@@ -62,12 +62,7 @@ impl Env {
 impl Default for Env {
     fn default() -> Self {
         Env {
-            store: RefCell::new(
-                builtins()
-                    .into_iter()
-                    .map(|(k, b)| (k.to_owned(), Object::Builtin(b)))
-                    .collect(),
-            ),
+            store: RefCell::new(builtins::objects()),
             outer: None,
         }
     }
@@ -76,12 +71,7 @@ impl Default for Env {
 impl From<Rc<RefCell<Env>>> for Env {
     fn from(outer: Rc<RefCell<Env>>) -> Self {
         Self {
-            store: RefCell::new(
-                builtins()
-                    .into_iter()
-                    .map(|(k, b)| (k.to_owned(), Object::Builtin(b)))
-                    .collect(),
-            ),
+            store: RefCell::new(builtins::objects()),
             outer: Some(outer),
         }
     }

@@ -10,7 +10,6 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{Expr, Ident, IfExpr, Infix, Literal, Parser, Prefix, Span, Stmt, Type, Var};
 
-use builtins::builtins;
 pub use builtins::Builtin;
 pub use env::Env;
 pub use error::{RuntimeError, RuntimeErrorKind};
@@ -28,7 +27,7 @@ impl Evaluator<'_> {
         Self {
             env,
             parser: Parser::default(),
-            builtins: builtins(),
+            builtins: builtins::map(),
         }
     }
 

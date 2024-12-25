@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::{builtins::builtins, Type};
+use crate::{builtins, Type};
 
 /// Keys of shape `__name__` are return types for functions
 #[derive(Clone, Debug, PartialEq)]
@@ -45,10 +45,7 @@ impl Default for SymbolTable {
     fn default() -> Self {
         SymbolTable {
             scope: String::from("global"),
-            store: builtins()
-                .into_iter()
-                .map(|(k, b)| (k.to_owned(), b.ret_t))
-                .collect(),
+            store: builtins::types(),
             outer: None,
         }
     }
@@ -59,10 +56,7 @@ impl From<Rc<RefCell<SymbolTable>>> for SymbolTable {
         let SymbolTable { scope, .. } = outer.borrow().clone();
         Self {
             scope,
-            store: builtins()
-                .into_iter()
-                .map(|(k, b)| (k.to_owned(), b.ret_t))
-                .collect(),
+            store: builtins::types(),
             outer: Some(outer),
         }
     }
