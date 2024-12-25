@@ -335,6 +335,7 @@ fn test_eval_methods() {
         (r#""".len()"#, Some(Object::U64(0))),
         (r#"let s = "asdf"; s.len()"#, Some(Object::U64(4))),
         (r#""{1 + 9}".len()"#, Some(Object::U64(2))),
+        (r#"[1, 2].len()"#, Some(Object::U64(2))),
     ];
 
     for (expr, expected) in tests {
@@ -372,8 +373,6 @@ fn test_eval_builtins() {
 
 #[test]
 fn test_eval_lists() {
-    let mut evaluator = Evaluator::default();
-
     let tests = vec![
         (
             "[]",
@@ -400,10 +399,41 @@ fn test_eval_lists() {
                 t: Type::Str,
             }),
         ),
+        (
+            r#"
+            fn f() -> str {
+                return "asdf";
+            }
+            [f()];
+            "#,
+            Some(Object::List {
+                data: vec![Object::Str(String::from("asdf"))],
+                t: Type::Str,
+            }),
+        ),
+        (
+            r#"
+            fn f() {}
+            [f()];
+            "#,
+            Some(Object::List {
+                data: vec![],
+                t: Type::Void,
+            }),
+        ),
     ];
 
     for (expr, expected) in tests {
-        assert_eq!(expected, evaluator.eval(expr));
+        assert_eq!(expected, Evaluator::default().eval(expr));
+    }
+
+    let tests = vec!["[f()]", "[print()]"];
+
+    for input in tests {
+        let actual = Evaluator::default().eval(input);
+        if !matches!(actual, Some(Object::Error { .. })) {
+            panic!("input:\n{}\nexpected error, actual:\n{:?}", input, actual);
+        }
     }
 }
 

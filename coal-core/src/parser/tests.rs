@@ -1187,14 +1187,55 @@ fn test_parse_lists() {
                 ((1, 1), (1, 6)),
             )),
         ),
+        (
+            "[foo()]",
+            Stmt::Expr(Expr::Literal(
+                Literal::List(
+                    vec![Expr::Call {
+                        name: String::from("foo"),
+                        args: vec![],
+                        ret_t: Type::Unknown,
+                        span: ((1, 2), (1, 6)),
+                    }],
+                    Type::Unknown,
+                ),
+                ((1, 1), (1, 7)),
+            )),
+        ),
+        (
+            r#"
+            fn foo() -> str {
+                return "asdf";
+            }
+            [foo()]
+            "#,
+            Stmt::Expr(Expr::Literal(
+                Literal::List(
+                    vec![Expr::Call {
+                        name: String::from("foo"),
+                        args: vec![],
+                        ret_t: Type::Str,
+                        span: ((4, 2), (4, 6)),
+                    }],
+                    Type::Str,
+                ),
+                ((4, 1), (4, 7)),
+            )),
+        ),
     ];
 
     for (input, expected) in tests {
-        let actual = Parser::from(input).parse();
-        if expected != actual[0] {
+        let mut parser = Parser::from(input);
+        let parsed = parser.parse();
+        if !parser.errors.is_empty() {
+            panic!("input:\n{}\nerrors:\n{:?}", input, parser.errors);
+        }
+
+        let actual = parsed.last().unwrap();
+        if expected != *actual {
             panic!(
                 "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
-                input, expected, actual[0]
+                input, expected, actual
             );
         }
     }
@@ -1202,8 +1243,10 @@ fn test_parse_lists() {
     let tests = vec![r#"[1, "2"]"#, r#"["1", 2]"#, r#"[1, 2.0]"#];
 
     for input in tests {
-        let actual = Parser::from(input).parse();
-        if !actual.is_empty() {
+        let mut parser = Parser::from(input);
+        let actual = parser.parse();
+
+        if parser.errors.is_empty() || !actual.is_empty() {
             panic!("expected invalid:\n{}", input);
         }
     }
