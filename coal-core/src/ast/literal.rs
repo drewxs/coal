@@ -87,7 +87,14 @@ impl fmt::Display for Literal {
             Literal::F32(x) => write!(f, "{x:?}"),
             Literal::F64(x) => write!(f, "{x:?}"),
             Literal::Bool(b) => write!(f, "{b}"),
-            Literal::List(l, _) => write!(f, "{l:?}"),
+            Literal::List(l, _) => {
+                let list = l
+                    .iter()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "[{list}]")
+            }
             Literal::Nil => write!(f, "nil"),
         }
     }
