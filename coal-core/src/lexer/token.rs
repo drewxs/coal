@@ -66,6 +66,7 @@ pub enum Token {
     Else,
     While,
     Return,
+    Nil,
 }
 
 impl From<&str> for Token {
@@ -112,6 +113,7 @@ impl From<&str> for Token {
             "else" => Token::Else,
             "while" => Token::While,
             "return" => Token::Return,
+            "nil" => Token::Nil,
             _ => Token::Ident(s.to_string()),
         }
     }
@@ -171,6 +173,7 @@ impl fmt::Display for Token {
             Token::Else => write!(f, "else"),
             Token::While => write!(f, "while"),
             Token::Return => write!(f, "return"),
+            Token::Nil => write!(f, "nil"),
         }
     }
 }

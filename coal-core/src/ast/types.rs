@@ -125,6 +125,24 @@ impl From<&Object> for Type {
     }
 }
 
+impl From<&Literal> for Type {
+    fn from(literal: &Literal) -> Self {
+        match literal {
+            Literal::Str(_) => Type::Str,
+            Literal::U32(_) => U32,
+            Literal::U64(_) => U64,
+            Literal::I32(_) => I32,
+            Literal::I64(_) => I64,
+            Literal::I128(_) => I128,
+            Literal::F32(_) => F32,
+            Literal::F64(_) => F64,
+            Literal::Bool(_) => Type::Bool,
+            Literal::List(_, t) => Type::List(Box::new(t.to_owned())),
+            Literal::Nil => Type::Nil,
+        }
+    }
+}
+
 impl TryFrom<&Token> for Type {
     type Error = String;
 
@@ -162,16 +180,7 @@ impl TryFrom<&Expr> for Type {
 
     fn try_from(expr: &Expr) -> Result<Self, Self::Error> {
         match expr {
-            Expr::Literal(Literal::Str(_), _) => Ok(Type::Str),
-            Expr::Literal(Literal::U32(_), _) => Ok(U32),
-            Expr::Literal(Literal::U64(_), _) => Ok(U64),
-            Expr::Literal(Literal::I32(_), _) => Ok(I32),
-            Expr::Literal(Literal::I64(_), _) => Ok(I64),
-            Expr::Literal(Literal::I128(_), _) => Ok(I128),
-            Expr::Literal(Literal::F32(_), _) => Ok(F32),
-            Expr::Literal(Literal::F64(_), _) => Ok(F64),
-            Expr::Literal(Literal::Bool(_), _) => Ok(Type::Bool),
-            Expr::Literal(Literal::List(_, t), _) => Ok(Type::List(Box::new(t.to_owned()))),
+            Expr::Literal(l, _) => Ok(Type::from(l)),
             Expr::Infix(_, lhs, rhs, _) => infer_infix_type(lhs, rhs),
             Expr::Prefix(prefix, rhs, _) => {
                 if prefix == &Prefix::Not {

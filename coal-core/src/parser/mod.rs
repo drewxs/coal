@@ -316,6 +316,7 @@ impl Parser {
             Token::If => self.parse_if_expr(),
             Token::While => self.parse_while_expr(),
             Token::Fn => self.parse_fn_expr(),
+            Token::Nil => Some(Expr::Literal(Literal::Nil, *span)),
             _ => {
                 self.error(ParserErrorKind::SyntaxError(self.curr_node.token.clone()));
                 return None;
