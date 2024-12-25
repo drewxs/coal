@@ -92,6 +92,14 @@ impl Type {
                 args_t: vec![U64],
                 ret_t: t.clone(),
             }),
+            "first" => Some(MethodSignature {
+                args_t: vec![],
+                ret_t: t.clone(),
+            }),
+            "last" => Some(MethodSignature {
+                args_t: vec![],
+                ret_t: t.clone(),
+            }),
             "join" => Some(MethodSignature {
                 args_t: vec![Type::Str],
                 ret_t: Type::Str,

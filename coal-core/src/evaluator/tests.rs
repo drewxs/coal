@@ -35,6 +35,8 @@ fn test_eval_str_interpolation() {
             r#""(1 + \"{-false})""#,
             Some(Object::Str(String::from(r#"(1 + "0)"#))),
         ),
+        (r#"let s = "asdf"; s.len()"#, Some(Object::U64(4))),
+        (r#""{1 + 9}".len()"#, Some(Object::U64(2))),
     ];
 
     for (expr, expected) in tests {
@@ -328,22 +330,6 @@ fn test_eval_function() {
 }
 
 #[test]
-fn test_eval_methods() {
-    let mut evaluator = Evaluator::default();
-
-    let tests = vec![
-        (r#""".len()"#, Some(Object::U64(0))),
-        (r#"let s = "asdf"; s.len()"#, Some(Object::U64(4))),
-        (r#""{1 + 9}".len()"#, Some(Object::U64(2))),
-        (r#"[1, 2].len()"#, Some(Object::U64(2))),
-    ];
-
-    for (expr, expected) in tests {
-        assert_eq!(expected, evaluator.eval(expr));
-    }
-}
-
-#[test]
 fn test_eval_builtins() {
     let mut evaluator = Evaluator::default();
 
@@ -420,6 +406,19 @@ fn test_eval_lists() {
                 data: vec![],
                 t: Type::Void,
             }),
+        ),
+        ("[1, 2, 3].len()", Some(Object::U64(3))),
+        (
+            "let x = [1, 2, 3]; x.push(7); x.len()",
+            Some(Object::U64(4)),
+        ),
+        ("[0, 10].pop()", Some(Object::I32(10))),
+        ("[0, 10].get(1)", Some(Object::I32(10))),
+        ("[1, 2, 3].first()", Some(Object::I32(1))),
+        ("[1, 2, 3].last()", Some(Object::I32(3))),
+        (
+            r#"[1, 2, 3].join("-")"#,
+            Some(Object::Str(String::from("1-2-3"))),
         ),
     ];
 

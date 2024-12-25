@@ -111,6 +111,8 @@ impl Object {
                         )))
                     }
                 }
+                "first" => data.first().cloned().or(Some(Object::Nil)),
+                "last" => data.last().cloned().or(Some(Object::Nil)),
                 "join" => {
                     if let Object::Str(sep) = &args[0] {
                         let result = data
