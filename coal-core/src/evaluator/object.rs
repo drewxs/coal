@@ -140,7 +140,7 @@ impl Object {
     }
 
     fn validate_call_args(&self, name: &str, args: &[Object], span: &Span) -> Result<(), Object> {
-        if let Some(method) = Type::from(self).signature(name) {
+        if let Some(method) = Type::from(self).sig(name) {
             for (arg, t) in args.iter().zip(method.args_t.iter()) {
                 if Type::from(arg) != *t {
                     let method_args_t = method

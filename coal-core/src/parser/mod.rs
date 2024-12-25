@@ -433,14 +433,12 @@ impl Parser {
 
         self.advance();
 
-        let expr = self.parse_expr(Precedence::Lowest)?;
-        list.push(expr);
+        list.push(self.parse_expr(Precedence::Lowest)?);
 
         while self.next_node.token == Token::Comma {
             self.advance();
             self.advance();
-            let expr = self.parse_expr(Precedence::Lowest)?;
-            list.push(expr);
+            list.push(self.parse_expr(Precedence::Lowest)?);
         }
 
         self.expect_next(end_tok).map(|_| list)
@@ -495,7 +493,7 @@ impl Parser {
 
         let lhs_t = Type::try_from(&lhs).unwrap_or(Type::Unknown);
 
-        if let Some(method) = lhs_t.signature(&method_name) {
+        if let Some(method) = lhs_t.sig(&method_name) {
             if args.len() != method.args_t.len() {
                 self.error(ParserErrorKind::InvalidArgumentsLength(
                     method.args_t.len(),

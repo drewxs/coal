@@ -49,7 +49,15 @@ impl Type {
         matches!(self, Type::Num(_))
     }
 
-    pub fn signature(&self, method: &str) -> Option<MethodSignature> {
+    pub fn sig(&self, method: &str) -> Option<MethodSignature> {
+        match self {
+            Type::Str => self.str_sig(method),
+            Type::List(t) => self.list_sig(method, t),
+            _ => None,
+        }
+    }
+
+    fn str_sig(&self, method: &str) -> Option<MethodSignature> {
         match self {
             Type::Str => match method {
                 "len" => Some(MethodSignature {
@@ -62,29 +70,32 @@ impl Type {
                 }),
                 _ => None,
             },
-            Type::List(t) => match method {
-                "len" => Some(MethodSignature {
-                    args_t: vec![],
-                    ret_t: U64,
-                }),
-                "push" => Some(MethodSignature {
-                    args_t: vec![*t.clone()],
-                    ret_t: Type::Void,
-                }),
-                "pop" => Some(MethodSignature {
-                    args_t: vec![],
-                    ret_t: *t.clone(),
-                }),
-                "get" => Some(MethodSignature {
-                    args_t: vec![U64],
-                    ret_t: *t.clone(),
-                }),
-                "join" => Some(MethodSignature {
-                    args_t: vec![Type::Str],
-                    ret_t: Type::Str,
-                }),
-                _ => None,
-            },
+            _ => None,
+        }
+    }
+
+    fn list_sig(&self, method: &str, t: &Type) -> Option<MethodSignature> {
+        match method {
+            "len" => Some(MethodSignature {
+                args_t: vec![],
+                ret_t: U64,
+            }),
+            "push" => Some(MethodSignature {
+                args_t: vec![t.clone()],
+                ret_t: Type::Void,
+            }),
+            "pop" => Some(MethodSignature {
+                args_t: vec![],
+                ret_t: t.clone(),
+            }),
+            "get" => Some(MethodSignature {
+                args_t: vec![U64],
+                ret_t: t.clone(),
+            }),
+            "join" => Some(MethodSignature {
+                args_t: vec![Type::Str],
+                ret_t: Type::Str,
+            }),
             _ => None,
         }
     }
