@@ -102,8 +102,14 @@ impl Object {
                 "get" => {
                     let t = Type::from(&args[0]);
 
-                    if let Some(Object::U64(idx)) = args[0].cast(&U64) {
-                        data.get(idx as usize).cloned().or(Some(Object::Nil))
+                    if let Some(Object::I64(idx)) = args[0].cast(&I64) {
+                        if idx < 0 {
+                            data.get((data.len() as i64 + idx) as usize)
+                                .cloned()
+                                .or(Some(Object::Nil))
+                        } else {
+                            data.get(idx as usize).cloned().or(Some(Object::Nil))
+                        }
                     } else {
                         Some(Object::Error(RuntimeError::new(
                             RuntimeErrorKind::TypeMismatch(U64, t),

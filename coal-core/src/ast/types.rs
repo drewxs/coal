@@ -89,7 +89,7 @@ impl Type {
                 ret_t: t.clone(),
             }),
             "get" => Some(MethodSignature {
-                args_t: vec![U64],
+                args_t: vec![I64],
                 ret_t: t.clone(),
             }),
             "first" => Some(MethodSignature {
