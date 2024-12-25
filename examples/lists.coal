@@ -1,0 +1,15 @@
+let x: list[i32] = [1, 3, 5];
+x.push(7);
+
+println(x.len());
+// 4
+
+println(x.pop());
+// 7
+
+println(x.join(", "));
+// 1, 3, 5
+
+println(x);
+// [1, 3, 5]
+
