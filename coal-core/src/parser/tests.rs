@@ -1222,6 +1222,24 @@ fn test_parse_lists() {
                 ((4, 1), (4, 7)),
             )),
         ),
+        (
+            "[1, 2, 3][1]",
+            Stmt::Expr(Expr::Index(
+                Box::new(Expr::Literal(
+                    Literal::List(
+                        vec![
+                            Expr::Literal(Literal::I32(1), ((1, 2), (1, 2))),
+                            Expr::Literal(Literal::I32(2), ((1, 5), (1, 5))),
+                            Expr::Literal(Literal::I32(3), ((1, 8), (1, 8))),
+                        ],
+                        I32,
+                    ),
+                    ((1, 1), (1, 9)),
+                )),
+                Box::new(Expr::Literal(Literal::I32(1), ((1, 11), (1, 11)))),
+                ((1, 1), (1, 12)),
+            )),
+        ),
     ];
 
     for (input, expected) in tests {

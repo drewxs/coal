@@ -243,6 +243,7 @@ impl Evaluator<'_> {
             Expr::Literal(literal, _) => self.eval_literal_expr(literal, &expr.span()),
             Expr::Prefix(prefix, rhs, span) => self.eval_prefix_expr(prefix, rhs, span),
             Expr::Infix(op, lhs, rhs, span) => self.eval_infix_expr(op, lhs, rhs, span),
+            Expr::Index(lhs, rhs, span) => self.eval_index_expr(lhs, rhs, span),
             Expr::If {
                 cond,
                 then,
@@ -416,6 +417,16 @@ impl Evaluator<'_> {
         let rhs = self.eval_expr(rhs)?;
 
         self.eval_infix_objects(op, lhs, rhs, span)
+    }
+
+    fn eval_index_expr(&mut self, lhs: &Expr, rhs: &Expr, span: &Span) -> Option<Object> {
+        let mut lhs = self.eval_expr(lhs)?;
+        let rhs = self.eval_expr(rhs)?;
+
+        match lhs {
+            Object::List { .. } => lhs.call("get", &[rhs], span),
+            _ => None,
+        }
     }
 
     fn eval_if_expr(

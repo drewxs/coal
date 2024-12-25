@@ -420,6 +420,16 @@ fn test_eval_lists() {
             r#"[1, 2, 3].join("-")"#,
             Some(Object::Str(String::from("1-2-3"))),
         ),
+        ("[1, 2, 3][1]", Some(Object::I32(2))),
+        (
+            r#"
+            fn f() {
+                return [1, 2, 3];
+            };
+            f()[1]
+            "#,
+            Some(Object::I32(2)),
+        ),
     ];
 
     for (expr, expected) in tests {

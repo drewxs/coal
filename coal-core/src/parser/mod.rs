@@ -360,6 +360,7 @@ impl Parser {
                 }
                 Token::Lbracket => {
                     self.advance();
+                    lhs = self.parse_index_expr(&lhs?);
                 }
                 Token::Dot => {
                     lhs = self.parse_method_call(lhs?);
@@ -428,6 +429,22 @@ impl Parser {
             ret_t,
             span: (start, end),
         })
+    }
+
+    fn parse_index_expr(&mut self, lhs: &Expr) -> Option<Expr> {
+        let (start, _) = lhs.span();
+        self.advance();
+
+        let idx = self.parse_expr(Precedence::Lowest)?;
+        self.expect_next(Token::Rbracket)?;
+
+        let (_, end) = self.curr_node.span;
+
+        Some(Expr::Index(
+            Box::new(lhs.clone()),
+            Box::new(idx),
+            (start, end),
+        ))
     }
 
     fn parse_expr_list(&mut self, end_tok: Token) -> Option<Vec<Expr>> {

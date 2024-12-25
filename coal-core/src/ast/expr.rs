@@ -10,6 +10,7 @@ pub enum Expr {
     Literal(Literal, Span),
     Prefix(Prefix, Box<Expr>, Span),
     Infix(Infix, Box<Expr>, Box<Expr>, Span),
+    Index(Box<Expr>, Box<Expr>, Span),
     If {
         cond: Box<Expr>,
         then: Vec<Stmt>,
@@ -57,6 +58,7 @@ impl Expr {
             Expr::Literal(_, span) => *span,
             Expr::Prefix(_, _, span) => *span,
             Expr::Infix(_, _, _, span) => *span,
+            Expr::Index(_, _, span) => *span,
             Expr::If { span, .. } => *span,
             Expr::While { span, .. } => *span,
             Expr::Fn { span, .. } => *span,
@@ -73,6 +75,7 @@ impl Expr {
             Expr::Literal(literal, _) => write!(f, "{literal}"),
             Expr::Prefix(prefix, expr, _) => write!(f, "{prefix}{expr}"),
             Expr::Infix(infix, lhs, rhs, _) => write!(f, "{lhs} {infix} {rhs}"),
+            Expr::Index(lhs, rhs, _) => write!(f, "{lhs}[{rhs}]"),
             Expr::If {
                 cond,
                 then,
