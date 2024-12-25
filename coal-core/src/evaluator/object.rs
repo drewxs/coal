@@ -143,6 +143,10 @@ impl Object {
         if let Some(method) = Type::from(self).sig(name) {
             for (arg, t) in args.iter().zip(method.args_t.iter()) {
                 if Type::from(arg) != *t {
+                    if arg.cast(t).is_some() {
+                        continue;
+                    }
+
                     let method_args_t = method
                         .args_t
                         .iter()
