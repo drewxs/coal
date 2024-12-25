@@ -127,9 +127,9 @@ impl Parser {
             return Some(());
         }
 
-        self.error(ParserErrorKind::UnexpectedToken(
-            token,
-            self.next_node.token.clone(),
+        self.errors.push(ParserError::new(
+            ParserErrorKind::UnexpectedToken(self.next_node.token.clone(), token),
+            self.next_node.span,
         ));
 
         None
