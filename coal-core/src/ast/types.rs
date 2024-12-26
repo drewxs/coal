@@ -51,25 +51,33 @@ impl Type {
 
     pub fn sig(&self, method: &str) -> Option<MethodSignature> {
         match self {
+            Type::Num(_) => self.num_sig(method),
             Type::Str => self.str_sig(method),
             Type::List(t) => self.list_sig(method, t),
             _ => None,
         }
     }
 
+    fn num_sig(&self, method: &str) -> Option<MethodSignature> {
+        match method {
+            "to_s" => Some(MethodSignature {
+                args_t: vec![],
+                ret_t: Type::Str,
+            }),
+            _ => None,
+        }
+    }
+
     fn str_sig(&self, method: &str) -> Option<MethodSignature> {
-        match self {
-            Type::Str => match method {
-                "len" => Some(MethodSignature {
-                    args_t: vec![],
-                    ret_t: U64,
-                }),
-                "split" => Some(MethodSignature {
-                    args_t: vec![Type::Str],
-                    ret_t: Type::List(Box::new(Type::Str)),
-                }),
-                _ => None,
-            },
+        match method {
+            "len" => Some(MethodSignature {
+                args_t: vec![],
+                ret_t: U64,
+            }),
+            "split" => Some(MethodSignature {
+                args_t: vec![Type::Str],
+                ret_t: Type::List(Box::new(Type::Str)),
+            }),
             _ => None,
         }
     }
