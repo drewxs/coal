@@ -75,10 +75,11 @@ impl Parser {
             return Ok(());
         }
 
-        let mut errors = format!("parser has {} errors", self.errors.len());
+        let mut errors = format!("parser has {} errors\n", self.errors.len());
         for error in &self.errors {
-            errors += &format!("\n{error}");
+            errors += &format!("{error}\n");
         }
+
         Err(errors)
     }
 
