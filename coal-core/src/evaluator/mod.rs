@@ -285,18 +285,7 @@ impl Evaluator<'_> {
     fn eval_literal_expr(&mut self, literal: &Literal, span: &Span) -> Option<Object> {
         match literal {
             Literal::Str(s) => self.eval_str(s, span),
-            Literal::List(list, t) => {
-                let mut data = vec![];
-                for item in list {
-                    if let Some(val) = self.eval_expr(item) {
-                        if let Object::Error { .. } = val {
-                            return Some(val);
-                        }
-                        data.push(val);
-                    }
-                }
-                Some(Object::List { data, t: t.clone() })
-            }
+            Literal::List(l, t) => self.eval_list_expr(l, t),
             _ => Some(Object::from(literal)),
         }
     }
@@ -349,6 +338,21 @@ impl Evaluator<'_> {
         }
 
         Some(Object::Str(res))
+    }
+
+    fn eval_list_expr(&mut self, list: &[Expr], t: &Type) -> Option<Object> {
+        let mut data = vec![];
+
+        for item in list {
+            if let Some(val) = self.eval_expr(item) {
+                if let Object::Error { .. } = val {
+                    return Some(val);
+                }
+                data.push(val);
+            }
+        }
+
+        Some(Object::List { data, t: t.clone() })
     }
 
     fn eval_prefix_expr(&mut self, prefix: &Prefix, rhs: &Expr, span: &Span) -> Option<Object> {
