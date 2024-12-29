@@ -1,4 +1,4 @@
-use coal_core::{clean_input, Evaluator};
+use coal_core::{clean_input, Evaluator, Object};
 
 pub fn eval(input: &str) {
     eval_with(&mut Evaluator::default(), input, true);
@@ -6,7 +6,11 @@ pub fn eval(input: &str) {
 
 pub fn eval_with(evaluator: &mut Evaluator, input: &str, print: bool) {
     match evaluator.eval(input) {
-        Ok(obj) if print => println!("{obj}"),
+        Ok(obj) => {
+            if print && obj != Object::Void {
+                println!("{obj}");
+            }
+        }
         Err(errs) => errs.iter().for_each(|e| {
             let ((l1, c1), (_, c2)) = e.span;
 
@@ -29,6 +33,5 @@ pub fn eval_with(evaluator: &mut Evaluator, input: &str, print: bool) {
                 println!("{}\n", e.kind);
             }
         }),
-        _ => {}
     }
 }
