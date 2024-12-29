@@ -790,9 +790,3 @@ impl From<&str> for Parser {
         Self::new(Lexer::new(input))
     }
 }
-
-impl From<&String> for Parser {
-    fn from(input: &String) -> Self {
-        Self::from(input.as_str())
-    }
-}

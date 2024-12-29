@@ -17,12 +17,6 @@ impl From<&str> for Ident {
     }
 }
 
-impl From<&String> for Ident {
-    fn from(name: &String) -> Self {
-        Ident(name.clone())
-    }
-}
-
 impl TryFrom<&Token> for Ident {
     type Error = String;
 

@@ -270,7 +270,7 @@ impl Evaluator<'_> {
                 ret_t,
                 span,
             } => {
-                let expr = Expr::Ident(Ident::from(name), ret_t.clone(), *span);
+                let expr = Expr::Ident(Ident::from(name.as_str()), ret_t.clone(), *span);
                 if self.builtins.contains_key(name.as_str()) {
                     self.eval_builtin(&expr, args, span)
                 } else {
