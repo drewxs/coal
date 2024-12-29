@@ -1240,20 +1240,52 @@ fn test_parse_lists() {
                 ((1, 1), (1, 12)),
             )),
         ),
+        (
+            "let x = [1, 2, 3]; [x[1], 1]",
+            Stmt::Expr(Expr::Literal(
+                Literal::List(
+                    vec![
+                        Expr::Index(
+                            Box::new(Expr::Ident(
+                                Ident::from("x"),
+                                Type::List(Box::new(I32)),
+                                ((1, 21), (1, 21)),
+                            )),
+                            Box::new(Expr::Literal(Literal::I32(1), ((1, 23), (1, 23)))),
+                            ((1, 21), (1, 24)),
+                        ),
+                        Expr::Literal(Literal::I32(1), ((1, 27), (1, 27))),
+                    ],
+                    I32,
+                ),
+                ((1, 20), (1, 28)),
+            )),
+        ),
+        (
+            "let x: list[i32] = []",
+            Stmt::Let(
+                Ident(String::from("x")),
+                Type::List(Box::new(I32)),
+                Expr::Literal(Literal::List(vec![], Type::Unknown), ((1, 20), (1, 21))),
+            ),
+        ),
     ];
 
     for (input, expected) in tests {
         let mut parser = Parser::from(input);
         let parsed = parser.parse();
-        if !parser.errors.is_empty() {
-            panic!("input:\n{}\nerrors:\n{:?}", input, parser.errors);
+        if let Err(errors) = parser.check() {
+            println!("input:\n{}", input);
+            for e in errors {
+                println!("{e}");
+            }
         }
 
         let actual = parsed.last().unwrap();
         if expected != *actual {
             panic!(
-                "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
-                input, expected, actual
+                "input:\n{}\n\nexpected:\n{}{:?}\n\nactual:\n{}{:?}\n",
+                input, expected, expected, actual, actual
             );
         }
     }

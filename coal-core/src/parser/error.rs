@@ -30,31 +30,38 @@ pub enum ParserErrorKind {
     TypeAnnotationsNeeded,
     InvalidArgumentsLength(usize, usize),
     TypeMismatch(Type, Type),
+    InvalidIndex(Type),
 }
 
 impl fmt::Display for ParserErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ParserErrorKind::SyntaxError(token) => {
-                write!(f, "syntax error: '{token}'")
+                write!(f, "syntax error: `{token}`")
             }
             ParserErrorKind::UnexpectedToken(t1, t2) => {
-                write!(f, "unexpected token: '{t1}', expected: '{t2}'")
+                write!(f, "unexpected token: `{t1}`, expected: `{t2}`")
             }
             ParserErrorKind::NotFound(name) => {
-                write!(f, "not found: {name}")
+                write!(f, "not found: `{name}`")
             }
             ParserErrorKind::MethodNotFound(t, name) => {
-                write!(f, "method not found: {t}.{name}()")
+                write!(f, "method not found: `{t}.{name}()`")
             }
             ParserErrorKind::TypeAnnotationsNeeded => {
                 write!(f, "type annotations needed")
             }
-            ParserErrorKind::InvalidArgumentsLength(t1, t2) => {
-                write!(f, "invalid number of arguments: expected={t1}, got={t2}")
+            ParserErrorKind::InvalidArgumentsLength(n1, n2) => {
+                write!(
+                    f,
+                    "invalid number of arguments: expected=`{n1}`, got=`{n2}`"
+                )
             }
             ParserErrorKind::TypeMismatch(t1, t2) => {
-                write!(f, "type mismatch: expected={t1}, got={t2}")
+                write!(f, "type mismatch: expected=`{t1}`, got=`{t2}`")
+            }
+            ParserErrorKind::InvalidIndex(t) => {
+                write!(f, "cannot index into a value of type `{t}`")
             }
         }
     }

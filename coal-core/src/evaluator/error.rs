@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{Infix, Span, Type};
+use crate::{Infix, ParserError, Span, Type};
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct RuntimeError {
@@ -14,6 +14,15 @@ impl RuntimeError {
     }
 }
 
+impl From<&ParserError> for RuntimeError {
+    fn from(value: &ParserError) -> Self {
+        RuntimeError {
+            kind: RuntimeErrorKind::ParserError(value.kind.to_string()),
+            span: value.span,
+        }
+    }
+}
+
 impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let ((l1, c1), (l2, c2)) = self.span;
@@ -24,6 +33,7 @@ impl fmt::Display for RuntimeError {
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub enum RuntimeErrorKind {
     Custom(String),
+    ParserError(String),
     Mismatch(String, Type),
     TypeMismatch(Type, Type),
     IdentifierNotFound(String),
@@ -41,6 +51,7 @@ impl fmt::Display for RuntimeErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             RuntimeErrorKind::Custom(s) => write!(f, "{s}"),
+            RuntimeErrorKind::ParserError(e) => write!(f, "{e}"),
             RuntimeErrorKind::Mismatch(t1, t2) => {
                 write!(f, "mismatch: expected={t1}, got={t2}")
             }

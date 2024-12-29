@@ -49,6 +49,14 @@ impl Type {
         matches!(self, Type::Num(_))
     }
 
+    pub fn is_defined(&self) -> bool {
+        match self {
+            Type::Unknown => false,
+            Type::List(t) => t.is_defined(),
+            _ => true,
+        }
+    }
+
     pub fn sig(&self, method: &str) -> Option<MethodSignature> {
         match self {
             Type::Num(_) => self.num_sig(method),
@@ -160,7 +168,7 @@ impl From<&Literal> for Type {
 }
 
 impl TryFrom<&Token> for Type {
-    type Error = String;
+    type Error = Type;
 
     fn try_from(token: &Token) -> Result<Self, Self::Error> {
         match token {
@@ -177,7 +185,7 @@ impl TryFrom<&Token> for Type {
                 "nil" => Ok(Type::Nil),
                 "any" => Ok(Type::Any),
                 "void" => Ok(Type::Void),
-                _ => Err(String::from("invalid identifier")),
+                _ => Err(Type::Unknown),
             },
             Token::U32(_) => Ok(U32),
             Token::U64(_) => Ok(U64),
@@ -186,18 +194,18 @@ impl TryFrom<&Token> for Type {
             Token::I128(_) => Ok(I128),
             Token::F32(_) => Ok(F32),
             Token::F64(_) => Ok(F64),
-            _ => Err(String::from("invalid type token")),
+            _ => Err(Type::Unknown),
         }
     }
 }
 
 impl TryFrom<&Expr> for Type {
-    type Error = String;
+    type Error = Type;
 
     fn try_from(expr: &Expr) -> Result<Self, Self::Error> {
         match expr {
+            Expr::Ident(_, t, _) => Ok(t.to_owned()),
             Expr::Literal(l, _) => Ok(Type::from(l)),
-            Expr::Infix(_, lhs, rhs, _) => infer_infix_type(lhs, rhs),
             Expr::Prefix(prefix, rhs, _) => {
                 if prefix == &Prefix::Not {
                     Ok(Type::Bool)
@@ -205,19 +213,23 @@ impl TryFrom<&Expr> for Type {
                     Type::try_from(Borrow::<Expr>::borrow(rhs))
                 }
             }
-            Expr::Ident(_, t, _) => Ok(t.to_owned()),
+            Expr::Infix(_, lhs, rhs, _) => infer_infix_type(lhs, rhs),
+            Expr::Index(expr, _, _) => match Type::try_from(&**expr) {
+                Ok(Type::List(t)) => Ok(*t),
+                Ok(t) | Err(t) => Err(t),
+            },
             Expr::Fn { args, ret_t, .. } => {
                 let args_t = args.iter().map(|arg| arg.t.to_owned()).collect();
                 Ok(Type::Fn(args_t, Box::new(ret_t.to_owned())))
             }
             Expr::Call { ret_t, .. } => Ok(ret_t.to_owned()),
             Expr::MethodCall { ret_t, .. } => Ok(ret_t.to_owned()),
-            _ => Err(String::from("unable to infer type")),
+            _ => Err(Type::Unknown),
         }
     }
 }
 
-fn infer_infix_type(lhs: &Expr, rhs: &Expr) -> Result<Type, String> {
+fn infer_infix_type(lhs: &Expr, rhs: &Expr) -> Result<Type, Type> {
     let lhs_t = Type::try_from(lhs)?;
     let rhs_t = Type::try_from(rhs)?;
 
@@ -230,7 +242,7 @@ fn infer_infix_type(lhs: &Expr, rhs: &Expr) -> Result<Type, String> {
         }
     }
 
-    Err(String::from("unable to infer type"))
+    Err(Type::Unknown)
 }
 
 impl fmt::Display for Type {

@@ -31,17 +31,18 @@ impl Evaluator<'_> {
         }
     }
 
-    pub fn eval(&mut self, input: &str) -> Option<Object> {
+    pub fn eval(&mut self, input: &str) -> Result<Object, Vec<RuntimeError>> {
         self.parser = self
             .parser
             .new_with(input, Rc::clone(&self.parser.symbol_table));
         let stmts = self.parser.parse();
 
         if !self.parser.errors.is_empty() {
-            return Some(Object::from(&self.parser.errors[0]));
+            return Err(self.parser.errors.iter().map(RuntimeError::from).collect());
         }
 
         let mut res = None;
+        let mut errors = vec![];
 
         for stmt in stmts {
             if stmt == Stmt::Void {
@@ -49,13 +50,17 @@ impl Evaluator<'_> {
             }
 
             match self.eval_stmt(stmt) {
-                Some(Object::Return(val)) => return Some(*val),
-                Some(Object::Error(e)) => return Some(Object::Error(e)),
+                Some(Object::Return(val)) => return Ok(*val),
+                Some(Object::Error(e)) => errors.push(e),
                 obj => res = obj,
             }
         }
 
-        res
+        if !errors.is_empty() {
+            return Err(errors);
+        }
+
+        Ok(res.unwrap_or(Object::Void))
     }
 
     fn eval_stmt(&mut self, stmt: Stmt) -> Option<Object> {
@@ -109,7 +114,7 @@ impl Evaluator<'_> {
         res
     }
 
-    fn eval_let_stmt(&mut self, ident: &Ident, t: &Type, expr: &Expr) -> Option<Object> {
+    fn eval_let_stmt(&mut self, ident: &Ident, declared_t: &Type, expr: &Expr) -> Option<Object> {
         let Ident(name) = ident;
 
         let mut val = self.eval_expr(expr)?;
@@ -118,12 +123,12 @@ impl Evaluator<'_> {
         }
 
         let resolved_t = Type::from(&val);
-        if t != &resolved_t {
-            if let Some(casted) = val.cast(t) {
+        if declared_t != &resolved_t {
+            if let Some(casted) = val.cast(declared_t) {
                 val = casted;
             } else {
                 return Some(Object::Error(RuntimeError::new(
-                    RuntimeErrorKind::TypeMismatch(t.to_owned(), resolved_t),
+                    RuntimeErrorKind::TypeMismatch(declared_t.to_owned(), resolved_t),
                     expr.span(),
                 )));
             }
@@ -311,7 +316,7 @@ impl Evaluator<'_> {
                 expr.clear();
             } else if c == '}' && in_expr {
                 match self.eval(&expr) {
-                    Some(Object::Error(e)) => {
+                    Ok(Object::Error(e)) => {
                         let ((l1, c1), (l2, c2)) = e.span;
                         let ((_, offset), (_, _)) = *span;
                         return Some(Object::Error(RuntimeError::new(
@@ -319,7 +324,7 @@ impl Evaluator<'_> {
                             ((l1, c1 + offset + 1), (l2, c2 + offset + 1)),
                         )));
                     }
-                    Some(obj) => {
+                    Ok(obj) => {
                         res.push_str(&obj.to_string());
                     }
                     _ => {}

@@ -70,30 +70,34 @@ impl Parser {
     }
 
     /// Checks for parser errors and returns `Ok(())` if none, or an `Err` with error details if present.
-    pub fn check(&mut self) -> Result<(), String> {
+    pub fn check(&mut self) -> Result<(), Vec<ParserError>> {
         if self.errors.is_empty() {
             return Ok(());
         }
 
-        let mut errors = format!("parser has {} errors\n", self.errors.len());
-        for error in &self.errors {
-            errors += &format!("{error}\n");
-        }
-
-        Err(errors)
+        Err(self.errors.clone())
     }
 
     /// Prints errors if there are any.
     pub fn print_errors(&mut self) {
-        if let Err(e) = self.check() {
-            println!("{e}");
+        if let Err(errors) = self.check() {
+            for e in errors {
+                println!("{e}");
+            }
         }
     }
 
     /// Runs `check`, then panics if there are errors.
     pub fn validate(&mut self) {
-        if let Err(e) = self.check() {
-            panic!("{e}");
+        if let Err(errors) = self.check() {
+            panic!(
+                "{}",
+                errors
+                    .iter()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            );
         }
     }
 
@@ -223,12 +227,14 @@ impl Parser {
                 declared_t = Some(t.clone());
             }
         } else if let Ok(inferred_t) = Type::try_from(&expr) {
-            if let Some(t) = &declared_t {
-                if !t.is_numeric() && !inferred_t.is_numeric() {
+            if inferred_t.is_defined() {
+                if let Some(t) = &declared_t {
+                    if !t.is_numeric() || !inferred_t.is_numeric() {
+                        declared_t = Some(inferred_t);
+                    }
+                } else {
                     declared_t = Some(inferred_t);
                 }
-            } else {
-                declared_t = Some(inferred_t);
             }
         }
 
@@ -330,6 +336,7 @@ impl Parser {
                 | Some(Expr::Literal(_, _))
                 | Some(Expr::Prefix { .. })
                 | Some(Expr::Infix(_, _, _, _))
+                | Some(Expr::Index(_, _, _))
                 | Some(Expr::Call { .. })
                 | Some(Expr::MethodCall { .. })
         ) {
@@ -360,7 +367,6 @@ impl Parser {
                     }
                 }
                 Token::Lbracket => {
-                    self.advance();
                     lhs = self.parse_index_expr(&lhs?);
                 }
                 Token::Dot => {
@@ -435,6 +441,7 @@ impl Parser {
     fn parse_index_expr(&mut self, lhs: &Expr) -> Option<Expr> {
         let (start, _) = lhs.span();
         self.advance();
+        self.advance();
 
         let idx = self.parse_expr(Precedence::Lowest)?;
         self.expect_next(Token::Rbracket)?;
@@ -486,13 +493,32 @@ impl Parser {
         while self.next_node.token == Token::Comma {
             self.advance();
             self.advance();
+
+            let (start, _) = self.curr_node.span;
             let expr = self.parse_expr(Precedence::Lowest)?;
-            let curr_t = Type::try_from(&expr).ok()?;
-            if curr_t != t {
-                self.error(ParserErrorKind::TypeMismatch(t, curr_t));
-                return None;
+
+            match Type::try_from(&expr) {
+                Ok(curr_t) => {
+                    if curr_t != t {
+                        let (_, end) = self.curr_node.span;
+                        self.errors.push(ParserError::new(
+                            ParserErrorKind::TypeMismatch(t, curr_t),
+                            (start, end),
+                        ));
+                        return None;
+                    }
+
+                    list.push(expr);
+                }
+                Err(e) => {
+                    let (_, end) = self.curr_node.span;
+                    self.errors.push(ParserError::new(
+                        ParserErrorKind::InvalidIndex(e),
+                        (start, end),
+                    ));
+                    return None;
+                }
             }
-            list.push(expr);
         }
 
         self.expect_next(end_tok)?;

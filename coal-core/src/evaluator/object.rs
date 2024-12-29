@@ -41,6 +41,7 @@ pub enum Object {
     Return(Box<Object>),
     Error(RuntimeError),
     Nil,
+    Void,
 }
 
 pub const TRUE: Object = Object::Bool(true);
@@ -271,6 +272,17 @@ impl Object {
             (Object::F64(from), &I128) => Some(Object::I128(*from as i128)),
             (Object::F64(from), &F32) => Some(Object::F32(*from as f32)),
 
+            (Object::List { data, t }, Type::List(t2)) => {
+                if data.is_empty() && !t.is_defined() {
+                    Some(Object::List {
+                        data: vec![],
+                        t: *t2.clone(),
+                    })
+                } else {
+                    None
+                }
+            }
+
             _ => None,
         }
     }
@@ -424,9 +436,9 @@ impl Hash for Object {
             Object::Map { .. } => "map".hash(state),
             Object::Fn { name, .. } => name.hash(state),
             Object::Builtin(b) => b.func.hash(state),
-            Object::Nil => {}
             Object::Return(v) => v.hash(state),
             Object::Error(e) => e.hash(state),
+            Object::Nil | Object::Void => {}
         }
     }
 }
@@ -567,6 +579,7 @@ impl fmt::Display for Object {
             Object::Return(v) => write!(f, "{v}"),
             Object::Error(e) => write!(f, "{e}"),
             Object::Nil => write!(f, "nil"),
+            Object::Void => Ok(()),
         }
     }
 }

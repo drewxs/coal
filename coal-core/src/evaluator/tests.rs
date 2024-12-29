@@ -2,7 +2,7 @@ use std::assert_matches::assert_matches;
 
 use test::Bencher;
 
-use crate::{Expr, Ident, Infix, Stmt, Type, Var, I32};
+use crate::{Expr, Ident, Infix, Stmt, Type, Var, I32, U64};
 
 use super::{Evaluator, Object, FALSE, TRUE};
 
@@ -11,10 +11,10 @@ fn test_eval_literal() {
     let mut evaluator = Evaluator::default();
 
     let tests = vec![
-        ("5", Some(Object::I32(5))),
-        ("3.14", Some(Object::F64(3.14))),
-        ("true", Some(TRUE)),
-        (r#""foo""#, Some(Object::Str(String::from("foo")))),
+        ("5", Ok(Object::I32(5))),
+        ("3.14", Ok(Object::F64(3.14))),
+        ("true", Ok(TRUE)),
+        (r#""foo""#, Ok(Object::Str(String::from("foo")))),
     ];
 
     for (expr, expected) in tests {
@@ -29,14 +29,14 @@ fn test_eval_str_interpolation() {
     let tests = vec![
         (
             r#""not {!false} or {!!false}""#,
-            Some(Object::Str(String::from("not true or false"))),
+            Ok(Object::Str(String::from("not true or false"))),
         ),
         (
             r#""(1 + \"{-false})""#,
-            Some(Object::Str(String::from(r#"(1 + "0)"#))),
+            Ok(Object::Str(String::from(r#"(1 + "0)"#))),
         ),
-        (r#"let s = "asdf"; s.len()"#, Some(Object::U64(4))),
-        (r#""{1 + 9}".len()"#, Some(Object::U64(2))),
+        (r#"let s = "asdf"; s.len()"#, Ok(Object::U64(4))),
+        (r#""{1 + 9}".len()"#, Ok(Object::U64(2))),
     ];
 
     for (expr, expected) in tests {
@@ -49,14 +49,14 @@ fn test_eval_prefix() {
     let mut evaluator = Evaluator::default();
 
     let tests = vec![
-        ("-5", Some(Object::I32(-5))),
-        ("-10", Some(Object::I32(-10))),
-        ("!true", Some(FALSE)),
-        ("!!true", Some(TRUE)),
-        ("!false", Some(TRUE)),
-        ("!!false", Some(FALSE)),
-        ("!5", Some(FALSE)),
-        ("!!5", Some(TRUE)),
+        ("-5", Ok(Object::I32(-5))),
+        ("-10", Ok(Object::I32(-10))),
+        ("!true", Ok(FALSE)),
+        ("!!true", Ok(TRUE)),
+        ("!false", Ok(TRUE)),
+        ("!!false", Ok(FALSE)),
+        ("!5", Ok(FALSE)),
+        ("!!5", Ok(TRUE)),
     ];
 
     for (expr, expected) in tests {
@@ -69,24 +69,21 @@ fn test_eval_infix() {
     let mut evaluator = Evaluator::default();
 
     let tests = vec![
-        ("(7 + 2 * 3 / 2) % 3", Some(Object::I32(1))),
-        ("1 + 2 * 3 + 4 / 5", Some(Object::I32(7))),
-        ("(1 + 2 * 3 + 4 / 5) * 2 + -10", Some(Object::I32(4))),
-        ("8 // 3", Some(Object::I32(2))),
-        ("10.4 // 2", Some(Object::F64(5.0))),
-        ("true == true", Some(TRUE)),
-        ("false == false", Some(TRUE)),
-        ("true == false", Some(FALSE)),
-        ("true != false", Some(TRUE)),
-        ("(1 < 2) == true", Some(TRUE)),
-        ("(1 > 2) != false", Some(FALSE)),
-        (
-            r#""foo" + "bar""#,
-            Some(Object::Str(String::from("foobar"))),
-        ),
-        (r#""foo" == "foo""#, Some(TRUE)),
-        (r#""a" * 3"#, Some(Object::Str(String::from("aaa")))),
-        (r#""a" < "b""#, Some(TRUE)),
+        ("(7 + 2 * 3 / 2) % 3", Ok(Object::I32(1))),
+        ("1 + 2 * 3 + 4 / 5", Ok(Object::I32(7))),
+        ("(1 + 2 * 3 + 4 / 5) * 2 + -10", Ok(Object::I32(4))),
+        ("8 // 3", Ok(Object::I32(2))),
+        ("10.4 // 2", Ok(Object::F64(5.0))),
+        ("true == true", Ok(TRUE)),
+        ("false == false", Ok(TRUE)),
+        ("true == false", Ok(FALSE)),
+        ("true != false", Ok(TRUE)),
+        ("(1 < 2) == true", Ok(TRUE)),
+        ("(1 > 2) != false", Ok(FALSE)),
+        (r#""foo" + "bar""#, Ok(Object::Str(String::from("foobar")))),
+        (r#""foo" == "foo""#, Ok(TRUE)),
+        (r#""a" * 3"#, Ok(Object::Str(String::from("aaa")))),
+        (r#""a" < "b""#, Ok(TRUE)),
     ];
 
     for (expr, expected) in tests {
@@ -110,7 +107,7 @@ fn test_eval_infix_invalid() {
         r#""x" % 10"#,
     ];
     for input in tests {
-        assert_matches!(Evaluator::default().eval(input), Some(Object::Error { .. }));
+        assert_matches!(Evaluator::default().eval(input), Err(_));
     }
 }
 
@@ -119,13 +116,13 @@ fn test_eval_if() {
     let mut evaluator = Evaluator::default();
 
     let tests = vec![
-        ("if true { 10 }", Some(Object::I32(10))),
-        ("if false { 10 }", None),
-        ("if 1 { 10 }", Some(Object::I32(10))),
-        ("if 1 < 2 { 10 }", Some(Object::I32(10))),
-        ("if 1 > 2 { 10 }", None),
-        ("if 1 > 2 { 10 } else { 20 }", Some(Object::I32(20))),
-        ("if 1 < 2 { 10 } else { 20 }", Some(Object::I32(10))),
+        ("if true { 10 }", Ok(Object::I32(10))),
+        ("if false { 10 }", Ok(Object::Void)),
+        ("if 1 { 10 }", Ok(Object::I32(10))),
+        ("if 1 < 2 { 10 }", Ok(Object::I32(10))),
+        ("if 1 > 2 { 10 }", Ok(Object::Void)),
+        ("if 1 > 2 { 10 } else { 20 }", Ok(Object::I32(20))),
+        ("if 1 < 2 { 10 } else { 20 }", Ok(Object::I32(10))),
         (
             r#"if 1 < 2 {
                 let x = 999;
@@ -133,7 +130,7 @@ fn test_eval_if() {
             } else {
                 return 20;
             }"#,
-            Some(Object::I32(10)),
+            Ok(Object::I32(10)),
         ),
         (
             r#"if 1 > 2 {
@@ -142,7 +139,7 @@ fn test_eval_if() {
                 return 2;
                 return 3;
             }"#,
-            Some(Object::I32(2)),
+            Ok(Object::I32(2)),
         ),
     ];
 
@@ -165,7 +162,7 @@ fn test_eval_nested_if() {
             } else {
                 return 3;
             }"#,
-            Some(Object::I32(1)),
+            Ok(Object::I32(1)),
         ),
         (
             r#"if true {
@@ -176,7 +173,7 @@ fn test_eval_nested_if() {
             } else {
                 return 3;
             }"#,
-            Some(Object::I32(2)),
+            Ok(Object::I32(2)),
         ),
     ];
 
@@ -196,11 +193,12 @@ fn test_eval_if_scope() {
     "#;
 
     let mut evaluator = Evaluator::default();
-    evaluator.eval(input);
+    let _ = evaluator.eval(input);
+    let env = evaluator.env.borrow();
 
-    assert_eq!(evaluator.env.borrow_mut().get("x"), Some(Object::I32(1)));
-    assert_eq!(evaluator.env.borrow_mut().get("y"), None);
-    assert_eq!(evaluator.env.borrow_mut().get("z"), None);
+    assert_eq!(env.get("x"), Some(Object::I32(1)));
+    assert_eq!(env.get("y"), None);
+    assert_eq!(env.get("z"), None);
 }
 
 #[test]
@@ -214,22 +212,23 @@ fn test_eval_while_scope() {
     "#;
 
     let mut evaluator = Evaluator::default();
-    evaluator.eval(input);
+    let _ = evaluator.eval(input);
+    let env = evaluator.env.borrow();
 
-    assert_eq!(evaluator.env.borrow_mut().get("i"), Some(Object::I32(1000)));
-    assert_eq!(evaluator.env.borrow_mut().get("x"), None);
+    assert_eq!(env.get("i"), Some(Object::I32(1000)));
+    assert_eq!(env.get("x"), None);
 }
 
 #[test]
 fn test_eval_let() {
     let tests = vec![
-        ("let x = 7; x;", Some(Object::I32(7))),
-        ("let x = 2 * 3; x;", Some(Object::I32(6))),
-        ("let x = 7; let y = 10; x;", Some(Object::I32(7))),
-        ("let x = 7; let y = 10; y;", Some(Object::I32(10))),
+        ("let x = 7; x;", Ok(Object::I32(7))),
+        ("let x = 2 * 3; x;", Ok(Object::I32(6))),
+        ("let x = 7; let y = 10; x;", Ok(Object::I32(7))),
+        ("let x = 7; let y = 10; y;", Ok(Object::I32(10))),
         (
             "let x = 7; let y = 10; let z: i32 = x + y + 3; z;",
-            Some(Object::I32(20)),
+            Ok(Object::I32(20)),
         ),
     ];
 
@@ -247,22 +246,22 @@ fn test_eval_let() {
 #[test]
 fn test_eval_let_scope() {
     let input = "let x = 1; if true { x = x + 1; }; x;";
-    assert_matches!(Evaluator::default().eval(input), Some(Object::I32(2)));
+    assert_matches!(Evaluator::default().eval(input), Ok(Object::I32(2)));
 
     let input = "let x = 1; fn foo() -> i32 { x = x + 1; }; foo(); x;";
-    assert_matches!(Evaluator::default().eval(input), Some(Object::I32(2)));
+    assert_matches!(Evaluator::default().eval(input), Ok(Object::I32(2)));
 }
 
 #[test]
 fn test_eval_assign() {
     let tests = vec![
-        ("let x = 1; x = 2; x;", Some(Object::I32(2))),
-        ("let x = 1; x = x + x + x; x;", Some(Object::I32(3))),
-        ("let x = 1; x += 1; x;", Some(Object::I32(2))),
-        ("let x = 4; x -= 1; x;", Some(Object::I32(3))),
-        ("let x = 2; x *= 3; x;", Some(Object::I32(6))),
-        ("let x = 8; x /= 2; x;", Some(Object::I32(4))),
-        ("let x = 10; x %= 3; x;", Some(Object::I32(1))),
+        ("let x = 1; x = 2; x;", Ok(Object::I32(2))),
+        ("let x = 1; x = x + x + x; x;", Ok(Object::I32(3))),
+        ("let x = 1; x += 1; x;", Ok(Object::I32(2))),
+        ("let x = 4; x -= 1; x;", Ok(Object::I32(3))),
+        ("let x = 2; x *= 3; x;", Ok(Object::I32(6))),
+        ("let x = 8; x /= 2; x;", Ok(Object::I32(4))),
+        ("let x = 10; x %= 3; x;", Ok(Object::I32(1))),
     ];
 
     for (expr, expected) in tests {
@@ -279,7 +278,7 @@ fn test_eval_assign_invalid() {
         "fn x() -> i32 { y = 1 }; x();",
     ];
     for input in tests {
-        assert_matches!(Evaluator::default().eval(input), Some(Object::Error { .. }));
+        assert_matches!(Evaluator::default().eval(input), Err(_));
     }
 }
 
@@ -295,7 +294,7 @@ fn test_eval_function() {
                 return x + y;
             }
         }"#,
-        Some(Object::Fn {
+        Ok(Object::Fn {
             name: String::from("add"),
             args: vec![Var::new("x", I32), Var::new("y", I32)],
             body: vec![Stmt::Expr(Expr::If {
@@ -334,14 +333,19 @@ fn test_eval_builtins() {
     let mut evaluator = Evaluator::default();
 
     let tests = vec![
-        (r#"print("asdf")"#, None),
-        (r#"println("asdf")"#, None),
-        (r#"dbg("asdf")"#, None),
+        (r#"print("asdf")"#, Ok(Object::Void)),
+        (r#"println("asdf")"#, Ok(Object::Void)),
+        (r#"dbg("asdf")"#, Ok(Object::Void)),
     ];
 
     for (expr, expected) in tests {
         assert_eq!(expected, evaluator.eval(expr));
     }
+}
+
+#[test]
+fn test_eval_builtins_invalid() {
+    let mut evaluator = Evaluator::default();
 
     let tests = vec![
         r#"print()"#,
@@ -353,7 +357,7 @@ fn test_eval_builtins() {
     ];
 
     for input in tests {
-        assert_matches!(evaluator.eval(input), Some(Object::Error { .. }));
+        assert_matches!(evaluator.eval(input), Err(_));
     }
 }
 
@@ -362,21 +366,21 @@ fn test_eval_lists() {
     let tests = vec![
         (
             "[]",
-            Some(Object::List {
+            Ok(Object::List {
                 data: vec![],
                 t: Type::Unknown,
             }),
         ),
         (
             "[1, 2, 3]",
-            Some(Object::List {
+            Ok(Object::List {
                 data: vec![Object::I32(1), Object::I32(2), Object::I32(3)],
                 t: I32,
             }),
         ),
         (
             r#"["one", "two", "three"]"#,
-            Some(Object::List {
+            Ok(Object::List {
                 data: vec![
                     Object::Str(String::from("one")),
                     Object::Str(String::from("two")),
@@ -392,7 +396,7 @@ fn test_eval_lists() {
             }
             [f()];
             "#,
-            Some(Object::List {
+            Ok(Object::List {
                 data: vec![Object::Str(String::from("asdf"))],
                 t: Type::Str,
             }),
@@ -402,25 +406,22 @@ fn test_eval_lists() {
             fn f() {}
             [f()];
             "#,
-            Some(Object::List {
+            Ok(Object::List {
                 data: vec![],
                 t: Type::Void,
             }),
         ),
-        ("[1, 2, 3].len()", Some(Object::U64(3))),
-        (
-            "let x = [1, 2, 3]; x.push(7); x.len()",
-            Some(Object::U64(4)),
-        ),
-        ("[0, 10].pop()", Some(Object::I32(10))),
-        ("[0, 10].get(1)", Some(Object::I32(10))),
-        ("[1, 2, 3].first()", Some(Object::I32(1))),
-        ("[1, 2, 3].last()", Some(Object::I32(3))),
+        ("[1, 2, 3].len()", Ok(Object::U64(3))),
+        ("let x = [1, 2, 3]; x.push(7); x.len()", Ok(Object::U64(4))),
+        ("[0, 10].pop()", Ok(Object::I32(10))),
+        ("[0, 10].get(1)", Ok(Object::I32(10))),
+        ("[1, 2, 3].first()", Ok(Object::I32(1))),
+        ("[1, 2, 3].last()", Ok(Object::I32(3))),
         (
             r#"[1, 2, 3].join("-")"#,
-            Some(Object::Str(String::from("1-2-3"))),
+            Ok(Object::Str(String::from("1-2-3"))),
         ),
-        ("[1, 2, 3][1]", Some(Object::I32(2))),
+        ("[1, 2, 3][1]", Ok(Object::I32(2))),
         (
             r#"
             fn f() {
@@ -428,19 +429,59 @@ fn test_eval_lists() {
             };
             f()[1]
             "#,
-            Some(Object::I32(2)),
+            Ok(Object::I32(2)),
+        ),
+        (
+            "[[1, 2, 3].len()]",
+            Ok(Object::List {
+                data: vec![Object::U64(3)],
+                t: U64,
+            }),
+        ),
+        (
+            "[[1, 2, 3][1], 1]",
+            Ok(Object::List {
+                data: vec![Object::I32(2), Object::I32(1)],
+                t: I32,
+            }),
+        ),
+        (
+            "let x = [1, 2, 3]; [x[-1], x[-2]]",
+            Ok(Object::List {
+                data: vec![Object::I32(3), Object::I32(2)],
+                t: I32,
+            }),
+        ),
+        ("let x = [[1, 2], [3, 4]]; x[0][1]", Ok(Object::I32(2))),
+        (
+            "let x: list[i32] = []; x",
+            Ok(Object::List {
+                data: vec![],
+                t: I32,
+            }),
         ),
     ];
 
     for (expr, expected) in tests {
-        assert_eq!(expected, Evaluator::default().eval(expr));
+        let actual = Evaluator::default().eval(expr);
+        if expected != actual {
+            panic!(
+                "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
+                expr,
+                expected,
+                actual.unwrap()
+            );
+        }
     }
+}
 
+#[test]
+fn test_eval_lists_invalid() {
     let tests = vec!["[f()]", "[print()]"];
 
     for input in tests {
         let actual = Evaluator::default().eval(input);
-        if !matches!(actual, Some(Object::Error { .. })) {
+        if !matches!(actual, Err(_)) {
             panic!("input:\n{}\nexpected error, actual:\n{:?}", input, actual);
         }
     }
