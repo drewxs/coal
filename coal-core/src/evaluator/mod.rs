@@ -8,9 +8,9 @@ pub mod object;
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::{Expr, Ident, IfExpr, Infix, Literal, Parser, Prefix, Span, Stmt, Type, Var};
+use crate::{Builtin, Expr, Ident, IfExpr, Infix, Literal, Parser, Prefix, Span, Stmt, Type, Var};
 
-pub use builtins::Builtin;
+pub use builtins::Def;
 pub use env::Env;
 pub use error::{RuntimeError, RuntimeErrorKind};
 pub use object::{Object, FALSE, TRUE};

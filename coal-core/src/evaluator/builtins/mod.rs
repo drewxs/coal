@@ -1,22 +1,23 @@
-mod builtin;
 mod dbg;
+mod def;
 mod print;
 mod println;
 
 use std::collections::HashMap;
 
-pub use builtin::Builtin;
+use crate::{Builtin, Object, Type};
 
-use crate::Type;
-
-use super::Object;
+use dbg::Dbg;
+pub use def::Def;
+use print::Print;
+use println::Println;
 
 pub fn map<'s>() -> HashMap<&'s str, Builtin> {
     let mut builtins = HashMap::new();
 
-    builtins.insert("print", print::builtin());
-    builtins.insert("println", println::builtin());
-    builtins.insert("dbg", dbg::builtin());
+    builtins.insert(Dbg::name(), Dbg::def());
+    builtins.insert(Print::name(), Print::def());
+    builtins.insert(Println::name(), Println::def());
 
     builtins
 }

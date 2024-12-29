@@ -1,17 +1,24 @@
-use crate::{Object, Type, Var};
+use crate::{Builtin, Object, Type, Var};
 
-use super::Builtin;
+use super::Def;
 
-fn func(args: &[Object]) -> Option<Object> {
-    println!("{:?}", args[0]);
-    None
-}
+pub struct Dbg;
 
-pub fn builtin() -> Builtin {
-    Builtin {
-        name: String::from("dbg"),
-        func,
-        args: vec![Var::new("args", Type::Any)],
-        ret_t: Type::Void,
+impl Def for Dbg {
+    fn name() -> &'static str {
+        "dbg"
+    }
+
+    fn def() -> Builtin {
+        Builtin {
+            func: Dbg::func,
+            args: vec![Var::new("args", Type::Any)],
+            ret_t: Type::Void,
+        }
+    }
+
+    fn func(args: &[Object]) -> Option<Object> {
+        println!("{:?}", args[0]);
+        None
     }
 }

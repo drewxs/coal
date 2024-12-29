@@ -1,17 +1,24 @@
-use crate::{Object, Type, Var};
+use crate::{Builtin, Object, Type, Var};
 
-use super::Builtin;
+use super::Def;
 
-fn func(args: &[Object]) -> Option<Object> {
-    print!("{}", args[0]);
-    None
-}
+pub struct Print;
 
-pub fn builtin() -> Builtin {
-    Builtin {
-        name: String::from("print"),
-        func,
-        args: vec![Var::new("args", Type::Any)],
-        ret_t: Type::Void,
+impl Def for Print {
+    fn name() -> &'static str {
+        "print"
+    }
+
+    fn def() -> Builtin {
+        Builtin {
+            func: Print::func,
+            args: vec![Var::new("args", Type::Any)],
+            ret_t: Type::Void,
+        }
+    }
+
+    fn func(args: &[Object]) -> Option<Object> {
+        print!("{}", args[0]);
+        None
     }
 }
