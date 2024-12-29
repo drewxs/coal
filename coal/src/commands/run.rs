@@ -18,12 +18,6 @@ pub fn print_ast(input: &str) {
     }
 }
 
-pub fn print_errors(input: &str) {
-    let mut parser = Parser::from(input);
-    parser.parse();
-    parser.print_errors();
-}
-
 pub fn print_file_tokens(path: &str) {
     print_tokens(&contents(path));
 }

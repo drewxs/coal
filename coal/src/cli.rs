@@ -37,10 +37,11 @@ pub enum Command {
 
         #[arg(short = 'a', long, action)]
         ast: bool,
-
-        #[arg(short = 'e', long, action)]
-        errors: bool,
     },
+
+    #[command(about = "Check for parsing errors")]
+    #[command(short_flag = 'l')]
+    Lint { input: String },
 
     #[command(about = "Format files")]
     #[command(long_about = "Format all files in the current project or from a given path")]
