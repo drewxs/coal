@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, fmt};
 
-use crate::{Object, Token};
+use crate::{Object, TokenKind};
 
 use super::{Expr, Literal, Prefix};
 
@@ -167,12 +167,12 @@ impl From<&Literal> for Type {
     }
 }
 
-impl TryFrom<&Token> for Type {
+impl TryFrom<&TokenKind> for Type {
     type Error = Type;
 
-    fn try_from(token: &Token) -> Result<Self, Self::Error> {
+    fn try_from(token: &TokenKind) -> Result<Self, Self::Error> {
         match token {
-            Token::Ident(name) => match name.as_str() {
+            TokenKind::Ident(name) => match name.as_str() {
                 "u32" => Ok(U32),
                 "u64" => Ok(U64),
                 "i32" => Ok(I32),
@@ -187,13 +187,13 @@ impl TryFrom<&Token> for Type {
                 "void" => Ok(Type::Void),
                 _ => Err(Type::Unknown),
             },
-            Token::U32(_) => Ok(U32),
-            Token::U64(_) => Ok(U64),
-            Token::I32(_) => Ok(I32),
-            Token::I64(_) => Ok(I64),
-            Token::I128(_) => Ok(I128),
-            Token::F32(_) => Ok(F32),
-            Token::F64(_) => Ok(F64),
+            TokenKind::U32(_) => Ok(U32),
+            TokenKind::U64(_) => Ok(U64),
+            TokenKind::I32(_) => Ok(I32),
+            TokenKind::I64(_) => Ok(I64),
+            TokenKind::I128(_) => Ok(I128),
+            TokenKind::F32(_) => Ok(F32),
+            TokenKind::F64(_) => Ok(F64),
             _ => Err(Type::Unknown),
         }
     }

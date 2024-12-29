@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::Token;
+use crate::TokenKind;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Prefix {
@@ -8,13 +8,13 @@ pub enum Prefix {
     Not,
 }
 
-impl TryFrom<&Token> for Prefix {
+impl TryFrom<&TokenKind> for Prefix {
     type Error = String;
 
-    fn try_from(token: &Token) -> Result<Self, Self::Error> {
+    fn try_from(token: &TokenKind) -> Result<Self, Self::Error> {
         match token {
-            Token::Bang => Ok(Prefix::Not),
-            Token::Sub => Ok(Prefix::Minus),
+            TokenKind::Bang => Ok(Prefix::Not),
+            TokenKind::Sub => Ok(Prefix::Minus),
             _ => Err(format!("invalid prefix token: {token:?}")),
         }
     }

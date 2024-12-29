@@ -1,4 +1,4 @@
-use crate::Token;
+use crate::TokenKind;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum Precedence {
@@ -13,15 +13,15 @@ pub enum Precedence {
     Index,   // list[index]
 }
 
-impl From<&Token> for Precedence {
-    fn from(token: &Token) -> Self {
+impl From<&TokenKind> for Precedence {
+    fn from(token: &TokenKind) -> Self {
         match token {
-            Token::EQ | Token::NEQ => Precedence::Eq,
-            Token::LT | Token::LTE | Token::GT | Token::GTE => Precedence::Cmp,
-            Token::Add | Token::Sub => Precedence::Sum,
-            Token::Mul | Token::Div | Token::IntDiv | Token::Rem => Precedence::Product,
-            Token::Lbracket => Precedence::Index,
-            Token::Lparen | Token::Dot => Precedence::Call,
+            TokenKind::EQ | TokenKind::NEQ => Precedence::Eq,
+            TokenKind::LT | TokenKind::LTE | TokenKind::GT | TokenKind::GTE => Precedence::Cmp,
+            TokenKind::Add | TokenKind::Sub => Precedence::Sum,
+            TokenKind::Mul | TokenKind::Div | TokenKind::IntDiv | TokenKind::Rem => Precedence::Product,
+            TokenKind::Lbracket => Precedence::Index,
+            TokenKind::Lparen | TokenKind::Dot => Precedence::Call,
             _ => Precedence::Lowest,
         }
     }

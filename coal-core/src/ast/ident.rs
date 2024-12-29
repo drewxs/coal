@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::Token;
+use crate::TokenKind;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Ident(pub String);
@@ -17,12 +17,12 @@ impl From<&str> for Ident {
     }
 }
 
-impl TryFrom<&Token> for Ident {
+impl TryFrom<&TokenKind> for Ident {
     type Error = String;
 
-    fn try_from(token: &Token) -> Result<Ident, Self::Error> {
+    fn try_from(token: &TokenKind) -> Result<Ident, Self::Error> {
         match token {
-            Token::Ident(ident) => Ok(Ident(ident.clone())),
+            TokenKind::Ident(ident) => Ok(Ident(ident.clone())),
             _ => Err(String::from("invalid identifier")),
         }
     }

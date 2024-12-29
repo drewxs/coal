@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{Span, Token, Type};
+use crate::{Span, TokenKind, Type};
 
 #[derive(Clone, Debug)]
 pub struct ParserError {
@@ -23,8 +23,8 @@ impl fmt::Display for ParserError {
 
 #[derive(Clone, Debug)]
 pub enum ParserErrorKind {
-    SyntaxError(Token),
-    UnexpectedToken(Token, Token),
+    SyntaxError(TokenKind),
+    UnexpectedToken(TokenKind, TokenKind),
     NotFound(String),
     MethodNotFound(Type, String),
     TypeAnnotationsNeeded,

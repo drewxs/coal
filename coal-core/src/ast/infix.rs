@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::Token;
+use crate::TokenKind;
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub enum Infix {
@@ -21,23 +21,23 @@ pub enum Infix {
     GTE,
 }
 
-impl TryFrom<&Token> for Infix {
+impl TryFrom<&TokenKind> for Infix {
     type Error = String;
 
-    fn try_from(token: &Token) -> Result<Self, Self::Error> {
+    fn try_from(token: &TokenKind) -> Result<Self, Self::Error> {
         match token {
-            Token::Add => Ok(Infix::Add),
-            Token::Sub => Ok(Infix::Sub),
-            Token::Mul => Ok(Infix::Mul),
-            Token::Div => Ok(Infix::Div),
-            Token::IntDiv => Ok(Infix::IntDiv),
-            Token::Rem => Ok(Infix::Rem),
-            Token::EQ => Ok(Infix::EQ),
-            Token::NEQ => Ok(Infix::NEQ),
-            Token::LT => Ok(Infix::LT),
-            Token::LTE => Ok(Infix::LTE),
-            Token::GT => Ok(Infix::GT),
-            Token::GTE => Ok(Infix::GTE),
+            TokenKind::Add => Ok(Infix::Add),
+            TokenKind::Sub => Ok(Infix::Sub),
+            TokenKind::Mul => Ok(Infix::Mul),
+            TokenKind::Div => Ok(Infix::Div),
+            TokenKind::IntDiv => Ok(Infix::IntDiv),
+            TokenKind::Rem => Ok(Infix::Rem),
+            TokenKind::EQ => Ok(Infix::EQ),
+            TokenKind::NEQ => Ok(Infix::NEQ),
+            TokenKind::LT => Ok(Infix::LT),
+            TokenKind::LTE => Ok(Infix::LTE),
+            TokenKind::GT => Ok(Infix::GT),
+            TokenKind::GTE => Ok(Infix::GTE),
             _ => Err(format!("invalid infix token: {token:?}")),
         }
     }
