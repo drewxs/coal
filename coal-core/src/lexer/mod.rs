@@ -10,6 +10,7 @@ pub use token::{Span, Token, TokenKind};
 #[derive(Clone, Debug, Default)]
 pub struct Lexer {
     pub input: String,
+    pub chars: Vec<char>,
     pub pos: usize,
     pub next_pos: usize,
     pub ch: char,
@@ -19,8 +20,11 @@ pub struct Lexer {
 
 impl Lexer {
     pub fn new(input: &str) -> Lexer {
+        let input = clean_input(input);
+        let chars = input.chars().collect();
         let mut lexer = Lexer {
-            input: clean_input(input),
+            input,
+            chars,
             pos: 0,
             next_pos: 0,
             ch: '\0',
@@ -51,18 +55,14 @@ impl Lexer {
 
     fn next_char(&mut self) -> char {
         if self.next_pos < self.input.len() {
-            self.input.chars().nth(self.next_pos).unwrap_or('\0')
+            self.chars[self.next_pos]
         } else {
             '\0'
         }
     }
 
     fn read_char(&mut self) {
-        if self.next_pos < self.input.len() {
-            self.ch = self.input.chars().nth(self.next_pos).unwrap_or('\0');
-        } else {
-            self.ch = '\0';
-        }
+        self.ch = self.next_char();
         self.pos = self.next_pos;
         self.next_pos += 1;
 
