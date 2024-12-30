@@ -30,15 +30,6 @@ fn test_lex_whitespace() {
 }
 
 #[test]
-fn test_lex_string() {
-    let input = r#""hello""#;
-    let expected = Token::new(TokenKind::Str(String::from("hello")), ((1, 1), (1, 7)));
-    let actual = Lexer::new(input).lexical_tokens();
-
-    assert_eq!(expected, actual[0]);
-}
-
-#[test]
 fn test_lex_comments() {
     let input = r#"
         // foo
@@ -67,39 +58,24 @@ fn test_lex_comments() {
 }
 
 #[test]
-fn test_next_tok() {
-    let input = r#"
-        // foo
+fn test_lex_string() {
+    let input = r#""hello""#;
+    let expected = Token::new(TokenKind::Str(String::from("hello")), ((1, 1), (1, 7)));
+    let actual = Lexer::new(input).lexical_tokens();
 
+    assert_eq!(expected, actual[0]);
+}
+
+#[test]
+fn test_lex_let_statements() {
+    let input = r#"
         let five: i32 = 5;
         let ten: i64 = 10;
-
-        fn add(x: i64, y: i64) -> i64 {
-            x + y
-        }
-
-        let result = add(five, ten);
-        !-/*5;
-        5 < 10 > 5;
-
-        if 5 < 10 {
-            return 1;
-        } elif 4 < 5 {
-            return true;
-        } else {
-            return false;
-        }
-
-        10 == 10;
-        10 != 9;
-        [1, 2]
         "#;
 
     let mut lexer = Lexer::new(input);
 
     let expected = vec![
-        TokenKind::Comment(String::from("foo")),
-        TokenKind::NewLine,
         TokenKind::Let,
         TokenKind::Ident(String::from("five")),
         TokenKind::Colon,
@@ -114,7 +90,29 @@ fn test_next_tok() {
         TokenKind::Assign,
         TokenKind::I32(10),
         TokenKind::Semicolon,
-        TokenKind::NewLine,
+        TokenKind::EOF,
+    ];
+
+    for (i, expected) in expected.iter().enumerate() {
+        if let Some(Token { token, .. }) = lexer.next() {
+            println!("[{i}] expected: {expected:?}, actual: {token:?}");
+            assert_eq!(*expected, token);
+        }
+    }
+}
+
+#[test]
+fn test_lex_functions() {
+    let input = r#"
+        fn add(x: i64, y: i64) -> i64 {
+            x + y
+        }
+        let result = add(five, ten);
+        "#;
+
+    let mut lexer = Lexer::new(input);
+
+    let expected = vec![
         TokenKind::Fn,
         TokenKind::Ident(String::from("add")),
         TokenKind::Lparen,
@@ -133,7 +131,6 @@ fn test_next_tok() {
         TokenKind::Add,
         TokenKind::Ident(String::from("y")),
         TokenKind::Rbrace,
-        TokenKind::NewLine,
         TokenKind::Let,
         TokenKind::Ident(String::from("result")),
         TokenKind::Assign,
@@ -144,6 +141,38 @@ fn test_next_tok() {
         TokenKind::Ident(String::from("ten")),
         TokenKind::Rparen,
         TokenKind::Semicolon,
+        TokenKind::EOF,
+    ];
+
+    for (i, expected) in expected.iter().enumerate() {
+        if let Some(Token { token, .. }) = lexer.next() {
+            println!("[{i}] expected: {expected:?}, actual: {token:?}");
+            assert_eq!(*expected, token);
+        }
+    }
+}
+
+#[test]
+fn test_lex_operators() {
+    let input = r#"
+        !-/*5;
+        5 < 10 > 5;
+
+        if 5 < 10 {
+            return 1;
+        } elif 4 < 5 {
+            return true;
+        } else {
+            return false;
+        }
+
+        10 == 10;
+        10 != 9;
+        "#;
+
+    let mut lexer = Lexer::new(input);
+
+    let expected = vec![
         TokenKind::Bang,
         TokenKind::Sub,
         TokenKind::Div,
@@ -190,6 +219,26 @@ fn test_next_tok() {
         TokenKind::NEQ,
         TokenKind::I32(9),
         TokenKind::Semicolon,
+        TokenKind::EOF,
+    ];
+
+    for (i, expected) in expected.iter().enumerate() {
+        if let Some(Token { token, .. }) = lexer.next() {
+            println!("[{i}] expected: {expected:?}, actual: {token:?}");
+            assert_eq!(*expected, token);
+        }
+    }
+}
+
+#[test]
+fn test_lex_lists() {
+    let input = r#"
+        [1, 2]
+        "#;
+
+    let mut lexer = Lexer::new(input);
+
+    let expected = vec![
         TokenKind::Lbracket,
         TokenKind::I32(1),
         TokenKind::Comma,
