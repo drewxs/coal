@@ -296,7 +296,11 @@ impl Iterator for Lexer {
                     )
                 } else {
                     Token::new(
-                        TokenKind::I32(s.parse::<i32>().expect("invalid int literal")),
+                        s.parse::<i32>()
+                            .map(TokenKind::I32)
+                            .or_else(|_| s.parse::<i64>().map(TokenKind::I64))
+                            .or_else(|_| s.parse::<i128>().map(TokenKind::I128))
+                            .expect("invalid int literal"),
                         (cursor, (line, col + s.len() - 1)),
                     )
                 }
