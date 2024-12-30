@@ -254,3 +254,27 @@ fn test_lex_lists() {
         }
     }
 }
+
+#[test]
+fn test_lex_iter() {
+    let input = r#"for i in 0..100"#;
+
+    let mut lexer = Lexer::new(input);
+
+    let expected = vec![
+        TokenKind::For,
+        TokenKind::Ident(String::from("i")),
+        TokenKind::In,
+        TokenKind::I32(0),
+        TokenKind::Range,
+        TokenKind::I32(100),
+        TokenKind::EOF,
+    ];
+
+    for (i, expected) in expected.iter().enumerate() {
+        if let Some(Token { token, .. }) = lexer.next() {
+            println!("[{i}] expected: {expected:?}, actual: {token:?}");
+            assert_eq!(*expected, token);
+        }
+    }
+}

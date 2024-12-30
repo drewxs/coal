@@ -15,15 +15,22 @@ let s: str = "Hello";
 let b: bool = true;
 ```
 
-Vectors:
+Lists:
 
 ```rs
 let x: list[i32] = [1, 2, 3];
 
 x.len(); // 3
-x.first() // 1
-x.last() // 3
-x.push(4) // [1, 2, 3, 4]
+x.first(); // 1
+x.last(); // 3
+x.push(4); // [1, 2, 3, 4]
+
+for v in x {
+    println(v);
+}
+for i in 0..x.len() {
+    println(x[i]);
+}
 ```
 
 Hashes:

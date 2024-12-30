@@ -17,9 +17,13 @@ impl From<&TokenKind> for Precedence {
     fn from(token: &TokenKind) -> Self {
         match token {
             TokenKind::EQ | TokenKind::NEQ => Precedence::Eq,
-            TokenKind::LT | TokenKind::LTE | TokenKind::GT | TokenKind::GTE => Precedence::Cmp,
+            TokenKind::LT | TokenKind::LTE | TokenKind::GT | TokenKind::GTE | TokenKind::Range => {
+                Precedence::Cmp
+            }
             TokenKind::Add | TokenKind::Sub => Precedence::Sum,
-            TokenKind::Mul | TokenKind::Div | TokenKind::IntDiv | TokenKind::Rem => Precedence::Product,
+            TokenKind::Mul | TokenKind::Div | TokenKind::IntDiv | TokenKind::Rem => {
+                Precedence::Product
+            }
             TokenKind::Lbracket => Precedence::Index,
             TokenKind::Lparen | TokenKind::Dot => Precedence::Call,
             _ => Precedence::Lowest,

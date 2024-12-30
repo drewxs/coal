@@ -12,6 +12,7 @@ pub enum Type {
     List(Box<Type>),
     Map(Box<(Type, Type)>),
     Fn(Vec<Type>, Box<Type>),
+    Range,
     UserDefined(String, Box<Type>),
     Nil,
     Any,
@@ -182,6 +183,7 @@ impl TryFrom<&TokenKind> for Type {
                 "f64" => Ok(F64),
                 "str" => Ok(Type::Str),
                 "bool" => Ok(Type::Bool),
+                "range" => Ok(Type::Range),
                 "nil" => Ok(Type::Nil),
                 "any" => Ok(Type::Any),
                 "void" => Ok(Type::Void),
@@ -274,6 +276,7 @@ impl fmt::Display for Type {
                     write!(f, "Fn({args_str}) -> {ret_t}")
                 }
             }
+            Type::Range => write!(f, "range"),
             Type::UserDefined(name, _) => write!(f, "{name}"),
             Type::Nil => write!(f, "nil"),
             Type::Any => write!(f, "any"),

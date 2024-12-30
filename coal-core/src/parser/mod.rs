@@ -321,6 +321,7 @@ impl Parser {
             TokenKind::Lbracket => self.parse_list_expr(),
             TokenKind::If => self.parse_if_expr(),
             TokenKind::While => self.parse_while_expr(),
+            TokenKind::For => self.parse_iter_expr(),
             TokenKind::Fn => self.parse_fn_expr(),
             TokenKind::Nil => Some(Expr::Literal(Literal::Nil, *span)),
             _ => {
@@ -370,6 +371,9 @@ impl Parser {
                 }
                 TokenKind::Dot => {
                     lhs = self.parse_method_call(lhs?);
+                }
+                TokenKind::Range => {
+                    lhs = self.parse_range_expr(&lhs?);
                 }
                 _ => break,
             }
@@ -656,6 +660,44 @@ impl Parser {
         })
     }
 
+    fn parse_range_expr(&mut self, lhs: &Expr) -> Option<Expr> {
+        let (start, _) = lhs.span();
+        self.advance();
+        self.advance();
+
+        let rhs = self.parse_expr(Precedence::Lowest)?;
+        let (_, end) = self.curr_node.span;
+
+        Some(Expr::Range(
+            Box::new(lhs.clone()),
+            Box::new(rhs),
+            (start, end),
+        ))
+    }
+
+    fn parse_iter_expr(&mut self) -> Option<Expr> {
+        let (start, _) = self.curr_node.span;
+        self.advance();
+
+        let ident = Ident::try_from(&self.curr_node.token).ok()?;
+        self.advance();
+        self.consume(TokenKind::In);
+
+        let expr = self.parse_expr(Precedence::Lowest)?;
+        self.expect_next(TokenKind::Lbrace)?;
+        self.advance();
+
+        let body = self.parse_block();
+        let (_, end) = self.curr_node.span;
+
+        Some(Expr::Iter {
+            ident,
+            expr: Box::new(expr),
+            body,
+            span: (start, end),
+        })
+    }
+
     fn parse_fn_expr(&mut self) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
         self.advance();
@@ -777,6 +819,7 @@ impl Parser {
     fn parse_list_type(&mut self) -> Option<Type> {
         self.advance();
         self.consume(TokenKind::Lbracket);
+
         let t = self.parse_type().unwrap_or(Type::Unknown);
         self.consume_next(TokenKind::Rbracket);
 

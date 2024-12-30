@@ -11,6 +11,7 @@ pub enum Expr {
     Prefix(Prefix, Box<Expr>, Span),
     Infix(Infix, Box<Expr>, Box<Expr>, Span),
     Index(Box<Expr>, Box<Expr>, Span),
+    Range(Box<Expr>, Box<Expr>, Span),
     If {
         cond: Box<Expr>,
         then: Vec<Stmt>,
@@ -20,6 +21,12 @@ pub enum Expr {
     },
     While {
         cond: Box<Expr>,
+        body: Vec<Stmt>,
+        span: Span,
+    },
+    Iter {
+        ident: Ident,
+        expr: Box<Expr>,
         body: Vec<Stmt>,
         span: Span,
     },
@@ -59,8 +66,10 @@ impl Expr {
             Expr::Prefix(_, _, span) => *span,
             Expr::Infix(_, _, _, span) => *span,
             Expr::Index(_, _, span) => *span,
+            Expr::Range(_, _, span) => *span,
             Expr::If { span, .. } => *span,
             Expr::While { span, .. } => *span,
+            Expr::Iter { span, .. } => *span,
             Expr::Fn { span, .. } => *span,
             Expr::Call { span, .. } => *span,
             Expr::MethodCall { span, .. } => *span,
@@ -76,6 +85,7 @@ impl Expr {
             Expr::Prefix(prefix, expr, _) => write!(f, "{prefix}{expr}"),
             Expr::Infix(infix, lhs, rhs, _) => write!(f, "{lhs} {infix} {rhs}"),
             Expr::Index(lhs, rhs, _) => write!(f, "{lhs}[{rhs}]"),
+            Expr::Range(start, end, _) => write!(f, "{start}..{end}"),
             Expr::If {
                 cond,
                 then,
@@ -103,6 +113,15 @@ impl Expr {
             }
             Expr::While { cond, body, .. } => {
                 writeln!(f, "{}while {cond} {{", indent)?;
+                for stmt in body {
+                    stmt.fmt_with_indent(f, indent_level + 1)?;
+                }
+                writeln!(f, "{indent}}}")
+            }
+            Expr::Iter {
+                ident, expr, body, ..
+            } => {
+                writeln!(f, "{}for {ident} in {expr} {{", indent)?;
                 for stmt in body {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }

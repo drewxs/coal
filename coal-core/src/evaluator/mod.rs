@@ -249,6 +249,7 @@ impl Evaluator<'_> {
             Expr::Prefix(prefix, rhs, span) => self.eval_prefix_expr(prefix, rhs, span),
             Expr::Infix(op, lhs, rhs, span) => self.eval_infix_expr(op, lhs, rhs, span),
             Expr::Index(lhs, rhs, span) => self.eval_index_expr(lhs, rhs, span),
+            Expr::Range(start, end, _) => self.eval_range_expr(start, end),
             Expr::If {
                 cond,
                 then,
@@ -257,6 +258,9 @@ impl Evaluator<'_> {
                 ..
             } => self.eval_if_expr(cond, then, elifs, alt),
             Expr::While { cond, body, .. } => self.eval_while_expr(cond, body),
+            Expr::Iter {
+                ident, expr, body, ..
+            } => self.eval_iter_expr(ident, expr, body),
             Expr::Fn {
                 name,
                 args,
@@ -469,6 +473,35 @@ impl Evaluator<'_> {
         while resolved_cond.is_truthy() {
             self.eval_block(body.to_owned());
             resolved_cond = self.eval_expr(cond)?;
+        }
+
+        None
+    }
+
+    fn eval_range_expr(&mut self, start: &Expr, end: &Expr) -> Option<Object> {
+        let start: usize = self.eval_expr(start)?.try_into().ok()?;
+        let end: usize = self.eval_expr(end)?.try_into().ok()?;
+
+        Some(Object::Range(start, end))
+    }
+
+    fn eval_iter_expr(&mut self, ident: &Ident, expr: &Expr, body: &[Stmt]) -> Option<Object> {
+        match self.eval_expr(expr)? {
+            Object::Range(start, end) => {
+                for i in start..end {
+                    let mut enclosed_env = Env::from(Rc::clone(&self.env));
+                    enclosed_env.set_in_scope(ident.name(), Object::U64(i as u64));
+                    self.eval_stmts_in_scope(body.to_owned(), Rc::new(RefCell::new(enclosed_env)));
+                }
+            }
+            Object::List { data, .. } => {
+                for item in data {
+                    let mut enclosed_env = Env::from(Rc::clone(&self.env));
+                    enclosed_env.set_in_scope(ident.name(), item);
+                    self.eval_stmts_in_scope(body.to_owned(), Rc::new(RefCell::new(enclosed_env)));
+                }
+            }
+            _ => {}
         }
 
         None

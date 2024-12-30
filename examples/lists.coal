@@ -1,15 +1,33 @@
 let x: list[i32] = [1, 3, 5];
 x.push(7);
 
-println(x.len());
-// 4
+let len: u64 = x.len();
+println("len: {len}");
 
-println(x.pop());
-// 7
+let popped: i32 = x.pop();
+print("pop: {popped}");
 
-println(x.join(", "));
-// 1, 3, 5
+let second: i32 = x.get(1);
+println("2nd: {second}");
 
-println(x);
-// [1, 3, 5]
+let s: str = x.join(", ");
+println("joined: {s}");
+
+println("list: {x}");
+
+let matrix: list[list[i32]] = [[1, 2, 3], [4, 5, 6]];
+println("matrix: {matrix}");
+
+let el: i32 = matrix[0][-1];
+println("row 1 last element: {el}");
+
+println("rows:");
+for row in matrix {
+    println(row);
+}
+
+println("1st col:");
+for i in 0..matrix.len() {
+    println(matrix[i][0]);
+}
 

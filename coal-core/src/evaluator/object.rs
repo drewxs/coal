@@ -23,6 +23,7 @@ pub enum Object {
     F64(f64),
     Str(String),
     Bool(bool),
+    Range(usize, usize),
     List {
         data: Vec<Object>,
         t: Type,
@@ -431,9 +432,10 @@ impl Hash for Object {
             Object::F32(f) => f.to_bits().hash(state),
             Object::F64(f) => f.to_bits().hash(state),
             Object::Bool(b) => b.hash(state),
+            Object::Range(_, _) => format!("{}", self).hash(state),
             Object::Str(s) => s.hash(state),
             Object::List { data, .. } => data.hash(state),
-            Object::Map { .. } => "map".hash(state),
+            Object::Map { .. } => format!("{}", self).hash(state),
             Object::Fn { name, .. } => name.hash(state),
             Object::Builtin(b) => b.func.hash(state),
             Object::Return(v) => v.hash(state),
@@ -549,6 +551,21 @@ impl PartialOrd for Object {
     }
 }
 
+impl TryInto<usize> for Object {
+    type Error = ();
+
+    fn try_into(self) -> Result<usize, ()> {
+        match self {
+            Object::U32(i) => Ok(i as usize),
+            Object::U64(i) => Ok(i as usize),
+            Object::I32(i) => Ok(i as usize),
+            Object::I64(i) => Ok(i as usize),
+            Object::I128(i) => Ok(i as usize),
+            _ => Err(()),
+        }
+    }
+}
+
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -561,6 +578,7 @@ impl fmt::Display for Object {
             Object::F64(x) => write!(f, "{x:?}"),
             Object::Str(s) => write!(f, "{s}"),
             Object::Bool(b) => write!(f, "{b}"),
+            Object::Range(start, end) => write!(f, "({start}..{end})"),
             Object::List { data, .. } => {
                 let items = data
                     .iter()
