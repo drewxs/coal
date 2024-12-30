@@ -1301,3 +1301,102 @@ fn test_parse_lists() {
         }
     }
 }
+
+#[test]
+fn test_parse_iter() {
+    let tests = vec![
+        (
+            "for i in 0..10 {}",
+            Stmt::Expr(Expr::Iter {
+                ident: Ident::from("i"),
+                expr: Box::new(Expr::Range(
+                    Box::new(Expr::Literal(Literal::I32(0), ((1, 10), (1, 10)))),
+                    Box::new(Expr::Literal(Literal::I32(10), ((1, 13), (1, 14)))),
+                    ((1, 10), (1, 14)),
+                )),
+                body: vec![],
+                span: ((1, 1), (1, 17)),
+            }),
+        ),
+        (
+            "for i in 0..100 { let x = i; }",
+            Stmt::Expr(Expr::Iter {
+                ident: Ident::from("i"),
+                expr: Box::new(Expr::Range(
+                    Box::new(Expr::Literal(Literal::I32(0), ((1, 10), (1, 10)))),
+                    Box::new(Expr::Literal(Literal::I32(100), ((1, 13), (1, 15)))),
+                    ((1, 10), (1, 15)),
+                )),
+                body: vec![Stmt::Let(
+                    Ident(String::from("x")),
+                    U64,
+                    Expr::Ident(Ident::from("i"), U64, ((1, 27), (1, 27))),
+                )],
+                span: ((1, 1), (1, 30)),
+            }),
+        ),
+        (
+            r#"
+            let list = [1, 2, 3];
+            for item in list {
+                let x = item;
+            }
+            "#,
+            Stmt::Expr(Expr::Iter {
+                ident: Ident::from("item"),
+                expr: Box::new(Expr::Ident(
+                    Ident::from("list"),
+                    Type::List(Box::new(I32)),
+                    ((2, 13), (2, 16)),
+                )),
+                body: vec![Stmt::Let(
+                    Ident(String::from("x")),
+                    I32,
+                    Expr::Ident(Ident::from("item"), I32, ((3, 9), (3, 12))),
+                )],
+                span: ((2, 1), (4, 1)),
+            }),
+        ),
+        (
+            r#"
+            let list: list[i64] = [1, 2, 3];
+            for item in list {
+                let x = item;
+            }
+            "#,
+            Stmt::Expr(Expr::Iter {
+                ident: Ident::from("item"),
+                expr: Box::new(Expr::Ident(
+                    Ident::from("list"),
+                    Type::List(Box::new(I64)),
+                    ((2, 13), (2, 16)),
+                )),
+                body: vec![Stmt::Let(
+                    Ident(String::from("x")),
+                    I64,
+                    Expr::Ident(Ident::from("item"), I64, ((3, 9), (3, 12))),
+                )],
+                span: ((2, 1), (4, 1)),
+            }),
+        ),
+    ];
+
+    for (input, expected) in tests {
+        let mut parser = Parser::from(input);
+        let parsed = parser.parse();
+        if let Err(errors) = parser.check() {
+            println!("input:\n{}", input);
+            for e in errors {
+                println!("{e}");
+            }
+        }
+
+        let actual = parsed.last().unwrap();
+        if expected != *actual {
+            panic!(
+                "input:\n{}\n\nexpected:\n{}{:?}\n\nactual:\n{}{:?}\n",
+                input, expected, expected, actual, actual
+            );
+        }
+    }
+}

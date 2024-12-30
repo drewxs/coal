@@ -487,6 +487,55 @@ fn test_eval_lists_invalid() {
     }
 }
 
+#[test]
+fn test_eval_iter() {
+    let tests = vec![
+        (
+            r#"
+            let x = 0;
+            for i in 0..100 {
+                x = i;
+            }
+            x
+            "#,
+            Ok(Object::I32(99)),
+        ),
+        (
+            r#"
+            let x: u64 = 0;
+            for i in 0..10 {
+                x += i;
+            }
+            x
+            "#,
+            Ok(Object::U64(45)),
+        ),
+        (
+            r#"
+            let count = 0;
+            let list = [1, 2, 3];
+            for x in list {
+                count += x;
+            }
+            count
+            "#,
+            Ok(Object::I32(6)),
+        ),
+    ];
+
+    for (expr, expected) in tests {
+        let actual = Evaluator::default().eval(expr);
+        if expected != actual {
+            panic!(
+                "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
+                expr,
+                expected,
+                actual.unwrap()
+            );
+        }
+    }
+}
+
 #[bench]
 fn bench_eval_math(b: &mut Bencher) {
     let mut evaluator = Evaluator::default();
