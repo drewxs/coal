@@ -58,6 +58,13 @@ impl Type {
         }
     }
 
+    pub fn extract(&self) -> &Self {
+        match self {
+            Type::List(t) => t,
+            t => t,
+        }
+    }
+
     pub fn sig(&self, method: &str) -> Option<MethodSignature> {
         match self {
             Type::Num(_) => self.num_sig(method),
@@ -208,22 +215,20 @@ impl TryFrom<&Expr> for Type {
         match expr {
             Expr::Ident(_, t, _) => Ok(t.to_owned()),
             Expr::Literal(l, _) => Ok(Type::from(l)),
-            Expr::Prefix(prefix, rhs, _) => {
-                if prefix == &Prefix::Not {
-                    Ok(Type::Bool)
-                } else {
-                    Type::try_from(Borrow::<Expr>::borrow(rhs))
-                }
-            }
+            Expr::Prefix(prefix, rhs, _) => match prefix {
+                Prefix::Not => Ok(Type::Bool),
+                _ => Type::try_from(Borrow::<Expr>::borrow(rhs)),
+            },
             Expr::Infix(_, lhs, rhs, _) => infer_infix_type(lhs, rhs),
             Expr::Index(expr, _, _) => match Type::try_from(&**expr) {
                 Ok(Type::List(t)) => Ok(*t),
                 Ok(t) | Err(t) => Err(t),
             },
-            Expr::Fn { args, ret_t, .. } => {
-                let args_t = args.iter().map(|arg| arg.t.to_owned()).collect();
-                Ok(Type::Fn(args_t, Box::new(ret_t.to_owned())))
-            }
+            Expr::Range(_, _, _) => Ok(U64),
+            Expr::Fn { args, ret_t, .. } => Ok(Type::Fn(
+                args.iter().map(|arg| arg.t.to_owned()).collect(),
+                Box::new(ret_t.to_owned()),
+            )),
             Expr::Call { ret_t, .. } => Ok(ret_t.to_owned()),
             Expr::MethodCall { ret_t, .. } => Ok(ret_t.to_owned()),
             _ => Err(Type::Unknown),

@@ -225,14 +225,21 @@ impl Parser {
             } else if let Some(t) = self.symbol_table.borrow().get(&format!("__{name}__")) {
                 declared_t = Some(t.clone());
             }
-        } else if let Ok(inferred_t) = Type::try_from(&expr) {
-            if inferred_t.is_defined() {
-                if let Some(t) = &declared_t {
-                    if !t.is_numeric() || !inferred_t.is_numeric() {
-                        declared_t = Some(inferred_t);
+        } else if let Ok(inf_t) = Type::try_from(&expr) {
+            if inf_t.is_defined() {
+                if let Some(decl_t) = &declared_t {
+                    let decl_tx = decl_t.extract();
+                    let inf_tx = inf_t.extract();
+
+                    if !decl_tx.is_numeric() || !inf_tx.is_numeric() {
+                        if matches!(inf_tx, Type::List(_)) {
+                            declared_t = Some(decl_t.clone());
+                        } else {
+                            declared_t = Some(inf_tx.clone());
+                        }
                     }
                 } else {
-                    declared_t = Some(inferred_t);
+                    declared_t = Some(inf_t);
                 }
             }
         }
@@ -687,7 +694,14 @@ impl Parser {
         self.expect_next(TokenKind::Lbrace)?;
         self.advance();
 
-        let body = self.parse_block();
+        let iter_t = Type::try_from(&expr)
+            .map(|t| t.extract().to_owned())
+            .unwrap_or(Type::Unknown);
+
+        let mut st = SymbolTable::from(Rc::clone(&self.symbol_table));
+        st.set(ident.name(), iter_t);
+        let body = self.parse_block_in_scope(Rc::new(RefCell::new(st)));
+
         let (_, end) = self.curr_node.span;
 
         Some(Expr::Iter {
