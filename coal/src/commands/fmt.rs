@@ -96,11 +96,26 @@ mod tests {
     }
 
     #[test]
-    fn test_fmt_nested_ifs() {
+    fn test_fmt_let_statements() {
         let input = "
           let       x =        5   ;
        let y   = 10  ;
 
+        let    x :   u32  =         2
+            ";
+
+        let expected = "let x: i32 = 5;
+let y: i32 = 10;
+
+let x: u32 = 2;
+";
+
+        assert_eq!(expected, fmt(input));
+    }
+
+    #[test]
+    fn test_fmt_nested_ifs() {
+        let input = "
                if x  > y {
         if x > 1 {        let z = 1.;
                 return z;  } else {
@@ -108,24 +123,9 @@ mod tests {
                   return y; } else {
                             return   0;
                          }
-
-  fn  adder (x :  u32 ) ->  Fn ( u32  ) ->    u32  {
-      fn add(n: u32) -> u32 { 
-let i = 0
-  while  1 < n  { i   +=  1  }
-return 
-x + n;
-        }
- return  add; }
-
-        let    x :   u32  =         2
-  let  add_two :   Fn ( u32  )  ->    u32  =   adder( x )
             ";
 
-        let expected = "let x: i32 = 5;
-let y: i32 = 10;
-
-if x > y {
+        let expected = "if x > y {
     if x > 1 {
         let z: f64 = 1.0;
         return z;
@@ -137,8 +137,27 @@ if x > y {
 } else {
     return 0;
 }
+";
 
-fn adder(x: u32) -> Fn(u32) -> u32 {
+        assert_eq!(expected, fmt(input));
+    }
+
+    #[test]
+    fn test_fmt_functions() {
+        let input = "
+  fn  adder (x :  u32 ) ->  Fn ( u32  ) ->    u32  {
+      fn add(n: u32) -> u32 { 
+let i = 0
+  while  1 < n  { i   +=  1  }
+return 
+x + n;
+        }
+ return  add; }
+
+  let  add_two :   Fn ( u32  )  ->    u32  =   adder( x )
+            ";
+
+        let expected = "fn adder(x: u32) -> Fn(u32) -> u32 {
     fn add(n: u32) -> u32 {
         let i: i32 = 0;
         while 1 < n {
@@ -149,7 +168,6 @@ fn adder(x: u32) -> Fn(u32) -> u32 {
     return add;
 }
 
-let x: u32 = 2;
 let add_two: Fn(u32) -> u32 = adder(x);
 ";
 
