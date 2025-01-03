@@ -40,6 +40,7 @@ pub enum Object {
     },
     Builtin(Builtin),
     Return(Box<Object>),
+    Type(Type),
     Error(RuntimeError),
     Nil,
     Void,
@@ -439,6 +440,7 @@ impl Hash for Object {
             Object::Fn { name, .. } => name.hash(state),
             Object::Builtin(b) => b.func.hash(state),
             Object::Return(v) => v.hash(state),
+            Object::Type(t) => t.hash(state),
             Object::Error(e) => e.hash(state),
             Object::Nil | Object::Void => {}
         }
@@ -595,6 +597,7 @@ impl fmt::Display for Object {
             Object::Fn { .. } => write!(f, "<fn_{}>", self.calculate_hash()),
             Object::Builtin(_) => write!(f, "<builtin_{}>", self.calculate_hash()),
             Object::Return(v) => write!(f, "{v}"),
+            Object::Type(t) => write!(f, "{t}"),
             Object::Error(e) => write!(f, "{e}"),
             Object::Nil => write!(f, "nil"),
             Object::Void => Ok(()),
