@@ -44,6 +44,8 @@ pub enum RuntimeErrorKind {
     ReassignmentToFunction,
     InvalidArguments(String, String),
     InvalidArgumentsLength(usize, usize),
+    IndexOutOfBounds(usize, usize),
+    InvalidIndex(Type, Type),
     FailedToEvaluate,
 }
 
@@ -81,6 +83,12 @@ impl fmt::Display for RuntimeErrorKind {
             }
             RuntimeErrorKind::InvalidArgumentsLength(n1, n2) => {
                 write!(f, "invalid # args: expected={n1}, got={n2}",)
+            }
+            RuntimeErrorKind::IndexOutOfBounds(i, len) => {
+                write!(f, "index out of bounds. len={len}, index={i}")
+            }
+            RuntimeErrorKind::InvalidIndex(t, idx_t) => {
+                write!(f, "the type `{t}` cannot be indexed by `{idx_t}`")
             }
             RuntimeErrorKind::FailedToEvaluate => {
                 write!(f, "failed to evaluate expression")

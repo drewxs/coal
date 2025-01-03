@@ -262,6 +262,86 @@ fn test_eval_assign() {
         ("let x = 2; x *= 3; x;", Ok(Object::I32(6))),
         ("let x = 8; x /= 2; x;", Ok(Object::I32(4))),
         ("let x = 10; x %= 3; x;", Ok(Object::I32(1))),
+        (
+            "let x = [1, 2]; x[0] = 3; x;",
+            Ok(Object::List {
+                data: vec![Object::I32(3), Object::I32(2)],
+                t: I32,
+            }),
+        ),
+        (
+            "let x = [1, 2]; x[0] += 6 / 2; x;",
+            Ok(Object::List {
+                data: vec![Object::I32(4), Object::I32(2)],
+                t: I32,
+            }),
+        ),
+        (
+            "let x = [[1, 2], [3, 4]]; x[0][1] = 6; x;",
+            Ok(Object::List {
+                data: vec![
+                    Object::List {
+                        data: vec![Object::I32(1), Object::I32(6)],
+                        t: I32,
+                    },
+                    Object::List {
+                        data: vec![Object::I32(3), Object::I32(4)],
+                        t: I32,
+                    },
+                ],
+                t: Type::List(Box::new(I32)),
+            }),
+        ),
+        (
+            "let x = [[1, 2], [3, 4]]; x[0][1] += 3 * 2; x;",
+            Ok(Object::List {
+                data: vec![
+                    Object::List {
+                        data: vec![Object::I32(1), Object::I32(8)],
+                        t: I32,
+                    },
+                    Object::List {
+                        data: vec![Object::I32(3), Object::I32(4)],
+                        t: I32,
+                    },
+                ],
+                t: Type::List(Box::new(I32)),
+            }),
+        ),
+        (
+            "let x = [[[1], [2]], [[3], [4]]]; x[0][1][0] = 6; x;",
+            Ok(Object::List {
+                data: vec![
+                    Object::List {
+                        data: vec![
+                            Object::List {
+                                data: vec![Object::I32(1)],
+                                t: I32,
+                            },
+                            Object::List {
+                                data: vec![Object::I32(6)],
+                                t: I32,
+                            },
+                        ],
+                        t: Type::List(Box::new(I32)),
+                    },
+                    Object::List {
+                        data: vec![
+                            Object::List {
+                                data: vec![Object::I32(3)],
+                                t: I32,
+                            },
+                            Object::List {
+                                data: vec![Object::I32(4)],
+                                t: I32,
+                            },
+                        ],
+                        t: Type::List(Box::new(I32)),
+                    },
+                ],
+                t: Type::List(Box::new(Type::List(Box::new(I32)))),
+            }),
+        ),
     ];
 
     for (expr, expected) in tests {
@@ -276,6 +356,10 @@ fn test_eval_assign_invalid() {
         "fn x() -> i32 {}; x = 1;",
         "fn x() -> i32 { x = 1 }; x();",
         "fn x() -> i32 { y = 1 }; x();",
+        "[1, 2][0] = true;",
+        "[1, 2][2] = 0;",
+        "let x = [1, 2]; x[0] = true;",
+        "let x = [1, 2]; x[2] = 0;",
     ];
     for input in tests {
         assert_matches!(Evaluator::default().eval(input), Err(_));
@@ -366,28 +450,28 @@ fn test_eval_lists() {
     let tests = vec![
         (
             "[]",
-            Ok(Object::List {
+            Object::List {
                 data: vec![],
                 t: Type::Unknown,
-            }),
+            },
         ),
         (
             "[1, 2, 3]",
-            Ok(Object::List {
+            Object::List {
                 data: vec![Object::I32(1), Object::I32(2), Object::I32(3)],
                 t: I32,
-            }),
+            },
         ),
         (
             r#"["one", "two", "three"]"#,
-            Ok(Object::List {
+            Object::List {
                 data: vec![
                     Object::Str(String::from("one")),
                     Object::Str(String::from("two")),
                     Object::Str(String::from("three")),
                 ],
                 t: Type::Str,
-            }),
+            },
         ),
         (
             r#"
@@ -396,32 +480,29 @@ fn test_eval_lists() {
             }
             [f()];
             "#,
-            Ok(Object::List {
+            Object::List {
                 data: vec![Object::Str(String::from("asdf"))],
                 t: Type::Str,
-            }),
+            },
         ),
         (
             r#"
             fn f() {}
             [f()];
             "#,
-            Ok(Object::List {
+            Object::List {
                 data: vec![],
                 t: Type::Void,
-            }),
+            },
         ),
-        ("[1, 2, 3].len()", Ok(Object::U64(3))),
-        ("let x = [1, 2, 3]; x.push(7); x.len()", Ok(Object::U64(4))),
-        ("[0, 10].pop()", Ok(Object::I32(10))),
-        ("[0, 10].get(1)", Ok(Object::I32(10))),
-        ("[1, 2, 3].first()", Ok(Object::I32(1))),
-        ("[1, 2, 3].last()", Ok(Object::I32(3))),
-        (
-            r#"[1, 2, 3].join("-")"#,
-            Ok(Object::Str(String::from("1-2-3"))),
-        ),
-        ("[1, 2, 3][1]", Ok(Object::I32(2))),
+        ("[1, 2, 3].len()", Object::U64(3)),
+        ("let x = [1, 2, 3]; x.push(7); x.len()", Object::U64(4)),
+        ("[0, 10].pop()", Object::I32(10)),
+        ("[0, 10].get(1)", Object::I32(10)),
+        ("[1, 2, 3].first()", Object::I32(1)),
+        ("[1, 2, 3].last()", Object::I32(3)),
+        (r#"[1, 2, 3].join("-")"#, Object::Str(String::from("1-2-3"))),
+        ("[1, 2, 3][1]", Object::I32(2)),
         (
             r#"
             fn f() {
@@ -429,48 +510,52 @@ fn test_eval_lists() {
             };
             f()[1]
             "#,
-            Ok(Object::I32(2)),
+            Object::I32(2),
         ),
         (
             "[[1, 2, 3].len()]",
-            Ok(Object::List {
+            Object::List {
                 data: vec![Object::U64(3)],
                 t: U64,
-            }),
+            },
         ),
         (
             "[[1, 2, 3][1], 1]",
-            Ok(Object::List {
+            Object::List {
                 data: vec![Object::I32(2), Object::I32(1)],
                 t: I32,
-            }),
+            },
         ),
         (
             "let x = [1, 2, 3]; [x[-1], x[-2]]",
-            Ok(Object::List {
+            Object::List {
                 data: vec![Object::I32(3), Object::I32(2)],
                 t: I32,
-            }),
+            },
         ),
-        ("let x = [[1, 2], [3, 4]]; x[0][1]", Ok(Object::I32(2))),
+        ("let x = [[1, 2], [3, 4]]; x[0][1]", Object::I32(2)),
         (
             "let x: list[i32] = []; x",
-            Ok(Object::List {
+            Object::List {
                 data: vec![],
                 t: I32,
-            }),
+            },
         ),
     ];
 
     for (expr, expected) in tests {
-        let actual = Evaluator::default().eval(expr);
-        if expected != actual {
-            panic!(
-                "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
-                expr,
-                expected,
-                actual.unwrap()
-            );
+        match Evaluator::default().eval(expr) {
+            Ok(actual) => {
+                if expected != actual {
+                    panic!(
+                        "input:\n{}\nexpected:\n{}\nactual:\n{}",
+                        expr, expected, actual
+                    );
+                }
+            }
+            Err(e) => {
+                panic!("input:\n{}\nexpected:\n{}\nerror:\n{:?}", expr, expected, e);
+            }
         }
     }
 }
@@ -498,7 +583,7 @@ fn test_eval_iter() {
             }
             x
             "#,
-            Ok(Object::I32(99)),
+            Object::I32(99),
         ),
         (
             r#"
@@ -508,7 +593,7 @@ fn test_eval_iter() {
             }
             x
             "#,
-            Ok(Object::U64(45)),
+            Object::U64(45),
         ),
         (
             r#"
@@ -519,18 +604,23 @@ fn test_eval_iter() {
             }
             count
             "#,
-            Ok(Object::I32(6)),
+            Object::I32(6),
         ),
     ];
 
     for (expr, expected) in tests {
-        let actual = Evaluator::default().eval(expr);
-        if expected != actual {
+        let mut evaluator = Evaluator::default();
+        if let Ok(actual) = evaluator.eval(expr) {
+            if expected != actual {
+                panic!(
+                    "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
+                    expr, expected, actual
+                );
+            }
+        } else {
             panic!(
-                "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
-                expr,
-                expected,
-                actual.unwrap()
+                "failed to evaluate input:\n{}\nerrors:\n{:?}",
+                expr, evaluator.parser.errors
             );
         }
     }

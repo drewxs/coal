@@ -37,6 +37,20 @@ impl From<&str> for Literal {
     }
 }
 
+impl TryInto<usize> for Literal {
+    type Error = ();
+
+    fn try_into(self) -> Result<usize, Self::Error> {
+        match self {
+            Literal::U32(i) => Ok(i as usize),
+            Literal::U64(i) => Ok(i as usize),
+            Literal::I32(i) => Ok(i as usize),
+            Literal::I64(i) => Ok(i as usize),
+            _ => Err(()),
+        }
+    }
+}
+
 impl fmt::Display for Literal {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

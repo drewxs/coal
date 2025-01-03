@@ -172,6 +172,17 @@ impl Expr {
     }
 }
 
+impl TryInto<usize> for Expr {
+    type Error = ();
+
+    fn try_into(self) -> Result<usize, Self::Error> {
+        match self {
+            Expr::Literal(l, _) => Ok(l.try_into()?),
+            _ => Err(()),
+        }
+    }
+}
+
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.fmt_with_indent(f, 0)

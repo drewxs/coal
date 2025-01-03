@@ -13,5 +13,7 @@ fn fib(n: u32) -> i128 {
     return x;
 }
 
-fib(184);
+let result: i128 = fib(184);
+
+println(result);
 

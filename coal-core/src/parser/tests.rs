@@ -76,32 +76,90 @@ fn test_parse_let_statements_inference() {
 #[test]
 fn test_parse_assign_statements() {
     let input = r#"
+        let x = 0;
         x = 1;
-        y = "foo";;
-        z = true;
         x += 1;
         "#;
     let expected = vec![
-        Stmt::Assign(
-            Ident(String::from("x")),
-            Expr::Literal(Literal::I32(1), ((1, 5), (1, 5))),
+        Stmt::Let(
+            Ident::from("x"),
+            I32,
+            Expr::Literal(Literal::I32(0), ((1, 9), (1, 9))),
         ),
         Stmt::Assign(
-            Ident(String::from("y")),
-            Expr::Literal(Literal::from("foo"), ((2, 5), (2, 9))),
+            Expr::Ident(Ident::from("x"), I32, ((2, 1), (2, 1))),
+            Expr::Literal(Literal::I32(1), ((2, 5), (2, 5))),
         ),
-        Stmt::Assign(
-            Ident(String::from("z")),
-            Expr::Literal(Literal::Bool(true), ((3, 5), (3, 8))),
-        ),
-        Stmt::AddAssign(
-            Ident(String::from("x")),
-            Expr::Literal(Literal::I32(1), ((4, 6), (4, 6))),
+        Stmt::OpAssign(
+            Infix::Add,
+            Expr::Ident(Ident::from("x"), I32, ((3, 1), (3, 1))),
+            Expr::Literal(Literal::I32(1), ((3, 6), (3, 6))),
         ),
     ];
-    let actual = Parser::from(input).parse();
+    assert_eq!(expected, Parser::from(input).parse());
 
-    assert_eq!(expected, actual);
+    let input = r#"
+        let y = "";
+        y = "foo";
+        "#;
+    let expected = vec![
+        Stmt::Let(
+            Ident::from("y"),
+            Type::Str,
+            Expr::Literal(Literal::Str(String::from("")), ((1, 9), (1, 10))),
+        ),
+        Stmt::Assign(
+            Expr::Ident(Ident::from("y"), Type::Str, ((2, 1), (2, 1))),
+            Expr::Literal(Literal::from("foo"), ((2, 5), (2, 9))),
+        ),
+    ];
+    assert_eq!(expected, Parser::from(input).parse());
+
+    let input = r#"
+        let z = false;
+        z = true;
+        "#;
+    let expected = vec![
+        Stmt::Let(
+            Ident::from("z"),
+            Type::Bool,
+            Expr::Literal(Literal::Bool(false), ((1, 9), (1, 13))),
+        ),
+        Stmt::Assign(
+            Expr::Ident(Ident::from("z"), Type::Bool, ((2, 1), (2, 1))),
+            Expr::Literal(Literal::Bool(true), ((2, 5), (2, 8))),
+        ),
+    ];
+    assert_eq!(expected, Parser::from(input).parse());
+
+    let input = r#"
+        let x = [1, 2, 3];
+        x[1] = 2;
+        "#;
+    let expected = Stmt::Assign(
+        Expr::Index(
+            Box::new(Expr::Ident(
+                Ident::from("x"),
+                Type::List(Box::new(I32)),
+                ((2, 1), (2, 1)),
+            )),
+            Box::new(Expr::Literal(Literal::I32(1), ((2, 3), (2, 3)))),
+            ((2, 1), (2, 4)),
+        ),
+        Expr::Literal(Literal::I32(2), ((2, 8), (2, 8))),
+    );
+    let actual = Parser::from(input).parse();
+    assert_eq!(expected, actual[1]);
+
+    let input = r#"
+        let x = [1, 2, 3];
+        x[0] = true;
+        "#;
+    let mut parser = Parser::from(input);
+    parser.parse();
+    if parser.errors.len() != 1 {
+        panic!("expected 1 error, got:\n{:?}", parser.errors);
+    }
 }
 
 #[test]
@@ -136,9 +194,8 @@ fn test_parse_identifier_expressions() {
             ((1, 11), (1, 16)),
         )),
     ];
-    let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, actual);
+    assert_eq!(expected, Parser::from(input).parse());
 }
 
 #[test]
@@ -153,9 +210,8 @@ fn test_parse_literal_expressions() {
             ((1, 17), (1, 21)),
         )),
     ];
-    let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, actual);
+    assert_eq!(expected, Parser::from(input).parse());
 }
 
 #[test]
@@ -183,9 +239,8 @@ fn test_parse_prefix_expressions() {
             ((1, 16), (1, 21)),
         )),
     ];
-    let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, actual);
+    assert_eq!(expected, Parser::from(input).parse());
 }
 
 #[test]
@@ -329,222 +384,84 @@ fn test_parse_infix_expressions() {
 fn test_parse_operator_precedence() {
     let tests = vec![
         (
-            "-a * b",
+            "-1 * 2",
             Stmt::Expr(Expr::Infix(
                 Infix::Mul,
                 Box::new(Expr::Prefix(
                     Prefix::Minus,
-                    Box::new(Expr::Ident(
-                        Ident::from("a"),
-                        Type::Unknown,
-                        ((1, 2), (1, 2)),
-                    )),
+                    Box::new(Expr::Literal(Literal::I32(1), ((1, 2), (1, 2)))),
                     ((1, 1), (1, 2)),
                 )),
-                Box::new(Expr::Ident(
-                    Ident::from("b"),
-                    Type::Unknown,
-                    ((1, 6), (1, 6)),
-                )),
+                Box::new(Expr::Literal(Literal::I32(2), ((1, 6), (1, 6)))),
                 ((1, 1), (1, 6)),
             )),
         ),
         (
-            "!-a",
+            "!-1",
             Stmt::Expr(Expr::Prefix(
                 Prefix::Not,
                 Box::new(Expr::Prefix(
                     Prefix::Minus,
-                    Box::new(Expr::Ident(
-                        Ident::from("a"),
-                        Type::Unknown,
-                        ((1, 3), (1, 3)),
-                    )),
+                    Box::new(Expr::Literal(Literal::I32(1), ((1, 3), (1, 3)))),
                     ((1, 2), (1, 3)),
                 )),
                 ((1, 1), (1, 3)),
             )),
         ),
         (
-            "a + b + c",
-            Stmt::Expr(Expr::Infix(
-                Infix::Add,
-                Box::new(Expr::Infix(
-                    Infix::Add,
-                    Box::new(Expr::Ident(
-                        Ident::from("a"),
-                        Type::Unknown,
-                        ((1, 1), (1, 1)),
-                    )),
-                    Box::new(Expr::Ident(
-                        Ident::from("b"),
-                        Type::Unknown,
-                        ((1, 5), (1, 5)),
-                    )),
-                    ((1, 1), (1, 5)),
-                )),
-                Box::new(Expr::Ident(
-                    Ident::from("c"),
-                    Type::Unknown,
-                    ((1, 9), (1, 9)),
-                )),
-                ((1, 1), (1, 9)),
-            )),
-        ),
-        (
-            "a + b - c",
-            Stmt::Expr(Expr::Infix(
-                Infix::Sub,
-                Box::new(Expr::Infix(
-                    Infix::Add,
-                    Box::new(Expr::Ident(
-                        Ident::from("a"),
-                        Type::Unknown,
-                        ((1, 1), (1, 1)),
-                    )),
-                    Box::new(Expr::Ident(
-                        Ident::from("b"),
-                        Type::Unknown,
-                        ((1, 5), (1, 5)),
-                    )),
-                    ((1, 1), (1, 5)),
-                )),
-                Box::new(Expr::Ident(
-                    Ident::from("c"),
-                    Type::Unknown,
-                    ((1, 9), (1, 9)),
-                )),
-                ((1, 1), (1, 9)),
-            )),
-        ),
-        (
-            "a * b * c",
+            "1 * 2 * 3",
             Stmt::Expr(Expr::Infix(
                 Infix::Mul,
                 Box::new(Expr::Infix(
                     Infix::Mul,
-                    Box::new(Expr::Ident(
-                        Ident::from("a"),
-                        Type::Unknown,
-                        ((1, 1), (1, 1)),
-                    )),
-                    Box::new(Expr::Ident(
-                        Ident::from("b"),
-                        Type::Unknown,
-                        ((1, 5), (1, 5)),
-                    )),
+                    Box::new(Expr::Literal(Literal::I32(1), ((1, 1), (1, 1)))),
+                    Box::new(Expr::Literal(Literal::I32(2), ((1, 5), (1, 5)))),
                     ((1, 1), (1, 5)),
                 )),
-                Box::new(Expr::Ident(
-                    Ident::from("c"),
-                    Type::Unknown,
-                    ((1, 9), (1, 9)),
-                )),
+                Box::new(Expr::Literal(Literal::I32(3), ((1, 9), (1, 9)))),
                 ((1, 1), (1, 9)),
             )),
         ),
         (
-            "a * b / c",
+            "1 * 2 / 3",
             Stmt::Expr(Expr::Infix(
                 Infix::Div,
                 Box::new(Expr::Infix(
                     Infix::Mul,
-                    Box::new(Expr::Ident(
-                        Ident::from("a"),
-                        Type::Unknown,
-                        ((1, 1), (1, 1)),
-                    )),
-                    Box::new(Expr::Ident(
-                        Ident::from("b"),
-                        Type::Unknown,
-                        ((1, 5), (1, 5)),
-                    )),
+                    Box::new(Expr::Literal(Literal::I32(1), ((1, 1), (1, 1)))),
+                    Box::new(Expr::Literal(Literal::I32(2), ((1, 5), (1, 5)))),
                     ((1, 1), (1, 5)),
                 )),
-                Box::new(Expr::Ident(
-                    Ident::from("c"),
-                    Type::Unknown,
-                    ((1, 9), (1, 9)),
-                )),
+                Box::new(Expr::Literal(Literal::I32(3), ((1, 9), (1, 9)))),
                 ((1, 1), (1, 9)),
             )),
         ),
         (
-            "a + b / c",
-            Stmt::Expr(Expr::Infix(
-                Infix::Add,
-                Box::new(Expr::Ident(
-                    Ident::from("a"),
-                    Type::Unknown,
-                    ((1, 1), (1, 1)),
-                )),
-                Box::new(Expr::Infix(
-                    Infix::Div,
-                    Box::new(Expr::Ident(
-                        Ident::from("b"),
-                        Type::Unknown,
-                        ((1, 5), (1, 5)),
-                    )),
-                    Box::new(Expr::Ident(
-                        Ident::from("c"),
-                        Type::Unknown,
-                        ((1, 9), (1, 9)),
-                    )),
-                    ((1, 5), (1, 9)),
-                )),
-                ((1, 1), (1, 9)),
-            )),
-        ),
-        (
-            "a + b * c + d / e - f",
+            "1 + 2 * 3 + 4 / 5 - 6",
             Stmt::Expr(Expr::Infix(
                 Infix::Sub,
                 Box::new(Expr::Infix(
                     Infix::Add,
                     Box::new(Expr::Infix(
                         Infix::Add,
-                        Box::new(Expr::Ident(
-                            Ident::from("a"),
-                            Type::Unknown,
-                            ((1, 1), (1, 1)),
-                        )),
+                        Box::new(Expr::Literal(Literal::I32(1), ((1, 1), (1, 1)))),
                         Box::new(Expr::Infix(
                             Infix::Mul,
-                            Box::new(Expr::Ident(
-                                Ident::from("b"),
-                                Type::Unknown,
-                                ((1, 5), (1, 5)),
-                            )),
-                            Box::new(Expr::Ident(
-                                Ident::from("c"),
-                                Type::Unknown,
-                                ((1, 9), (1, 9)),
-                            )),
+                            Box::new(Expr::Literal(Literal::I32(2), ((1, 5), (1, 5)))),
+                            Box::new(Expr::Literal(Literal::I32(3), ((1, 9), (1, 9)))),
                             ((1, 5), (1, 9)),
                         )),
                         ((1, 1), (1, 9)),
                     )),
                     Box::new(Expr::Infix(
                         Infix::Div,
-                        Box::new(Expr::Ident(
-                            Ident::from("d"),
-                            Type::Unknown,
-                            ((1, 13), (1, 13)),
-                        )),
-                        Box::new(Expr::Ident(
-                            Ident::from("e"),
-                            Type::Unknown,
-                            ((1, 17), (1, 17)),
-                        )),
+                        Box::new(Expr::Literal(Literal::I32(4), ((1, 13), (1, 13)))),
+                        Box::new(Expr::Literal(Literal::I32(5), ((1, 17), (1, 17)))),
                         ((1, 13), (1, 17)),
                     )),
                     ((1, 1), (1, 17)),
                 )),
-                Box::new(Expr::Ident(
-                    Ident::from("f"),
-                    Type::Unknown,
-                    ((1, 21), (1, 21)),
-                )),
+                Box::new(Expr::Literal(Literal::I32(6), ((1, 21), (1, 21)))),
                 ((1, 1), (1, 21)),
             )),
         ),
@@ -733,7 +650,15 @@ fn test_parse_operator_precedence() {
 
     for (input, expected) in tests {
         let actual = Parser::from(input).parse();
-        assert_eq!(expected, actual[0]);
+        if actual.is_empty() {
+            panic!("input:\n{}", input);
+        }
+        if expected != actual[0] {
+            panic!(
+                "input:\n{}\n\nexpected:\n{:?}\n\nactual:\n{:?}\n\n",
+                input, expected, actual,
+            );
+        }
     }
 }
 

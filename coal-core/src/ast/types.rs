@@ -4,7 +4,7 @@ use crate::{Object, TokenKind};
 
 use super::{Expr, Literal, Prefix};
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq, Default)]
 pub enum Type {
     Bool,
     Str,
@@ -17,6 +17,7 @@ pub enum Type {
     Nil,
     Any,
     Void,
+    #[default]
     Unknown,
 }
 

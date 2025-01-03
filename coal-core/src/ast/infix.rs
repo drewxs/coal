@@ -26,12 +26,12 @@ impl TryFrom<&TokenKind> for Infix {
 
     fn try_from(token: &TokenKind) -> Result<Self, Self::Error> {
         match token {
-            TokenKind::Add => Ok(Infix::Add),
-            TokenKind::Sub => Ok(Infix::Sub),
-            TokenKind::Mul => Ok(Infix::Mul),
-            TokenKind::Div => Ok(Infix::Div),
+            TokenKind::Add | TokenKind::AddAssign => Ok(Infix::Add),
+            TokenKind::Sub | TokenKind::SubAssign => Ok(Infix::Sub),
+            TokenKind::Mul | TokenKind::MulAssign => Ok(Infix::Mul),
+            TokenKind::Div | TokenKind::DivAssign => Ok(Infix::Div),
             TokenKind::IntDiv => Ok(Infix::IntDiv),
-            TokenKind::Rem => Ok(Infix::Rem),
+            TokenKind::Rem | TokenKind::RemAssign => Ok(Infix::Rem),
             TokenKind::EQ => Ok(Infix::EQ),
             TokenKind::NEQ => Ok(Infix::NEQ),
             TokenKind::LT => Ok(Infix::LT),

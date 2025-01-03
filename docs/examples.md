@@ -20,6 +20,8 @@ Lists:
 ```rs
 let x: list[i32] = [1, 2, 3];
 
+x[0]; // 1
+x[-1]; // 3
 x.len(); // 3
 x.first(); // 1
 x.last(); // 3

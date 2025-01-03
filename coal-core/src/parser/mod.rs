@@ -108,6 +108,15 @@ impl Parser {
             .unwrap_or(Token::new(TokenKind::EOF, self.next_node.span));
     }
 
+    fn advance_line(&mut self) {
+        while !matches!(
+            self.curr_node.token,
+            TokenKind::Semicolon | TokenKind::NewLine
+        ) {
+            self.advance();
+        }
+    }
+
     fn consume(&mut self, token: TokenKind) {
         if self.curr_node.token == token {
             self.advance();
@@ -137,6 +146,17 @@ impl Parser {
         ));
 
         None
+    }
+
+    fn lookup_expr_type(&mut self, expr: &Expr) -> Option<Type> {
+        if let Expr::Ident(Ident(name), _, _) = &expr {
+            if let Some(t) = self.symbol_table.borrow().get(name) {
+                return Some(t.clone());
+            } else if let Some(t) = self.symbol_table.borrow().get(&format!("__{name}__")) {
+                return Some(t.clone());
+            }
+        }
+        Type::try_from(expr).ok()
     }
 
     fn parse_block(&mut self) -> Vec<Stmt> {
@@ -174,15 +194,7 @@ impl Parser {
     fn parse_stmt(&mut self) -> Option<Stmt> {
         match &self.curr_node.token {
             TokenKind::Let => self.parse_let_stmt(),
-            TokenKind::Ident(_) => match self.next_node.token {
-                TokenKind::Assign => self.parse_assign_stmt(),
-                TokenKind::AddAssign => self.parse_op_assign_stmt(Infix::Add),
-                TokenKind::SubAssign => self.parse_op_assign_stmt(Infix::Sub),
-                TokenKind::MulAssign => self.parse_op_assign_stmt(Infix::Mul),
-                TokenKind::DivAssign => self.parse_op_assign_stmt(Infix::Div),
-                TokenKind::RemAssign => self.parse_op_assign_stmt(Infix::Rem),
-                _ => self.parse_expr_stmt(),
-            },
+            TokenKind::Ident(_) => self.parse_ident_stmt(),
             TokenKind::Return => self.parse_ret_stmt(),
             TokenKind::Comment(c) => Some(Stmt::Comment(Comment(c.clone()))),
             TokenKind::NewLine => Some(Stmt::Newline),
@@ -191,9 +203,10 @@ impl Parser {
     }
 
     fn parse_let_stmt(&mut self) -> Option<Stmt> {
-        if let TokenKind::Ident(_) = self.next_node.token {
-            self.advance();
-        } else {
+        self.advance();
+        if !matches!(self.curr_node.token, TokenKind::Ident(_)) {
+            self.error(ParserErrorKind::SyntaxError(self.curr_node.token.clone()));
+            self.advance_line();
             return None;
         }
 
@@ -264,31 +277,47 @@ impl Parser {
         Some(Stmt::Let(ident, t, expr))
     }
 
-    fn parse_assign_stmt(&mut self) -> Option<Stmt> {
-        let ident = Ident::try_from(&self.curr_node.token).ok()?;
+    fn parse_ident_stmt(&mut self) -> Option<Stmt> {
+        let lhs = self.parse_expr(Precedence::Lowest)?;
         self.advance();
-        self.advance();
-        self.parse_expr(Precedence::Lowest).map(|expr| {
-            self.consume_next(TokenKind::Semicolon);
-            Stmt::Assign(ident, expr)
-        })
+
+        let infix = match self.curr_node.token {
+            TokenKind::AddAssign
+            | TokenKind::SubAssign
+            | TokenKind::MulAssign
+            | TokenKind::DivAssign
+            | TokenKind::RemAssign => Infix::try_from(&self.curr_node.token).ok(),
+            TokenKind::Assign => None,
+            _ => return Some(Stmt::Expr(lhs)),
+        };
+
+        self.parse_assign_stmt(lhs, infix)
     }
 
-    fn parse_op_assign_stmt(&mut self, op: Infix) -> Option<Stmt> {
-        let ident = Ident::try_from(&self.curr_node.token).ok()?;
+    fn parse_assign_stmt(&mut self, lhs: Expr, infix: Option<Infix>) -> Option<Stmt> {
         self.advance();
-        self.advance();
-        self.parse_expr(Precedence::Lowest).map(|expr| {
-            self.consume_next(TokenKind::Semicolon);
-            match op {
-                Infix::Add => Stmt::AddAssign(ident, expr),
-                Infix::Sub => Stmt::SubAssign(ident, expr),
-                Infix::Mul => Stmt::MulAssign(ident, expr),
-                Infix::Div => Stmt::DivAssign(ident, expr),
-                Infix::Rem => Stmt::RemAssign(ident, expr),
-                _ => unreachable!(),
-            }
-        })
+
+        let lhs_t = self.lookup_expr_type(&lhs)?;
+
+        let rhs = self.parse_expr(Precedence::Lowest)?;
+        let rhs_t = self.lookup_expr_type(&rhs)?;
+
+        if lhs_t != rhs_t && !(lhs_t.is_numeric() && rhs_t.is_numeric()) {
+            self.errors.push(ParserError::new(
+                ParserErrorKind::TypeMismatch(lhs_t, rhs_t),
+                rhs.span(),
+            ));
+            self.advance_line();
+            return None;
+        }
+
+        self.consume_next(TokenKind::Semicolon);
+
+        if let Some(op) = infix {
+            Some(Stmt::OpAssign(op, lhs, rhs))
+        } else {
+            Some(Stmt::Assign(lhs, rhs))
+        }
     }
 
     fn parse_ret_stmt(&mut self) -> Option<Stmt> {
@@ -306,10 +335,7 @@ impl Parser {
                 .map(|ident| {
                     Expr::Ident(
                         ident,
-                        self.symbol_table
-                            .borrow()
-                            .get(name)
-                            .unwrap_or(Type::Unknown),
+                        self.symbol_table.borrow().get(name).unwrap_or_default(),
                         *span,
                     )
                 })
@@ -438,7 +464,7 @@ impl Parser {
             .symbol_table
             .borrow()
             .get(&format!("__{name}__"))
-            .unwrap_or(Type::Unknown);
+            .unwrap_or_default();
 
         Some(Expr::Call {
             name,
@@ -554,7 +580,7 @@ impl Parser {
             args = self.parse_expr_list(TokenKind::Rparen)?;
         }
 
-        let lhs_t = Type::try_from(&lhs).unwrap_or(Type::Unknown);
+        let lhs_t = Type::try_from(&lhs).unwrap_or_default();
 
         if let Some(method) = lhs_t.sig(&method_name) {
             if args.len() != method.args_t.len() {
@@ -696,7 +722,7 @@ impl Parser {
 
         let iter_t = Type::try_from(&expr)
             .map(|t| t.extract().to_owned())
-            .unwrap_or(Type::Unknown);
+            .unwrap_or_default();
 
         let mut st = SymbolTable::from(Rc::clone(&self.symbol_table));
         st.set(ident.name(), iter_t);
@@ -811,7 +837,7 @@ impl Parser {
 
         let mut args = vec![];
         while let TokenKind::Ident(_) = self.curr_node.token.clone() {
-            let t = self.parse_type().unwrap_or(Type::Unknown);
+            let t = self.parse_type().unwrap_or_default();
             self.advance();
             self.consume_next(TokenKind::Comma);
             self.advance();
@@ -822,7 +848,7 @@ impl Parser {
         let ret_t = match self.curr_node.token {
             TokenKind::Arrow => {
                 self.advance();
-                self.parse_ret_type().unwrap_or(Type::Void)
+                self.parse_ret_type().unwrap_or_default()
             }
             _ => Type::Void,
         };
@@ -834,7 +860,7 @@ impl Parser {
         self.advance();
         self.consume(TokenKind::Lbracket);
 
-        let t = self.parse_type().unwrap_or(Type::Unknown);
+        let t = self.parse_type().unwrap_or_default();
         self.consume_next(TokenKind::Rbracket);
 
         Some(Type::List(Box::new(t)))

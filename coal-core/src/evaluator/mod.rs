@@ -66,12 +66,8 @@ impl Evaluator<'_> {
     fn eval_stmt(&mut self, stmt: Stmt) -> Option<Object> {
         match stmt {
             Stmt::Let(ident, t, expr) => self.eval_let_stmt(&ident, &t, &expr),
-            Stmt::Assign(ident, expr) => self.eval_assign_stmt(&ident, &expr),
-            Stmt::AddAssign(ident, expr) => self.eval_op_assign_stmt(&ident, &expr, Infix::Add),
-            Stmt::SubAssign(ident, expr) => self.eval_op_assign_stmt(&ident, &expr, Infix::Sub),
-            Stmt::MulAssign(ident, expr) => self.eval_op_assign_stmt(&ident, &expr, Infix::Mul),
-            Stmt::DivAssign(ident, expr) => self.eval_op_assign_stmt(&ident, &expr, Infix::Div),
-            Stmt::RemAssign(ident, expr) => self.eval_op_assign_stmt(&ident, &expr, Infix::Rem),
+            Stmt::Assign(lhs, rhs) => self.eval_assign_stmt(&lhs, &rhs, None),
+            Stmt::OpAssign(op, lhs, rhs) => self.eval_assign_stmt(&lhs, &rhs, Some(op)),
             Stmt::Return(expr) => self.eval_return_stmt(&expr),
             Stmt::Expr(expr) => self.eval_expr(&expr),
             _ => None,
@@ -139,95 +135,130 @@ impl Evaluator<'_> {
         None
     }
 
-    fn eval_assign_stmt(&mut self, ident: &Ident, expr: &Expr) -> Option<Object> {
-        let Ident(name) = ident;
-        let curr = self.env.borrow_mut().get(name);
+    fn eval_assign_stmt(&mut self, lhs: &Expr, rhs: &Expr, op: Option<Infix>) -> Option<Object> {
+        // Create list of indices for nested indexing
+        let (name, indices) = match lhs {
+            Expr::Ident(ident, _, _) => (ident.name(), vec![]),
+            Expr::Index(expr, idx, _) => {
+                let mut indices = Vec::new();
+                indices.push(*idx.clone());
 
-        if let Some(curr) = curr {
-            let mut val = self.eval_expr(expr)?;
-            if let Object::Error { .. } = val {
-                return Some(val);
-            }
+                let mut curr_expr = expr.clone();
+                while let Expr::Index(inner_expr, inner_idx, _) = curr_expr.as_ref() {
+                    indices.push(*inner_idx.clone());
+                    curr_expr = inner_expr.clone();
+                }
 
-            if let Object::Fn { .. } = curr {
-                return Some(Object::Error(RuntimeError::new(
-                    RuntimeErrorKind::ReassignmentToFunction,
-                    expr.span(),
-                )));
-            }
-
-            let curr_t = Type::from(&curr);
-            let resolved_t = Type::from(&val);
-
-            if curr_t != resolved_t {
-                if let Some(casted) = val.cast(&curr_t) {
-                    val = casted;
+                if let Expr::Ident(ident, _, _) = curr_expr.as_ref() {
+                    (ident.name(), indices.into_iter().rev().collect())
                 } else {
-                    return Some(Object::Error(RuntimeError::new(
-                        RuntimeErrorKind::TypeMismatch(curr_t, resolved_t),
-                        expr.span(),
-                    )));
+                    unreachable!()
                 }
             }
+            _ => unreachable!(),
+        };
 
-            self.env.borrow_mut().set_in_scope(name.to_owned(), val);
+        let curr = match self.env.borrow_mut().get(&name) {
+            Some(value) => value,
+            None => {
+                return Some(Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
+                    lhs.span(),
+                )))
+            }
+        };
 
-            None
-        } else {
-            let ((line, _), _) = expr.span();
-            Some(Object::Error(RuntimeError::new(
-                RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
-                ((line, 1), (line, name.len())),
-            )))
+        let mut val = self.eval_expr(rhs)?;
+        if let Object::Error { .. } = val {
+            return Some(val);
         }
-    }
 
-    fn eval_op_assign_stmt(&mut self, ident: &Ident, expr: &Expr, op: Infix) -> Option<Object> {
-        let Ident(name) = ident;
-        let curr = self.env.borrow_mut().get(name);
-        let span = expr.span();
+        if let Object::Fn { .. } = curr {
+            return Some(Object::Error(RuntimeError::new(
+                RuntimeErrorKind::ReassignmentToFunction,
+                rhs.span(),
+            )));
+        }
 
-        if let Some(curr) = curr {
-            let mut val = self.eval_expr(expr)?;
-            if let Object::Error { .. } = val {
-                return Some(val);
-            }
+        let lhs_t = Type::try_from(lhs).unwrap_or_default();
+        let curr_t = Type::from(&curr);
+        let resolved_t = Type::from(&val);
 
-            if let Object::Fn { .. } = curr {
+        if lhs_t != resolved_t {
+            if let Some(casted) = val.cast(&lhs_t) {
+                val = casted;
+            } else {
                 return Some(Object::Error(RuntimeError::new(
-                    RuntimeErrorKind::ReassignmentToFunction,
-                    expr.span(),
+                    RuntimeErrorKind::TypeMismatch(lhs_t, resolved_t),
+                    rhs.span(),
                 )));
             }
+        }
 
-            let curr_t = Type::from(&curr);
-            let resolved_t = Type::from(&val);
+        if let Object::List { mut data, t } = curr {
+            let mut target = &mut data;
 
-            if curr_t != resolved_t {
-                if let Some(casted) = val.cast(&curr_t) {
-                    val = casted;
+            for idx in indices.iter() {
+                if let Ok(i) = idx.clone().try_into() {
+                    if i >= target.len() {
+                        return Some(Object::Error(RuntimeError::new(
+                            RuntimeErrorKind::IndexOutOfBounds(i, target.len()),
+                            idx.span(),
+                        )));
+                    }
+
+                    if indices.last() == Some(idx) {
+                        // Final index, assign value
+                        if let Some(op) = op {
+                            target[i] =
+                                self.eval_infix_objects(&op, target[i].clone(), val, &idx.span())?;
+                        } else {
+                            target[i] = val;
+                        }
+
+                        self.env
+                            .borrow_mut()
+                            .set_in_scope(name.to_owned(), Object::List { data, t });
+
+                        return None;
+                    } else if let Object::List {
+                        data: inner_data, ..
+                    } = &mut target[i]
+                    {
+                        // Drill down into the nested list
+                        target = inner_data;
+                    } else {
+                        return Some(Object::Error(RuntimeError::new(
+                            RuntimeErrorKind::InvalidIndex(
+                                curr_t,
+                                Type::try_from(idx).unwrap_or_default(),
+                            ),
+                            idx.span(),
+                        )));
+                    }
                 } else {
                     return Some(Object::Error(RuntimeError::new(
-                        RuntimeErrorKind::TypeMismatch(curr_t, resolved_t),
-                        expr.span(),
+                        RuntimeErrorKind::InvalidIndex(
+                            curr_t,
+                            Type::try_from(idx).unwrap_or_default(),
+                        ),
+                        idx.span(),
                     )));
                 }
             }
-
-            let updated_val = self.eval_infix_objects(&op, curr, val, &span);
+        } else {
+            let updated_val = if let Some(op) = op {
+                self.eval_infix_objects(&op, curr, val, &rhs.span())?
+            } else {
+                val
+            };
 
             self.env
                 .borrow_mut()
-                .set_in_scope(name.to_owned(), updated_val?);
-
-            None
-        } else {
-            let ((line, _), _) = expr.span();
-            Some(Object::Error(RuntimeError::new(
-                RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
-                ((line, 1), (line, name.len())),
-            )))
+                .set_in_scope(name.to_owned(), updated_val);
         }
+
+        None
     }
 
     fn eval_return_stmt(&mut self, expr: &Expr) -> Option<Object> {

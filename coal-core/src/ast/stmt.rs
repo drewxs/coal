@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{Comment, Expr, Ident, Type};
+use super::{Comment, Expr, Ident, Infix, Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
@@ -8,12 +8,8 @@ pub enum Stmt {
     Newline,
     Comment(Comment),
     Let(Ident, Type, Expr),
-    Assign(Ident, Expr),
-    AddAssign(Ident, Expr),
-    SubAssign(Ident, Expr),
-    MulAssign(Ident, Expr),
-    DivAssign(Ident, Expr),
-    RemAssign(Ident, Expr),
+    Assign(Expr, Expr),
+    OpAssign(Infix, Expr, Expr),
     Return(Expr),
     Expr(Expr),
 }
@@ -31,23 +27,11 @@ impl Stmt {
                 expr.fmt_with_indent(f, indent_level)?;
                 writeln!(f, ";")
             }
-            Stmt::Assign(ident, expr) => {
-                writeln!(f, "{}{ident} = {expr};", indent)
+            Stmt::Assign(lhs, rhs) => {
+                writeln!(f, "{}{lhs} = {rhs};", indent)
             }
-            Stmt::AddAssign(ident, expr) => {
-                writeln!(f, "{}{ident} += {expr};", indent)
-            }
-            Stmt::SubAssign(ident, expr) => {
-                writeln!(f, "{}{ident} -= {expr};", indent)
-            }
-            Stmt::MulAssign(ident, expr) => {
-                writeln!(f, "{}{ident} *= {expr};", indent)
-            }
-            Stmt::DivAssign(ident, expr) => {
-                writeln!(f, "{}{ident} /= {expr};", indent)
-            }
-            Stmt::RemAssign(ident, expr) => {
-                writeln!(f, "{}{ident} %= {expr};", indent)
+            Stmt::OpAssign(op, lhs, rhs) => {
+                writeln!(f, "{}{lhs} {op}= {rhs};", indent)
             }
             Stmt::Return(expr) => {
                 write!(f, "{}return ", indent)?;
