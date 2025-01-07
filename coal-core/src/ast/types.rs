@@ -170,7 +170,7 @@ impl From<&Literal> for Type {
             Literal::F32(_) => F32,
             Literal::F64(_) => F64,
             Literal::Bool(_) => Type::Bool,
-            Literal::List(_, t) => Type::List(Box::new(t.to_owned())),
+            Literal::List(_, t, _) => Type::List(Box::new(t.to_owned())),
             Literal::Nil => Type::Nil,
         }
     }

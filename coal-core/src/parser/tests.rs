@@ -1095,7 +1095,7 @@ fn test_parse_lists() {
         (
             "[]",
             Stmt::Expr(Expr::Literal(
-                Literal::List(vec![], Type::Unknown),
+                Literal::List(vec![], Type::Unknown, None),
                 ((1, 1), (1, 2)),
             )),
         ),
@@ -1108,6 +1108,7 @@ fn test_parse_lists() {
                         Expr::Literal(Literal::I32(2), ((1, 5), (1, 5))),
                     ],
                     I32,
+                    None,
                 ),
                 ((1, 1), (1, 6)),
             )),
@@ -1123,6 +1124,7 @@ fn test_parse_lists() {
                         span: ((1, 2), (1, 6)),
                     }],
                     Type::Unknown,
+                    None,
                 ),
                 ((1, 1), (1, 7)),
             )),
@@ -1143,6 +1145,7 @@ fn test_parse_lists() {
                         span: ((4, 2), (4, 6)),
                     }],
                     Type::Str,
+                    None,
                 ),
                 ((4, 1), (4, 7)),
             )),
@@ -1158,6 +1161,7 @@ fn test_parse_lists() {
                             Expr::Literal(Literal::I32(3), ((1, 8), (1, 8))),
                         ],
                         I32,
+                        None,
                     ),
                     ((1, 1), (1, 9)),
                 )),
@@ -1182,6 +1186,7 @@ fn test_parse_lists() {
                         Expr::Literal(Literal::I32(1), ((1, 27), (1, 27))),
                     ],
                     I32,
+                    None,
                 ),
                 ((1, 20), (1, 28)),
             )),
@@ -1191,7 +1196,10 @@ fn test_parse_lists() {
             Stmt::Let(
                 Ident(String::from("x")),
                 Type::List(Box::new(I32)),
-                Expr::Literal(Literal::List(vec![], Type::Unknown), ((1, 20), (1, 21))),
+                Expr::Literal(
+                    Literal::List(vec![], Type::Unknown, None),
+                    ((1, 20), (1, 21)),
+                ),
             ),
         ),
     ];

@@ -331,7 +331,7 @@ impl Evaluator<'_> {
     fn eval_literal_expr(&mut self, literal: &Literal, span: &Span) -> Option<Object> {
         match literal {
             Literal::Str(s) => self.eval_str(s, span),
-            Literal::List(l, t) => self.eval_list_expr(l, t),
+            Literal::List(l, t, repeat) => self.eval_list_expr(l, t, repeat),
             _ => Some(Object::from(literal)),
         }
     }
@@ -386,15 +386,29 @@ impl Evaluator<'_> {
         Some(Object::Str(res))
     }
 
-    fn eval_list_expr(&mut self, list: &[Expr], t: &Type) -> Option<Object> {
+    fn eval_list_expr(
+        &mut self,
+        list: &[Expr],
+        t: &Type,
+        repeat: &Option<Box<Expr>>,
+    ) -> Option<Object> {
         let mut data = vec![];
 
-        for item in list {
-            if let Some(val) = self.eval_expr(item) {
-                if let Object::Error { .. } = val {
-                    return Some(val);
+        if let Some(repeat) = repeat {
+            if let Some(i) = list.first() {
+                let item = self.eval_expr(i)?;
+                let n_obj = self.eval_expr(repeat)?;
+                let n: usize = n_obj.try_into().ok()?;
+                data = vec![item; n];
+            }
+        } else {
+            for item in list {
+                if let Some(val) = self.eval_expr(item) {
+                    if let Object::Error { .. } = val {
+                        return Some(val);
+                    }
+                    data.push(val);
                 }
-                data.push(val);
             }
         }
 
@@ -527,14 +541,14 @@ impl Evaluator<'_> {
             Object::Range(start, end) => {
                 for i in start..end {
                     let mut enclosed_env = Env::from(Rc::clone(&self.env));
-                    enclosed_env.set_in_scope(ident.name(), Object::U64(i as u64));
+                    enclosed_env.set_in_store(ident.name(), Object::U64(i as u64));
                     self.eval_stmts_in_scope(body.to_owned(), Rc::new(RefCell::new(enclosed_env)));
                 }
             }
             Object::List { data, .. } => {
                 for item in data {
                     let mut enclosed_env = Env::from(Rc::clone(&self.env));
-                    enclosed_env.set_in_scope(ident.name(), item);
+                    enclosed_env.set_in_store(ident.name(), item);
                     self.eval_stmts_in_scope(body.to_owned(), Rc::new(RefCell::new(enclosed_env)));
                 }
             }

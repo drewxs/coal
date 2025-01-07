@@ -9,6 +9,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     Comment, Expr, Ident, IfExpr, Infix, Lexer, Literal, Prefix, Stmt, Token, TokenKind, Type, Var,
+    U32,
 };
 
 pub use error::{ParserError, ParserErrorKind};
@@ -512,19 +513,32 @@ impl Parser {
         Some(list)
     }
 
-    fn parse_uniform_expr_list(&mut self, end_tok: TokenKind) -> Option<(Vec<Expr>, Type)> {
+    fn parse_uniform_expr_list(
+        &mut self,
+        end_tok: TokenKind,
+    ) -> Option<(Vec<Expr>, Type, Option<Box<Expr>>)> {
         let mut list = vec![];
 
         if self.next_node.token == end_tok {
             self.advance();
-            return Some((list, Type::Unknown));
+            return Some((list, Type::Unknown, None));
         }
 
         self.advance();
 
         let expr = self.parse_expr(Precedence::Lowest)?;
-        let t = Type::try_from(&expr).ok()?;
-        list.push(expr);
+        let t = Type::try_from(&expr).unwrap_or_default();
+        list.push(expr.clone());
+
+        if self.next_node.token == TokenKind::Semicolon {
+            self.advance();
+            self.advance();
+
+            if let Some(expr_list) = self.parse_repeat_expr_list(&expr, &t) {
+                self.expect_next(end_tok)?;
+                return Some(expr_list);
+            }
+        }
 
         while self.next_node.token == TokenKind::Comma {
             self.advance();
@@ -559,7 +573,49 @@ impl Parser {
 
         self.expect_next(end_tok)?;
 
-        Some((list, t))
+        Some((list, t, None))
+    }
+
+    fn parse_repeat_expr_list(
+        &mut self,
+        expr: &Expr,
+        t: &Type,
+    ) -> Option<(Vec<Expr>, Type, Option<Box<Expr>>)> {
+        let rhs = self.parse_expr(Precedence::Lowest)?;
+        let (list, repeat) = match &rhs {
+            Expr::Literal(Literal::U32(i), _) => {
+                (vec![expr.clone(); *i as usize], Some(Box::new(rhs.clone())))
+            }
+            Expr::Literal(Literal::U64(i), _) => {
+                (vec![expr.clone(); *i as usize], Some(Box::new(rhs.clone())))
+            }
+            Expr::Literal(Literal::I32(i), _) => {
+                (vec![expr.clone(); *i as usize], Some(Box::new(rhs.clone())))
+            }
+            Expr::Literal(Literal::I64(i), _) => {
+                (vec![expr.clone(); *i as usize], Some(Box::new(rhs.clone())))
+            }
+            Expr::Call { ret_t, .. } | Expr::MethodCall { ret_t, .. } => {
+                if !ret_t.is_numeric() {
+                    self.errors.push(ParserError::new(
+                        ParserErrorKind::TypeMismatch(U32, t.clone()),
+                        self.next_node.span,
+                    ));
+                    (vec![], None)
+                } else {
+                    (vec![expr.clone()], Some(Box::new(rhs.clone())))
+                }
+            }
+            _ => {
+                self.errors.push(ParserError::new(
+                    ParserErrorKind::TypeMismatch(U32, t.clone()),
+                    self.next_node.span,
+                ));
+                (vec![], None)
+            }
+        };
+
+        Some((list, t.clone(), repeat))
     }
 
     fn parse_method_call(&mut self, lhs: Expr) -> Option<Expr> {
@@ -625,10 +681,10 @@ impl Parser {
 
     fn parse_list_expr(&mut self) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
-        let (items, t) = self.parse_uniform_expr_list(TokenKind::Rbracket)?;
+        let (items, t, repeat) = self.parse_uniform_expr_list(TokenKind::Rbracket)?;
         let (_, end) = self.curr_node.span;
 
-        Some(Expr::Literal(Literal::List(items, t), (start, end)))
+        Some(Expr::Literal(Literal::List(items, t, repeat), (start, end)))
     }
 
     fn parse_if_expr(&mut self) -> Option<Expr> {

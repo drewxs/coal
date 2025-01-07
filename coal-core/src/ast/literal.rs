@@ -13,7 +13,7 @@ pub enum Literal {
     F64(f64),
     Str(String),
     Bool(bool),
-    List(Vec<Expr>, Type),
+    List(Vec<Expr>, Type, Option<Box<Expr>>),
     Nil,
 }
 
@@ -101,13 +101,21 @@ impl fmt::Display for Literal {
             Literal::F32(x) => write!(f, "{x:?}"),
             Literal::F64(x) => write!(f, "{x:?}"),
             Literal::Bool(b) => write!(f, "{b}"),
-            Literal::List(l, _) => {
-                let list = l
-                    .iter()
-                    .map(|e| e.to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                write!(f, "[{list}]")
+            Literal::List(l, _, repeat) => {
+                if let Some(n) = repeat {
+                    if let Some(e) = l.first() {
+                        write!(f, "[{e}; {n}]")
+                    } else {
+                        write!(f, "[?; {n}]",)
+                    }
+                } else {
+                    let list = l
+                        .iter()
+                        .map(|e| e.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    write!(f, "[{list}]")
+                }
             }
             Literal::Nil => write!(f, "nil"),
         }
