@@ -13,8 +13,6 @@ println("2nd: {second}");
 let s: str = x.join(", ");
 println("joined: {s}");
 
-println("list: {x}");
-
 let matrix: list[list[i32]] = [[1, 2, 3], [4, 5, 6]];
 println("matrix: {matrix}");
 

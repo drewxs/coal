@@ -1,0 +1,21 @@
+fn matmul(a: list[list[i32]], b: list[list[i32]]) -> list[list[i32]] {
+    let res: list[list[i32]] = [[0; b[0].len()]; a.len()];
+    for i in 0..a.len() {
+        for j in 0..b[0].len() {
+            for k in 0..a[0].len() {
+                res[i][j] += a[i][k] * b[k][j];
+            }
+        }
+    }
+    return res;
+}
+
+fn main() {
+    let a: list[list[i32]] = [[1, 2, 3], [4, 5, 6]];
+    let b: list[list[i32]] = [[7, 8], [9, 10], [11, 12]];
+
+    let result: list[list[i32]] = matmul(a, b);
+
+    println(result);
+}
+
