@@ -205,7 +205,7 @@ impl Evaluator<'_> {
             let mut target = &mut data;
 
             for idx in indices.iter() {
-                if let Ok(i) = idx.clone().try_into() {
+                if let Ok(i) = self.eval_expr(idx)?.try_into() {
                     if i >= target.len() {
                         return Some(Object::Error(RuntimeError::new(
                             RuntimeErrorKind::IndexOutOfBounds(i, target.len()),
