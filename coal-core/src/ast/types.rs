@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, fmt};
+use std::fmt;
 
 use crate::{Object, TokenKind};
 
@@ -218,7 +218,7 @@ impl TryFrom<&Expr> for Type {
             Expr::Literal(l, _) => Ok(Type::from(l)),
             Expr::Prefix(prefix, rhs, _) => match prefix {
                 Prefix::Not => Ok(Type::Bool),
-                _ => Type::try_from(Borrow::<Expr>::borrow(rhs)),
+                _ => Type::try_from(&**rhs),
             },
             Expr::Infix(_, lhs, rhs, _) => infer_infix_type(lhs, rhs),
             Expr::Index(expr, _, _) => match Type::try_from(&**expr) {
