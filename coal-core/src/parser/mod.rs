@@ -153,7 +153,7 @@ impl Parser {
         if let Expr::Ident(Ident(name), _, _) = &expr {
             if let Some(t) = self.symbol_table.borrow().get(name) {
                 return Some(t.clone());
-            } else if let Some(t) = self.symbol_table.borrow().get(&format!("__{name}__")) {
+            } else if let Some(t) = self.symbol_table.borrow().get_ret_t(name) {
                 return Some(t.clone());
             }
         }
@@ -236,7 +236,7 @@ impl Parser {
         if let Expr::Ident(Ident(name), _, _) = &expr {
             if let Some(t) = self.symbol_table.borrow().get(name) {
                 declared_t = Some(t.clone());
-            } else if let Some(t) = self.symbol_table.borrow().get(&format!("__{name}__")) {
+            } else if let Some(t) = self.symbol_table.borrow().get_ret_t(name) {
                 declared_t = Some(t.clone());
             }
         } else if let Ok(inf_t) = Type::try_from(&expr) {
@@ -270,7 +270,7 @@ impl Parser {
         if let Type::Fn(_, ret_t) = &t {
             self.symbol_table
                 .borrow_mut()
-                .set(format!("__{}__", ident.name()), *ret_t.clone());
+                .set_ret_t(ident.name(), *ret_t.clone());
         }
 
         self.consume_next(TokenKind::Semicolon);
@@ -464,7 +464,7 @@ impl Parser {
         let ret_t = self
             .symbol_table
             .borrow()
-            .get(&format!("__{name}__"))
+            .get_ret_t(&name)
             .unwrap_or_default();
 
         Some(Expr::Call {
@@ -812,7 +812,7 @@ impl Parser {
         for arg in args.iter() {
             st.set(arg.name.clone(), arg.t.clone());
             if let Type::Fn(_, t) = &arg.t {
-                st.set(format!("__{}__", arg.name), *t.clone());
+                st.set_ret_t(arg.name.clone(), *t.clone());
             }
         }
 

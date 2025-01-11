@@ -36,8 +36,16 @@ impl SymbolTable {
         })
     }
 
+    pub fn get_ret_t(&self, key: &str) -> Option<Type> {
+        self.get(&format!("__{}__", key))
+    }
+
     pub fn set(&mut self, key: String, value: Type) {
         self.store.insert(key, value);
+    }
+
+    pub fn set_ret_t(&mut self, key: String, value: Type) {
+        self.set(format!("__{}__", key), value);
     }
 }
 
