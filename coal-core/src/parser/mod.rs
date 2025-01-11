@@ -112,7 +112,7 @@ impl Parser {
     fn advance_line(&mut self) {
         while !matches!(
             self.curr_node.token,
-            TokenKind::Semicolon | TokenKind::NewLine
+            TokenKind::Semicolon | TokenKind::NewLine | TokenKind::EOF
         ) {
             self.advance();
         }
