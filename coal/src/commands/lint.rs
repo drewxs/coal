@@ -4,6 +4,11 @@ pub fn lint(input: &str) {
     let mut parser = Parser::from(input);
     parser.parse();
 
+    if parser.errors.is_empty() {
+        println!("\x1b[32mNo errors\x1b[0m");
+        return;
+    }
+
     for e in parser.errors {
         let ((l1, c1), (_, c2)) = e.span;
 
