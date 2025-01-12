@@ -230,7 +230,7 @@ impl Parser {
     }
 
     fn parse_let_stmt(&mut self) -> Option<Stmt> {
-        self.advance();
+        self.advance(); // 'let'
         if !matches!(self.curr_node.token, TokenKind::Ident(_)) {
             self.error(ParserErrorKind::SyntaxError(self.curr_node.token.clone()));
             self.advance_line();
@@ -322,7 +322,7 @@ impl Parser {
     }
 
     fn parse_assign_stmt(&mut self, lhs: Expr, infix: Option<Infix>) -> Option<Stmt> {
-        self.advance();
+        self.advance(); // '='
 
         let lhs_t = self.lookup_expr_type(&lhs)?;
 
@@ -348,7 +348,7 @@ impl Parser {
     }
 
     fn parse_ret_stmt(&mut self) -> Option<Stmt> {
-        self.advance();
+        self.advance(); // 'return'
         let expr = self.parse_expr(Precedence::Lowest).map(Stmt::Return);
         self.consume_next(TokenKind::Semicolon);
         expr
@@ -427,6 +427,7 @@ impl Parser {
                     }
                 }
                 TokenKind::Lbracket => {
+                    self.advance();
                     lhs = self.parse_index_expr(&lhs?);
                 }
                 TokenKind::Dot => {
@@ -483,10 +484,11 @@ impl Parser {
 
     fn parse_call_expr(&mut self, name: String) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
-        self.advance();
+        self.advance(); // ident
 
         let args = self.parse_expr_list(TokenKind::Rparen)?;
         let (_, end) = self.curr_node.span;
+
         let ret_t = self
             .symbol_table
             .borrow()
@@ -503,8 +505,7 @@ impl Parser {
 
     fn parse_index_expr(&mut self, lhs: &Expr) -> Option<Expr> {
         let (start, _) = lhs.span();
-        self.advance();
-        self.advance();
+        self.advance(); // '['
 
         let idx = self.parse_expr(Precedence::Lowest)?;
         self.expect_next(TokenKind::Rbracket)?;
@@ -526,7 +527,7 @@ impl Parser {
             return Some(list);
         }
 
-        self.advance();
+        self.advance(); // '('
         list.push(self.parse_expr(Precedence::Lowest)?);
 
         while self.next_node.token == TokenKind::Comma {
@@ -645,9 +646,10 @@ impl Parser {
     }
 
     fn parse_method_call(&mut self, lhs: Expr) -> Option<Expr> {
-        let (start, _) = self.curr_node.span;
+        self.advance(); // lhs
         self.advance();
-        self.advance();
+
+        let (start, _) = lhs.span();
 
         let method_name = if let TokenKind::Ident(name) = &self.curr_node.token {
             name.clone()
@@ -699,7 +701,7 @@ impl Parser {
     }
 
     fn parse_grouped_expr(&mut self) -> Option<Expr> {
-        self.advance();
+        self.advance(); // '('
         let expr = self.parse_expr(Precedence::Lowest);
         self.expect_next(TokenKind::Rparen)?;
         expr
@@ -715,7 +717,7 @@ impl Parser {
 
     fn parse_if_expr(&mut self) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
-        self.advance();
+        self.advance(); // 'if'
 
         let cond = self.parse_expr(Precedence::Lowest)?;
         self.expect_next(TokenKind::Lbrace)?;
@@ -759,7 +761,7 @@ impl Parser {
 
     fn parse_while_expr(&mut self) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
-        self.advance();
+        self.advance(); // 'while'
 
         let cond = self.parse_expr(Precedence::Lowest)?;
         self.expect_next(TokenKind::Lbrace)?;
@@ -777,7 +779,7 @@ impl Parser {
 
     fn parse_range_expr(&mut self, lhs: &Expr) -> Option<Expr> {
         let (start, _) = lhs.span();
-        self.advance();
+        self.advance(); // lhs
         self.advance();
 
         let rhs = self.parse_expr(Precedence::Lowest)?;
@@ -792,7 +794,7 @@ impl Parser {
 
     fn parse_iter_expr(&mut self) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
-        self.advance();
+        self.advance(); // 'for'
 
         let ident = Ident::try_from(&self.curr_node.token).ok()?;
         self.advance();
@@ -822,7 +824,7 @@ impl Parser {
 
     fn parse_fn_expr(&mut self) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
-        self.advance();
+        self.advance(); // 'fn'
 
         let ident = Ident::try_from(&self.curr_node.token).ok()?;
         self.expect_next(TokenKind::Lparen)?;
@@ -959,8 +961,8 @@ impl Parser {
     }
 
     fn parse_fn_type(&mut self) -> Option<Type> {
-        self.advance();
-        self.advance();
+        self.advance(); // 'Fn'
+        self.consume(TokenKind::Lparen);
 
         let mut args = vec![];
         while let TokenKind::Ident(_) = self.curr_node.token.clone() {
@@ -984,7 +986,7 @@ impl Parser {
     }
 
     fn parse_list_type(&mut self) -> Option<Type> {
-        self.advance();
+        self.advance(); // 'list'
         self.consume(TokenKind::Lbracket);
 
         let t = self.parse_type().unwrap_or_default();

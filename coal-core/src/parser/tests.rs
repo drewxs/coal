@@ -1086,7 +1086,13 @@ fn test_parse_infer_type_from_method() {
 
 #[test]
 fn test_parse_promote_infix_i32_u64() {
-    let input = "fn foo() -> u64 { return 1 }; let x = 2; let y = foo() + x;";
+    let input = r#"
+    fn foo() -> u64 {
+        return 1;
+    };
+    let x = 2;
+    let y = foo() + x;
+    "#;
     let expected = Stmt::Let(
         Ident(String::from("y")),
         I64,
@@ -1096,10 +1102,10 @@ fn test_parse_promote_infix_i32_u64() {
                 name: String::from("foo"),
                 args: vec![],
                 ret_t: U64,
-                span: ((1, 50), (1, 54)),
+                span: ((5, 9), (5, 13)),
             }),
-            Box::new(Expr::Ident(Ident::from("x"), I32, ((1, 58), (1, 58)))),
-            ((1, 50), (1, 58)),
+            Box::new(Expr::Ident(Ident::from("x"), I32, ((5, 17), (5, 17)))),
+            ((5, 9), (5, 17)),
         ),
     );
     let actual = Parser::from(input).parse();
