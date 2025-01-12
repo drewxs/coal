@@ -966,6 +966,24 @@ fn test_parse_function_expressions() {
             );
         }
     }
+
+    let tests = vec![
+        "fn f() -> i32 {}",
+        "fn f() -> i32 { if true { return 0; } }",
+        "fn f() -> i32 { if true { return 0; } else { print(0); } }",
+        "fn f() -> i32 { if true { let x = 0; } else { print(0); } }",
+        "fn f() -> i32 { if true { let x = 0; } else { return 0; } }",
+        "fn f() -> i32 { return 1; if true { return 2; } else { return 3; } }",
+    ];
+
+    for input in tests {
+        let mut parser = Parser::from(input);
+        parser.parse();
+
+        if parser.errors.is_empty() && parser.warnings.is_empty() {
+            panic!("expected invalid:\n{}", input);
+        }
+    }
 }
 
 #[test]

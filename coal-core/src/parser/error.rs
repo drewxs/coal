@@ -31,6 +31,7 @@ pub enum ParserErrorKind {
     InvalidArgumentsLength(usize, usize),
     TypeMismatch(Type, Type),
     InvalidIndex(Type),
+    MissingElseClause,
 }
 
 impl fmt::Display for ParserErrorKind {
@@ -54,14 +55,17 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::InvalidArgumentsLength(n1, n2) => {
                 write!(
                     f,
-                    "invalid number of arguments: expected=`{n1}`, got=`{n2}`"
+                    "invalid number of arguments. expected: `{n1}`, got: `{n2}`"
                 )
             }
             ParserErrorKind::TypeMismatch(t1, t2) => {
-                write!(f, "type mismatch: expected=`{t1}`, got=`{t2}`")
+                write!(f, "type mismatch. expected: `{t1}`, got: `{t2}`")
             }
             ParserErrorKind::InvalidIndex(t) => {
                 write!(f, "cannot index into a value of type `{t}`")
+            }
+            ParserErrorKind::MissingElseClause => {
+                write!(f, "`if` may be missing an `else` clause")
             }
         }
     }

@@ -2,8 +2,9 @@
 mod tests;
 
 mod error;
-pub mod precedence;
-pub mod symbol_table;
+mod precedence;
+mod symbol_table;
+mod warning;
 
 use std::{cell::RefCell, rc::Rc};
 
@@ -15,6 +16,7 @@ use crate::{
 pub use error::{ParserError, ParserErrorKind};
 pub use precedence::Precedence;
 pub use symbol_table::SymbolTable;
+pub use warning::{ParserWarning, ParserWarningKind};
 
 #[derive(Clone, Debug, Default)]
 pub struct Parser {
@@ -23,6 +25,7 @@ pub struct Parser {
     pub next_node: Token,
     pub symbol_table: Rc<RefCell<SymbolTable>>,
     pub errors: Vec<ParserError>,
+    pub warnings: Vec<ParserWarning>,
 }
 
 impl Parser {
@@ -33,6 +36,7 @@ impl Parser {
             next_node: Token::default(),
             symbol_table: Rc::new(RefCell::new(SymbolTable::default())),
             errors: vec![],
+            warnings: vec![],
         };
         parser.advance();
         parser.advance();
@@ -46,6 +50,7 @@ impl Parser {
             next_node: Token::default(),
             symbol_table: Rc::new(RefCell::new(SymbolTable::from(symbol_table))),
             errors: vec![],
+            warnings: vec![],
         };
         parser.advance();
         parser.advance();
@@ -178,6 +183,27 @@ impl Parser {
         self.symbol_table = curr_st;
 
         res
+    }
+
+    // Returns (blocks, return statements)
+    fn parse_fn_block(&mut self, scope: Rc<RefCell<SymbolTable>>) -> (Vec<Stmt>, Vec<Stmt>) {
+        let curr_st = Rc::clone(&self.symbol_table);
+        self.symbol_table = scope;
+
+        let mut blocks = vec![];
+        let mut ret_stmts = vec![];
+
+        while self.curr_node.token != TokenKind::Rbrace && self.curr_node.token != TokenKind::EOF {
+            if let Some(stmt) = self.parse_stmt() {
+                ret_stmts.extend(stmt.ret_stmts());
+                blocks.push(stmt);
+            }
+            self.advance();
+        }
+
+        self.symbol_table = curr_st;
+
+        (blocks, ret_stmts)
     }
 
     fn parse_stmts(&mut self) -> Vec<Stmt> {
@@ -816,21 +842,66 @@ impl Parser {
             }
         }
 
-        let body = self.parse_block_in_scope(Rc::new(RefCell::new(st)));
+        let (body, ret_stmts) = self.parse_fn_block(Rc::new(RefCell::new(st)));
         let (_, end) = self.curr_node.span;
 
-        let ret_t = declared_ret_t.unwrap_or_else(|| {
-            if let Some(Stmt::Return(expr)) = body.last() {
-                if let Ok(t) = Type::try_from(expr) {
-                    return t;
+        let body_len = body.len();
+        for (i, stmt) in body.iter().enumerate() {
+            if let Stmt::Return(expr) = stmt {
+                if i < body_len - 1 {
+                    self.warnings.push(ParserWarning::new(
+                        ParserWarningKind::UnreachableStatement,
+                        expr.span(),
+                    ))
                 }
             }
-            Type::Void
-        });
+        }
+
+        let ret_t = if let Some(dt) = declared_ret_t {
+            if ret_stmts.is_empty() {
+                self.errors.push(ParserError::new(
+                    ParserErrorKind::TypeMismatch(dt.clone(), Type::Void),
+                    (start, end),
+                ));
+            }
+
+            for stmt in &body {
+                if let Err(e) = stmt.ret_t(&dt) {
+                    self.errors.push(e);
+                }
+            }
+
+            dt
+        } else {
+            let mut ret_t = Type::Void;
+
+            for stmt in &body {
+                match stmt {
+                    Stmt::Return(expr) => {
+                        if let Ok(t) = Type::try_from(expr) {
+                            ret_t = t;
+                        }
+                    }
+                    Stmt::Expr(expr) if matches!(expr, Expr::If { .. }) => {
+                        if let Ok(t) = Type::try_from(expr) {
+                            ret_t = t;
+                        } else {
+                            self.errors.push(ParserError::new(
+                                ParserErrorKind::MissingElseClause,
+                                expr.span(),
+                            ));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            ret_t
+        };
 
         self.symbol_table
             .borrow_mut()
-            .set(format!("__{}__", ident.name()), ret_t.clone());
+            .set_ret_t(ident.name(), ret_t.clone());
         self.symbol_table
             .borrow_mut()
             .set(ident.name(), Type::Fn(args_t, Box::new(ret_t.clone())));

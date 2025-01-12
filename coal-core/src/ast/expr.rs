@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::Span;
+use crate::{ParserError, ParserErrorKind, Span};
 
 use super::{Ident, Infix, Literal, Prefix, Stmt, Type, Var};
 
@@ -74,6 +74,108 @@ impl Expr {
             Expr::Call { span, .. } => *span,
             Expr::MethodCall { span, .. } => *span,
         }
+    }
+
+    pub fn ret_t(&self, expected: &Type) -> Result<Type, ParserError> {
+        match self {
+            Expr::If {
+                then, elifs, alt, ..
+            } => {
+                let mut returning = None;
+                for stmt in then {
+                    let t = stmt.ret_t(expected)?;
+                    if t != Type::Void && t != *expected {
+                        return Err(ParserError::new(
+                            ParserErrorKind::TypeMismatch(expected.clone(), t.clone()),
+                            self.span(),
+                        ));
+                    }
+                    returning = Some((t, stmt.clone()));
+                }
+                for elif in elifs {
+                    for stmt in &elif.then {
+                        let t = stmt.ret_t(expected)?;
+                        if t != *expected {
+                            return Err(ParserError::new(
+                                ParserErrorKind::TypeMismatch(expected.clone(), t.clone()),
+                                self.span(),
+                            ));
+                        }
+                    }
+                }
+                if let Some(alt) = alt {
+                    for stmt in alt {
+                        let t = stmt.ret_t(expected)?;
+                        if let Some((rt, if_then)) = &returning {
+                            if rt != expected {
+                                return Err(ParserError::new(
+                                    ParserErrorKind::TypeMismatch(expected.clone(), rt.clone()),
+                                    if_then.span(),
+                                ));
+                            }
+                        }
+                        if t != *expected {
+                            return Err(ParserError::new(
+                                ParserErrorKind::TypeMismatch(expected.clone(), t.clone()),
+                                stmt.span(),
+                            ));
+                        }
+                    }
+                } else if *expected != Type::Void {
+                    return Err(ParserError::new(
+                        ParserErrorKind::MissingElseClause,
+                        self.span(),
+                    ));
+                }
+                Ok(Type::Void)
+            }
+            Expr::While { body, .. } => {
+                for stmt in body {
+                    let t = stmt.ret_t(expected)?;
+                    if t != Type::Void && t != *expected {
+                        return Err(ParserError::new(
+                            ParserErrorKind::TypeMismatch(expected.clone(), t.clone()),
+                            self.span(),
+                        ));
+                    }
+                }
+                Ok(Type::Void)
+            }
+            _ => Ok(Type::Void),
+        }
+    }
+
+    pub fn ret_stmts(&self) -> Vec<Stmt> {
+        let mut rets = vec![];
+        match self {
+            Expr::If {
+                then, elifs, alt, ..
+            } => {
+                for stmt in then {
+                    rets.extend(stmt.ret_stmts());
+                }
+                for elif in elifs {
+                    for stmt in &elif.then {
+                        rets.extend(stmt.ret_stmts());
+                    }
+                }
+                if let Some(alt) = alt {
+                    for stmt in alt {
+                        rets.extend(stmt.ret_stmts());
+                    }
+                }
+            }
+            Expr::While { body, .. } => {
+                for stmt in body {
+                    rets.extend(stmt.ret_stmts());
+                }
+            }
+            Expr::Iter { expr, .. } => {
+                rets.extend(expr.ret_stmts());
+            }
+            _ => {}
+        }
+        rets
     }
 
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {

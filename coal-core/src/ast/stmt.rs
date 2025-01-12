@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::{ParserError, ParserErrorKind, Span};
+
 use super::{Comment, Expr, Ident, Infix, Type};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -15,6 +17,36 @@ pub enum Stmt {
 }
 
 impl Stmt {
+    pub fn span(&self) -> Span {
+        match self {
+            Stmt::Void | Stmt::Newline | Stmt::Comment(_) => Span::default(),
+            Stmt::Let(_, _, e) => e.span(),
+            Stmt::Assign(lhs, rhs) => (lhs.span().0, rhs.span().1),
+            Stmt::OpAssign(_, lhs, rhs) => (lhs.span().0, rhs.span().1),
+            Stmt::Return(e) => e.span(),
+            Stmt::Expr(e) => e.span(),
+        }
+    }
+
+    pub fn ret_t(&self, expected: &Type) -> Result<Type, ParserError> {
+        match self {
+            Stmt::Return(e) => Type::try_from(e)
+                .map_err(|_| ParserError::new(ParserErrorKind::TypeAnnotationsNeeded, e.span())),
+            Stmt::Expr(e) => e.ret_t(expected),
+            _ => Ok(Type::Void),
+        }
+    }
+
+    pub fn ret_stmts(&self) -> Vec<Stmt> {
+        let mut rets = vec![];
+        match self {
+            Stmt::Return(_) => rets.push(self.clone()),
+            Stmt::Expr(expr) => rets.extend(expr.ret_stmts()),
+            _ => {}
+        }
+        rets
+    }
+
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
         let indent = " ".repeat(indent_level * 4);
 

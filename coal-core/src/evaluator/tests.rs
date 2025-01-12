@@ -248,7 +248,7 @@ fn test_eval_let_scope() {
     let input = "let x = 1; if true { x = x + 1; }; x;";
     assert_matches!(Evaluator::default().eval(input), Ok(Object::I32(2)));
 
-    let input = "let x = 1; fn foo() -> i32 { x = x + 1; }; foo(); x;";
+    let input = "let x = 1; fn foo() { x = x + 1; }; foo(); x;";
     assert_matches!(Evaluator::default().eval(input), Ok(Object::I32(2)));
 }
 
