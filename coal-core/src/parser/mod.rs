@@ -582,6 +582,7 @@ impl Parser {
                             ParserErrorKind::TypeMismatch(t, curr_t),
                             (start, end),
                         ));
+                        self.advance_line();
                         return None;
                     }
 
