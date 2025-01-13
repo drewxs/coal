@@ -46,6 +46,23 @@ pub struct MethodSignature {
     pub ret_t: Type,
 }
 
+impl MethodSignature {
+    pub fn new(args_t: &[Type], ret_t: Type) -> Self {
+        MethodSignature {
+            args_t: args_t.to_owned(),
+            ret_t,
+        }
+    }
+
+    pub fn args_str(&self) -> String {
+        self.args_t
+            .iter()
+            .map(|arg| arg.to_string())
+            .collect::<Vec<String>>()
+            .join(", ")
+    }
+}
+
 impl Type {
     pub fn is_numeric(&self) -> bool {
         matches!(self, Type::Num(_))
@@ -77,58 +94,35 @@ impl Type {
 
     fn num_sig(&self, method: &str) -> Option<MethodSignature> {
         match method {
-            "to_s" => Some(MethodSignature {
-                args_t: vec![],
-                ret_t: Type::Str,
-            }),
+            "to_s" => Some(MethodSignature::new(&[], Type::Str)),
             _ => None,
         }
     }
 
     fn str_sig(&self, method: &str) -> Option<MethodSignature> {
         match method {
-            "len" => Some(MethodSignature {
-                args_t: vec![],
-                ret_t: U64,
-            }),
-            "split" => Some(MethodSignature {
-                args_t: vec![Type::Str],
-                ret_t: Type::List(Box::new(Type::Str)),
-            }),
+            "len" => Some(MethodSignature::new(&[], U64)),
+            "split" => Some(MethodSignature::new(
+                &[Type::Str],
+                Type::List(Box::new(Type::Str)),
+            )),
             _ => None,
         }
     }
 
     fn list_sig(&self, method: &str, t: &Type) -> Option<MethodSignature> {
         match method {
-            "len" => Some(MethodSignature {
-                args_t: vec![],
-                ret_t: U64,
-            }),
-            "push" => Some(MethodSignature {
-                args_t: vec![t.clone()],
-                ret_t: Type::Void,
-            }),
-            "pop" => Some(MethodSignature {
-                args_t: vec![],
-                ret_t: t.clone(),
-            }),
-            "get" => Some(MethodSignature {
-                args_t: vec![I64],
-                ret_t: t.clone(),
-            }),
-            "first" => Some(MethodSignature {
-                args_t: vec![],
-                ret_t: t.clone(),
-            }),
-            "last" => Some(MethodSignature {
-                args_t: vec![],
-                ret_t: t.clone(),
-            }),
-            "join" => Some(MethodSignature {
-                args_t: vec![Type::Str],
-                ret_t: Type::Str,
-            }),
+            "len" => Some(MethodSignature::new(&[], U64)),
+            "push" => Some(MethodSignature::new(&[t.clone()], Type::Void)),
+            "pop" => Some(MethodSignature::new(&[], t.clone())),
+            "get" => Some(MethodSignature::new(&[I64], t.clone())),
+            "first" => Some(MethodSignature::new(&[], t.clone())),
+            "last" => Some(MethodSignature::new(&[], t.clone())),
+            "join" => Some(MethodSignature::new(&[Type::Str], Type::Str)),
+            "map" => Some(MethodSignature::new(
+                &[Type::Fn(vec![t.clone()], Box::new(t.clone()))],
+                Type::List(Box::new(Type::Unknown)),
+            )),
             _ => None,
         }
     }
@@ -148,7 +142,7 @@ impl From<&Object> for Type {
             Object::Bool(_) => Type::Bool,
             Object::List { t, .. } => Type::List(Box::new(t.to_owned())),
             Object::Map { t, .. } => Type::Map(Box::new(t.to_owned())),
-            Object::Fn { args, ret_t, .. } => Type::Fn(
+            Object::Fn { args, ret_t, .. } | Object::Closure { args, ret_t, .. } => Type::Fn(
                 args.iter().map(|arg| arg.t.to_owned()).collect(),
                 Box::new(ret_t.to_owned()),
             ),
@@ -226,7 +220,7 @@ impl TryFrom<&Expr> for Type {
                 Ok(t) | Err(t) => Err(t),
             },
             Expr::Range(_, _, _) => Ok(U64),
-            Expr::Fn { args, ret_t, .. } => Ok(Type::Fn(
+            Expr::Fn { args, ret_t, .. } | Expr::Closure { args, ret_t, .. } => Ok(Type::Fn(
                 args.iter().map(|arg| arg.t.to_owned()).collect(),
                 Box::new(ret_t.to_owned()),
             )),

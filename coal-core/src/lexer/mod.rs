@@ -353,6 +353,10 @@ impl Iterator for Lexer {
                     Token::new(TokenKind::Dot, (cursor, cursor))
                 }
             },
+            '|' => {
+                self.read_ch();
+                Token::new(TokenKind::Pipe, (cursor, cursor))
+            }
             '\n' => {
                 self.read_ch();
                 Token::new(

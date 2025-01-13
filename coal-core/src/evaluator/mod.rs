@@ -305,6 +305,9 @@ impl Evaluator<'_> {
                 body,
                 span,
             } => self.eval_fn_expr(name, args, ret_t, body, span),
+            Expr::Closure {
+                args, ret_t, body, ..
+            } => self.eval_closure_expr(args, ret_t, body),
             Expr::Call {
                 name,
                 args,
@@ -586,6 +589,19 @@ impl Evaluator<'_> {
         Some(func)
     }
 
+    fn eval_closure_expr(
+        &mut self,
+        args: &[Var],
+        ret_t: &Type,
+        body: &Vec<Stmt>,
+    ) -> Option<Object> {
+        Some(Object::Closure {
+            args: args.to_owned(),
+            body: body.to_owned(),
+            ret_t: ret_t.to_owned(),
+        })
+    }
+
     fn eval_call_expr(&mut self, func: &Expr, args: &[Expr], span: &Span) -> Option<Object> {
         let resolved_args: Vec<Object> =
             args.iter().filter_map(|arg| self.eval_expr(arg)).collect();
@@ -602,6 +618,11 @@ impl Evaluator<'_> {
 
     fn eval_call_obj(&mut self, func: &Object, args: &[Object], span: &Span) -> Option<Object> {
         if let Object::Fn {
+            args: fn_args,
+            body: fn_body,
+            ..
+        }
+        | Object::Closure {
             args: fn_args,
             body: fn_body,
             ..
@@ -736,11 +757,46 @@ impl Evaluator<'_> {
             .collect::<Vec<Object>>();
 
         {
-            let env_ref = self.env.borrow_mut();
+            let env = Rc::clone(&self.env);
+            let env_ref = env.borrow_mut();
             let mut store_ref = env_ref.store.borrow_mut();
 
             if let Some(obj) = store_ref.get_mut(&var) {
-                return obj.call(name, &args, span);
+                match obj {
+                    Object::List { .. } => match name {
+                        "map" => {
+                            if !matches!(args[0], Object::Closure { .. }) {
+                                return Some(Object::Error(RuntimeError::new(
+                                    RuntimeErrorKind::InvalidArguments(
+                                        String::from("function"),
+                                        args.iter()
+                                            .map(|arg| Type::from(arg).to_string())
+                                            .collect::<Vec<_>>()
+                                            .join(", "),
+                                    ),
+                                    *span,
+                                )));
+                            }
+
+                            let mut new_data = vec![];
+
+                            if let Object::List { data, .. } = obj {
+                                for item in data {
+                                    let new_item =
+                                        self.eval_call_obj(&args[0], &[item.clone()], span)?;
+                                    new_data.push(new_item);
+                                }
+                            }
+
+                            return Some(Object::List {
+                                data: new_data,
+                                t: Type::List(Box::new(Type::Unknown)),
+                            });
+                        }
+                        _ => return obj.call(name, &args, span),
+                    },
+                    _ => return obj.call(name, &args, span),
+                }
             }
 
             if let Some(outer_rc) = &env_ref.outer {

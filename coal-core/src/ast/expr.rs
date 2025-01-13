@@ -37,6 +37,12 @@ pub enum Expr {
         body: Vec<Stmt>,
         span: Span,
     },
+    Closure {
+        args: Vec<Var>,
+        ret_t: Type,
+        body: Vec<Stmt>,
+        span: Span,
+    },
     Call {
         name: String,
         args: Vec<Expr>,
@@ -71,6 +77,7 @@ impl Expr {
             Expr::While { span, .. } => *span,
             Expr::Iter { span, .. } => *span,
             Expr::Fn { span, .. } => *span,
+            Expr::Closure { span, .. } => *span,
             Expr::Call { span, .. } => *span,
             Expr::MethodCall { span, .. } => *span,
         }
@@ -251,6 +258,18 @@ impl Expr {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
                 writeln!(f, "{}}}", indent)
+            }
+            Expr::Closure { args, body, .. } => {
+                let args = args
+                    .iter()
+                    .map(|arg| format!("{arg}"))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                writeln!(f, "|{args}| {{")?;
+                for stmt in body {
+                    stmt.fmt_with_indent(f, indent_level + 1)?;
+                }
+                write!(f, "{}}}", indent)
             }
             Expr::Call { name, args, .. } => {
                 let args = args

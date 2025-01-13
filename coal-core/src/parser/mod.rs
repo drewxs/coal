@@ -383,6 +383,7 @@ impl Parser {
             TokenKind::While => self.parse_while_expr(),
             TokenKind::For => self.parse_iter_expr(),
             TokenKind::Fn => self.parse_fn_expr(),
+            TokenKind::Pipe => self.parse_closure_expr(),
             TokenKind::Nil => Some(Expr::Literal(Literal::Nil, *span)),
             _ => {
                 self.error(ParserErrorKind::SyntaxError(self.curr_node.token.clone()));
@@ -527,7 +528,7 @@ impl Parser {
             return Some(list);
         }
 
-        self.advance(); // '('
+        self.advance(); // '(', '[', '|'
         list.push(self.parse_expr(Precedence::Lowest)?);
 
         while self.next_node.token == TokenKind::Comma {
@@ -847,18 +848,7 @@ impl Parser {
 
         let (body, ret_stmts) = self.parse_fn_block(Rc::new(RefCell::new(st)));
         let (_, end) = self.curr_node.span;
-
-        let body_len = body.len();
-        for (i, stmt) in body.iter().enumerate() {
-            if let Stmt::Return(expr) = stmt {
-                if i < body_len - 1 {
-                    self.warnings.push(ParserWarning::new(
-                        ParserWarningKind::UnreachableStatement,
-                        expr.span(),
-                    ))
-                }
-            }
-        }
+        self.check_unreachable(&body);
 
         let ret_t = if let Some(dt) = declared_ret_t {
             if ret_stmts.is_empty() {
@@ -876,30 +866,7 @@ impl Parser {
 
             dt
         } else {
-            let mut ret_t = Type::Void;
-
-            for stmt in &body {
-                match stmt {
-                    Stmt::Return(expr) => {
-                        if let Ok(t) = Type::try_from(expr) {
-                            ret_t = t;
-                        }
-                    }
-                    Stmt::Expr(expr) if matches!(expr, Expr::If { .. }) => {
-                        if let Ok(t) = Type::try_from(expr) {
-                            ret_t = t;
-                        } else {
-                            self.errors.push(ParserError::new(
-                                ParserErrorKind::MissingElseClause,
-                                expr.span(),
-                            ));
-                        }
-                    }
-                    _ => {}
-                }
-            }
-
-            ret_t
+            self.infer_ret_t(&body)
         };
 
         self.symbol_table
@@ -911,6 +878,36 @@ impl Parser {
 
         Some(Expr::Fn {
             name: ident.name(),
+            args,
+            ret_t,
+            body,
+            span: (start, end),
+        })
+    }
+
+    fn parse_closure_expr(&mut self) -> Option<Expr> {
+        let (start, _) = self.curr_node.span;
+        self.advance(); // '|'
+
+        let args = self.parse_decl_args()?;
+        self.consume(TokenKind::Pipe);
+        self.consume(TokenKind::Lbrace);
+
+        let mut st = SymbolTable::from(Rc::clone(&self.symbol_table));
+        for arg in args.iter() {
+            st.set(arg.name.clone(), arg.t.clone());
+            if let Type::Fn(_, t) = &arg.t {
+                st.set_ret_t(arg.name.clone(), *t.clone());
+            }
+        }
+
+        let (body, _) = self.parse_fn_block(Rc::new(RefCell::new(st)));
+        let (_, end) = self.curr_node.span;
+        self.check_unreachable(&body);
+
+        let ret_t = self.infer_ret_t(&body);
+
+        Some(Expr::Closure {
             args,
             ret_t,
             body,
@@ -994,6 +991,48 @@ impl Parser {
         self.consume_next(TokenKind::Rbracket);
 
         Some(Type::List(Box::new(t)))
+    }
+
+    fn check_unreachable(&mut self, stmts: &[Stmt]) {
+        let len = stmts.len();
+
+        for (i, stmt) in stmts.iter().enumerate() {
+            if let Stmt::Return(expr) = stmt {
+                if i < len - 1 {
+                    self.warnings.push(ParserWarning::new(
+                        ParserWarningKind::UnreachableStatement,
+                        expr.span(),
+                    ))
+                }
+            }
+        }
+    }
+
+    fn infer_ret_t(&mut self, body: &[Stmt]) -> Type {
+        let mut ret_t = Type::Void;
+
+        for stmt in body {
+            match stmt {
+                Stmt::Return(expr) => {
+                    if let Ok(t) = Type::try_from(expr) {
+                        ret_t = t;
+                    }
+                }
+                Stmt::Expr(expr) if matches!(expr, Expr::If { .. }) => {
+                    if let Ok(t) = Type::try_from(expr) {
+                        ret_t = t;
+                    } else {
+                        self.errors.push(ParserError::new(
+                            ParserErrorKind::MissingElseClause,
+                            expr.span(),
+                        ));
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        ret_t
     }
 }
 

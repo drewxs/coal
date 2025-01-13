@@ -8,6 +8,7 @@ pub enum TokenKind {
     Comment(String),
     NewLine,
     Dot,
+    Pipe,
 
     // Identifiers + literals
     Ident(String),
@@ -133,6 +134,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Comment(s) => writeln!(f, "// {s}"),
             TokenKind::NewLine => writeln!(f),
             TokenKind::Dot => write!(f, "."),
+            TokenKind::Pipe => write!(f, "|"),
             TokenKind::Ident(name) => write!(f, "{name}"),
             TokenKind::U32(i) => write!(f, "{i}"),
             TokenKind::U64(i) => write!(f, "{i}"),

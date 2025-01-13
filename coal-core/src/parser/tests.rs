@@ -987,6 +987,126 @@ fn test_parse_function_expressions() {
 }
 
 #[test]
+fn test_parse_closure_expressions() {
+    let tests = vec![
+        (
+            "|| {}",
+            Stmt::Expr(Expr::Closure {
+                args: vec![],
+                body: vec![],
+                ret_t: Type::Void,
+                span: ((1, 1), (1, 5)),
+            }),
+        ),
+        (
+            "|x: i32| {}",
+            Stmt::Expr(Expr::Closure {
+                args: vec![Var::new("x", I32)],
+                body: vec![],
+                ret_t: Type::Void,
+                span: ((1, 1), (1, 11)),
+            }),
+        ),
+        (
+            "|| { return 0; }",
+            Stmt::Expr(Expr::Closure {
+                args: vec![],
+                body: vec![Stmt::Return(Expr::Literal(
+                    Literal::I32(0),
+                    ((1, 13), (1, 13)),
+                ))],
+                ret_t: I32,
+                span: ((1, 1), (1, 16)),
+            }),
+        ),
+        (
+            "|x: i32| { return x; }",
+            Stmt::Expr(Expr::Closure {
+                args: vec![Var::new("x", I32)],
+                body: vec![Stmt::Return(Expr::Ident(
+                    Ident::from("x"),
+                    I32,
+                    ((1, 19), (1, 19)),
+                ))],
+                ret_t: I32,
+                span: ((1, 1), (1, 22)),
+            }),
+        ),
+        (
+            r#"
+            [0, 0].map(|| {
+                return 1;
+            });
+            "#,
+            Stmt::Expr(Expr::MethodCall {
+                lhs: Box::new(Expr::Literal(
+                    Literal::List(
+                        vec![
+                            Expr::Literal(Literal::I32(0), ((1, 2), (1, 2))),
+                            Expr::Literal(Literal::I32(0), ((1, 5), (1, 5))),
+                        ],
+                        I32,
+                        None,
+                    ),
+                    ((1, 1), (1, 6)),
+                )),
+                name: String::from("map"),
+                args: vec![Expr::Closure {
+                    args: vec![],
+                    body: vec![Stmt::Return(Expr::Literal(
+                        Literal::I32(1),
+                        ((2, 8), (2, 8)),
+                    ))],
+                    ret_t: I32,
+                    span: ((1, 12), (3, 1)),
+                }],
+                ret_t: Type::List(Box::new(Type::Unknown)),
+                span: ((1, 1), (3, 2)),
+            }),
+        ),
+        (
+            r#"
+            let x = [0, 0];
+            x.map(|| {
+                return 1;
+            });
+            "#,
+            Stmt::Expr(Expr::MethodCall {
+                lhs: Box::new(Expr::Ident(
+                    Ident::from("x"),
+                    Type::List(Box::new(I32)),
+                    ((2, 1), (2, 1)),
+                )),
+                name: String::from("map"),
+                args: vec![Expr::Closure {
+                    args: vec![],
+                    body: vec![Stmt::Return(Expr::Literal(
+                        Literal::I32(1),
+                        ((3, 8), (3, 8)),
+                    ))],
+                    ret_t: I32,
+                    span: ((2, 7), (4, 1)),
+                }],
+                ret_t: Type::List(Box::new(Type::Unknown)),
+                span: ((2, 1), (4, 2)),
+            }),
+        ),
+    ];
+
+    for (input, expected) in tests {
+        let parsed = Parser::from(input).parse();
+        let actual = parsed.last().unwrap().clone();
+
+        if expected != actual {
+            panic!(
+                "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
+                input, expected, actual
+            );
+        }
+    }
+}
+
+#[test]
 fn test_parse_call_expression() {
     let input = "add(1, 2 * 3, 4 + 5);";
     let expected = Stmt::Expr(Expr::Call {

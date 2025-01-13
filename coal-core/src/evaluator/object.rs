@@ -38,6 +38,11 @@ pub enum Object {
         body: Vec<Stmt>,
         ret_t: Type,
     },
+    Closure {
+        args: Vec<Var>,
+        body: Vec<Stmt>,
+        ret_t: Type,
+    },
     Builtin(Builtin),
     Return(Box<Object>),
     Type(Type),
@@ -160,20 +165,21 @@ impl Object {
         }
     }
 
-    fn validate_call_args(&self, name: &str, args: &[Object], span: &Span) -> Result<(), Object> {
+    pub fn validate_call_args(
+        &self,
+        name: &str,
+        args: &[Object],
+        span: &Span,
+    ) -> Result<(), Object> {
         if let Some(method) = Type::from(self).sig(name) {
             for (arg, t) in args.iter().zip(method.args_t.iter()) {
-                if Type::from(arg) != *t {
+                let arg_t = Type::from(arg);
+                if arg_t != *t {
+                    dbg!(arg_t, t);
                     if arg.cast(t).is_some() {
                         continue;
                     }
 
-                    let method_args_t = method
-                        .args_t
-                        .iter()
-                        .map(|arg| arg.to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ");
                     let args_t = args
                         .iter()
                         .map(|arg| Type::from(arg).to_string())
@@ -181,7 +187,7 @@ impl Object {
                         .join(", ");
 
                     return Err(Object::Error(RuntimeError::new(
-                        RuntimeErrorKind::InvalidArguments(method_args_t, args_t),
+                        RuntimeErrorKind::InvalidArguments(method.args_str(), args_t),
                         *span,
                     )));
                 }
@@ -438,6 +444,12 @@ impl Hash for Object {
             Object::List { data, .. } => data.hash(state),
             Object::Map { .. } => format!("{}", self).hash(state),
             Object::Fn { name, .. } => name.hash(state),
+            Object::Closure { args, .. } => args
+                .iter()
+                .map(|arg| arg.name.to_owned())
+                .collect::<Vec<String>>()
+                .join(":")
+                .hash(state),
             Object::Builtin(b) => b.func.hash(state),
             Object::Return(v) => v.hash(state),
             Object::Type(t) => t.hash(state),
@@ -595,6 +607,7 @@ impl fmt::Display for Object {
             }
             Object::Map { data, .. } => write!(f, "{data:?}"),
             Object::Fn { .. } => write!(f, "<fn_{}>", self.calculate_hash()),
+            Object::Closure { .. } => write!(f, "<closure_{}>", self.calculate_hash()),
             Object::Builtin(_) => write!(f, "<builtin_{}>", self.calculate_hash()),
             Object::Return(v) => write!(f, "{v}"),
             Object::Type(t) => write!(f, "{t}"),
