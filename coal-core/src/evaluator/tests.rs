@@ -1,8 +1,8 @@
-use std::assert_matches::assert_matches;
+use std::{assert_matches::assert_matches, collections::HashMap};
 
 use test::Bencher;
 
-use crate::{Expr, Ident, Infix, Stmt, Type, Var, I32, U64};
+use crate::{Expr, Ident, Infix, Stmt, Type, Var, F64, I32, U64};
 
 use super::{Evaluator, Object, FALSE, TRUE};
 
@@ -539,6 +539,56 @@ fn test_eval_lists() {
             Object::List {
                 data: vec![],
                 t: I32,
+            },
+        ),
+    ];
+
+    for (expr, expected) in tests {
+        match Evaluator::default().eval(expr) {
+            Ok(actual) => {
+                if expected != actual {
+                    panic!(
+                        "input:\n{}\nexpected:\n{}\nactual:\n{}",
+                        expr, expected, actual
+                    );
+                }
+            }
+            Err(e) => {
+                panic!("input:\n{}\nexpected:\n{}\nerror:\n{:?}", expr, expected, e);
+            }
+        }
+    }
+}
+
+#[test]
+fn test_eval_maps() {
+    let tests = vec![
+        (
+            "{}",
+            Object::Map {
+                data: HashMap::new(),
+                t: (Type::Unknown, Type::Unknown),
+            },
+        ),
+        (
+            "{1: 2}",
+            Object::Map {
+                data: HashMap::from([(Object::I32(1), Object::I32(2))]),
+                t: (I32, I32),
+            },
+        ),
+        (
+            "{1.2: 3}",
+            Object::Map {
+                data: HashMap::from([(Object::F64(1.2), Object::I32(3))]),
+                t: (F64, I32),
+            },
+        ),
+        (
+            r#"{"one": 1}"#,
+            Object::Map {
+                data: HashMap::from([(Object::Str(String::from("one")), Object::I32(1))]),
+                t: (Type::Str, I32),
             },
         ),
     ];

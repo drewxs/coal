@@ -201,38 +201,53 @@ impl Evaluator<'_> {
             }
         }
 
-        if let Object::List { mut data, t } = curr {
-            let mut target = &mut data;
+        match curr {
+            Object::List { mut data, t } => {
+                let mut target = &mut data;
 
-            for idx in indices.iter() {
-                if let Ok(i) = self.eval_expr(idx)?.try_into() {
-                    if i >= target.len() {
-                        return Some(Object::Error(RuntimeError::new(
-                            RuntimeErrorKind::IndexOutOfBounds(i, target.len()),
-                            idx.span(),
-                        )));
-                    }
-
-                    if indices.last() == Some(idx) {
-                        // Final index, assign value
-                        if let Some(op) = op {
-                            target[i] =
-                                self.eval_infix_objects(&op, target[i].clone(), val, &idx.span())?;
-                        } else {
-                            target[i] = val;
+                // Nested indexing (e.g. list[0][1])
+                for idx in indices.iter() {
+                    if let Ok(i) = self.eval_expr(idx)?.try_into() {
+                        if i >= target.len() {
+                            return Some(Object::Error(RuntimeError::new(
+                                RuntimeErrorKind::IndexOutOfBounds(i, target.len()),
+                                idx.span(),
+                            )));
                         }
 
-                        self.env
-                            .borrow_mut()
-                            .set_in_scope(name.to_owned(), Object::List { data, t });
+                        if indices.last() == Some(idx) {
+                            // Final index, assign value
+                            if let Some(op) = op {
+                                target[i] = self.eval_infix_objects(
+                                    &op,
+                                    target[i].clone(),
+                                    val,
+                                    &idx.span(),
+                                )?;
+                            } else {
+                                target[i] = val;
+                            }
 
-                        return None;
-                    } else if let Object::List {
-                        data: inner_data, ..
-                    } = &mut target[i]
-                    {
-                        // Drill down into the nested list
-                        target = inner_data;
+                            self.env
+                                .borrow_mut()
+                                .set_in_scope(name.to_owned(), Object::List { data, t });
+
+                            return None;
+                        } else if let Object::List {
+                            data: inner_data, ..
+                        } = &mut target[i]
+                        {
+                            // Drill down into the nested list
+                            target = inner_data;
+                        } else {
+                            return Some(Object::Error(RuntimeError::new(
+                                RuntimeErrorKind::InvalidIndex(
+                                    curr_t,
+                                    Type::try_from(idx).unwrap_or_default(),
+                                ),
+                                idx.span(),
+                            )));
+                        }
                     } else {
                         return Some(Object::Error(RuntimeError::new(
                             RuntimeErrorKind::InvalidIndex(
@@ -242,26 +257,48 @@ impl Evaluator<'_> {
                             idx.span(),
                         )));
                     }
-                } else {
-                    return Some(Object::Error(RuntimeError::new(
-                        RuntimeErrorKind::InvalidIndex(
-                            curr_t,
-                            Type::try_from(idx).unwrap_or_default(),
-                        ),
-                        idx.span(),
-                    )));
                 }
             }
-        } else {
-            let updated_val = if let Some(op) = op {
-                self.eval_infix_objects(&op, curr, val, &rhs.span())?
-            } else {
-                val
-            };
+            Object::Map { mut data, t } => {
+                if let Some(idx) = indices.first() {
+                    if let Some(i) = self.eval_expr(idx) {
+                        let it = Type::from(&i);
+                        let (kt, _) = &t;
 
-            self.env
-                .borrow_mut()
-                .set_in_scope(name.to_owned(), updated_val);
+                        if it != *kt {
+                            return Some(Object::Error(RuntimeError::new(
+                                RuntimeErrorKind::InvalidIndex(kt.clone(), it),
+                                idx.span(),
+                            )));
+                        }
+
+                        data.insert(i, val);
+
+                        self.env
+                            .borrow_mut()
+                            .set_in_scope(name.to_owned(), Object::Map { data, t });
+                    } else {
+                        return Some(Object::Error(RuntimeError::new(
+                            RuntimeErrorKind::InvalidIndex(
+                                curr_t,
+                                Type::try_from(idx).unwrap_or_default(),
+                            ),
+                            idx.span(),
+                        )));
+                    }
+                }
+            }
+            _ => {
+                let updated_val = if let Some(op) = op {
+                    self.eval_infix_objects(&op, curr, val, &rhs.span())?
+                } else {
+                    val
+                };
+
+                self.env
+                    .borrow_mut()
+                    .set_in_scope(name.to_owned(), updated_val);
+            }
         }
 
         None
@@ -335,6 +372,7 @@ impl Evaluator<'_> {
         match literal {
             Literal::Str(s) => self.eval_str(s, span),
             Literal::List(l, t, repeat) => self.eval_list_expr(l, t, repeat),
+            Literal::Map(m, t) => self.eval_map_expr(m, t),
             _ => Some(Object::from(literal)),
         }
     }
@@ -418,6 +456,26 @@ impl Evaluator<'_> {
         Some(Object::List { data, t: t.clone() })
     }
 
+    fn eval_map_expr(&mut self, m: &[(Expr, Expr)], t: &(Type, Type)) -> Option<Object> {
+        let mut data = HashMap::new();
+
+        for (k, v) in m {
+            let k = self.eval_expr(k)?;
+            let v = self.eval_expr(v)?;
+
+            if let Object::Error { .. } = k {
+                return Some(k);
+            }
+            if let Object::Error { .. } = v {
+                return Some(v);
+            }
+
+            data.insert(k, v);
+        }
+
+        Some(Object::Map { data, t: t.clone() })
+    }
+
     fn eval_prefix_expr(&mut self, prefix: &Prefix, rhs: &Expr, span: &Span) -> Option<Object> {
         let rhs = self.eval_expr(rhs)?;
         let obj = match prefix {
@@ -492,6 +550,7 @@ impl Evaluator<'_> {
 
         match lhs {
             Object::List { .. } => lhs.call("get", &[rhs], span),
+            Object::Map { .. } => lhs.call("get", &[rhs], span),
             _ => None,
         }
     }

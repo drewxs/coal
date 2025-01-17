@@ -158,6 +158,25 @@ impl Object {
                     *span,
                 ))),
             },
+            Object::Map { data, t: (kt, _vt) } => match name {
+                "get" => {
+                    let idx_t = Type::from(&args[0]);
+                    if idx_t == *kt {
+                        data.get(&args[0]).cloned().or(Some(Object::Nil))
+                    } else if let Some(idx) = args[0].cast(kt) {
+                        data.get(&idx).cloned().or(Some(Object::Nil))
+                    } else {
+                        Some(Object::Error(RuntimeError::new(
+                            RuntimeErrorKind::TypeMismatch(idx_t, kt.clone()),
+                            *span,
+                        )))
+                    }
+                }
+                _ => Some(Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::MethodNotFound(name.to_owned()),
+                    *span,
+                ))),
+            },
             _ => Some(Object::Error(RuntimeError::new(
                 RuntimeErrorKind::MethodNotFound(name.to_owned()),
                 *span,
@@ -175,7 +194,6 @@ impl Object {
             for (arg, t) in args.iter().zip(method.args_t.iter()) {
                 let arg_t = Type::from(arg);
                 if arg_t != *t {
-                    dbg!(arg_t, t);
                     if arg.cast(t).is_some() {
                         continue;
                     }
@@ -405,6 +423,13 @@ impl From<&Literal> for Object {
                 data: l.iter().map(Object::from).collect(),
                 t: t.clone(),
             },
+            Literal::Map(m, t) => Object::Map {
+                data: m
+                    .iter()
+                    .map(|(k, v)| (Object::from(k), Object::from(v)))
+                    .collect(),
+                t: t.clone(),
+            },
             Literal::Nil => Object::Nil,
         }
     }
@@ -439,22 +464,13 @@ impl Hash for Object {
             Object::F32(f) => f.to_bits().hash(state),
             Object::F64(f) => f.to_bits().hash(state),
             Object::Bool(b) => b.hash(state),
-            Object::Range(_, _) => format!("{}", self).hash(state),
             Object::Str(s) => s.hash(state),
-            Object::List { data, .. } => data.hash(state),
-            Object::Map { .. } => format!("{}", self).hash(state),
-            Object::Fn { name, .. } => name.hash(state),
-            Object::Closure { args, .. } => args
-                .iter()
-                .map(|arg| arg.name.to_owned())
-                .collect::<Vec<String>>()
-                .join(":")
-                .hash(state),
             Object::Builtin(b) => b.func.hash(state),
             Object::Return(v) => v.hash(state),
             Object::Type(t) => t.hash(state),
             Object::Error(e) => e.hash(state),
             Object::Nil | Object::Void => {}
+            _ => self.to_string().hash(state),
         }
     }
 }

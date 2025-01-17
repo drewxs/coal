@@ -6,11 +6,11 @@ mod precedence;
 mod symbol_table;
 mod warning;
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 use crate::{
-    Comment, Expr, Ident, IfExpr, Infix, Lexer, Literal, Prefix, Stmt, Token, TokenKind, Type, Var,
-    U32,
+    Comment, Expr, ExprPair, Ident, IfExpr, Infix, Lexer, Literal, Prefix, Stmt, Token, TokenKind,
+    Type, Var, U32,
 };
 
 pub use error::{ParserError, ParserErrorKind};
@@ -379,6 +379,7 @@ impl Parser {
             TokenKind::Bang | TokenKind::Add | TokenKind::Sub => self.parse_prefix_expr(),
             TokenKind::Lparen => self.parse_grouped_expr(),
             TokenKind::Lbracket => self.parse_list_expr(),
+            TokenKind::Lbrace => self.parse_map_expr(),
             TokenKind::If => self.parse_if_expr(),
             TokenKind::While => self.parse_while_expr(),
             TokenKind::For => self.parse_iter_expr(),
@@ -647,6 +648,77 @@ impl Parser {
         Some((list, t.clone(), repeat))
     }
 
+    fn parse_kv_pairs(&mut self) -> Option<(Vec<ExprPair>, (Type, Type))> {
+        let mut map = vec![];
+
+        if self.next_node.token == TokenKind::Rbrace {
+            self.advance();
+            return Some((map, (Type::Unknown, Type::Unknown)));
+        }
+
+        self.advance();
+
+        let mut keys = HashSet::new();
+
+        let k = self.parse_expr(Precedence::Lowest)?;
+        let kt = Type::try_from(&k).unwrap_or_default();
+
+        self.expect_next(TokenKind::Colon)?;
+        self.advance();
+
+        let v = self.parse_expr(Precedence::Lowest)?;
+        let vt = Type::try_from(&v).unwrap_or_default();
+
+        keys.insert(k.to_string());
+        map.push((k, v));
+
+        while self.next_node.token == TokenKind::Comma {
+            self.advance();
+            self.advance();
+
+            let (start, _) = self.curr_node.span;
+
+            let k = self.parse_expr(Precedence::Lowest)?;
+            if !keys.insert(k.to_string()) {
+                let (_, end) = self.curr_node.span;
+                self.warnings.push(ParserWarning::new(
+                    ParserWarningKind::MapKeyRepeated(k.to_string()),
+                    (start, end),
+                ));
+            }
+
+            if kt != Type::try_from(&k).unwrap_or_default() {
+                let (_, end) = self.curr_node.span;
+                self.errors.push(ParserError::new(
+                    ParserErrorKind::TypeMismatch(kt, Type::try_from(&k).unwrap_or_default()),
+                    (start, end),
+                ));
+                self.advance_line();
+                return None;
+            }
+
+            self.expect_next(TokenKind::Colon)?;
+            self.advance();
+
+            let v = self.parse_expr(Precedence::Lowest)?;
+            if vt != Type::try_from(&v).unwrap_or_default() {
+                let (_, end) = self.curr_node.span;
+                self.errors.push(ParserError::new(
+                    ParserErrorKind::TypeMismatch(vt, Type::try_from(&v).unwrap_or_default()),
+                    (start, end),
+                ));
+                self.advance_line();
+                return None;
+            }
+
+            map.push((k, v));
+        }
+
+        self.expect_next(TokenKind::Rbrace)?;
+
+        Some((map, (kt, vt)))
+    }
+
     fn parse_method_call(&mut self, lhs: Expr) -> Option<Expr> {
         self.advance(); // lhs
         self.advance();
@@ -715,6 +787,14 @@ impl Parser {
         let (_, end) = self.curr_node.span;
 
         Some(Expr::Literal(Literal::List(items, t, repeat), (start, end)))
+    }
+
+    fn parse_map_expr(&mut self) -> Option<Expr> {
+        let (start, _) = self.curr_node.span;
+        let (pairs, t) = self.parse_kv_pairs()?;
+        let (_, end) = self.curr_node.span;
+
+        Some(Expr::Literal(Literal::Map(pairs, t), (start, end)))
     }
 
     fn parse_if_expr(&mut self) -> Option<Expr> {

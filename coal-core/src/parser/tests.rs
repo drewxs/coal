@@ -1380,6 +1380,70 @@ fn test_parse_lists() {
 }
 
 #[test]
+fn test_parse_maps() {
+    let tests = vec![
+        (
+            "{}",
+            Stmt::Expr(Expr::Literal(
+                Literal::Map(vec![], (Type::Unknown, Type::Unknown)),
+                ((1, 1), (1, 2)),
+            )),
+        ),
+        (
+            "{1: 2}",
+            Stmt::Expr(Expr::Literal(
+                Literal::Map(
+                    vec![(
+                        Expr::Literal(Literal::I32(1), ((1, 2), (1, 2))),
+                        Expr::Literal(Literal::I32(2), ((1, 5), (1, 5))),
+                    )],
+                    (I32, I32),
+                ),
+                ((1, 1), (1, 6)),
+            )),
+        ),
+        (
+            r#"{"one": 1, "two": 2}"#,
+            Stmt::Expr(Expr::Literal(
+                Literal::Map(
+                    vec![
+                        (
+                            Expr::Literal(Literal::Str(String::from("one")), ((1, 2), (1, 6))),
+                            Expr::Literal(Literal::I32(1), ((1, 9), (1, 9))),
+                        ),
+                        (
+                            Expr::Literal(Literal::Str(String::from("two")), ((1, 12), (1, 16))),
+                            Expr::Literal(Literal::I32(2), ((1, 19), (1, 19))),
+                        ),
+                    ],
+                    (Type::Str, I32),
+                ),
+                ((1, 1), (1, 20)),
+            )),
+        ),
+    ];
+
+    for (input, expected) in tests {
+        let mut parser = Parser::from(input);
+        let parsed = parser.parse();
+        if let Err(errors) = parser.check() {
+            println!("input:\n{}", input);
+            for e in errors {
+                println!("{e}");
+            }
+        }
+
+        let actual = parsed.last().unwrap();
+        if expected != *actual {
+            panic!(
+                "input:\n{}\n\nexpected:\n{}{:?}\n\nactual:\n{}{:?}\n",
+                input, expected, expected, actual, actual
+            );
+        }
+    }
+}
+
+#[test]
 fn test_parse_iter() {
     let tests = vec![
         (

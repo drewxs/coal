@@ -24,6 +24,7 @@ impl fmt::Display for ParserWarning {
 #[derive(Clone, Debug)]
 pub enum ParserWarningKind {
     UnreachableStatement,
+    MapKeyRepeated(String),
 }
 
 impl fmt::Display for ParserWarningKind {
@@ -31,6 +32,9 @@ impl fmt::Display for ParserWarningKind {
         match self {
             ParserWarningKind::UnreachableStatement => {
                 write!(f, "any code following this expression is unreachable")
+            }
+            ParserWarningKind::MapKeyRepeated(key) => {
+                write!(f, "map key repeated: `{key}`")
             }
         }
     }

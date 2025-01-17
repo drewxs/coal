@@ -32,6 +32,7 @@ pub enum ParserErrorKind {
     TypeMismatch(Type, Type),
     InvalidIndex(Type),
     MissingElseClause,
+    UnhashableMapKey(Type),
 }
 
 impl fmt::Display for ParserErrorKind {
@@ -66,6 +67,9 @@ impl fmt::Display for ParserErrorKind {
             }
             ParserErrorKind::MissingElseClause => {
                 write!(f, "`if` may be missing an `else` clause")
+            }
+            ParserErrorKind::UnhashableMapKey(t) => {
+                write!(f, "map key not hashable: type `{t}`")
             }
         }
     }

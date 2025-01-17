@@ -9,6 +9,11 @@ impl Ident {
     pub fn name(&self) -> String {
         self.0.clone()
     }
+
+    pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
+        let indent = "    ".repeat(indent_level);
+        write!(f, "{}{}", indent, self.0)
+    }
 }
 
 impl From<&str> for Ident {
@@ -30,6 +35,6 @@ impl TryFrom<&TokenKind> for Ident {
 
 impl fmt::Display for Ident {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
+        self.fmt_with_indent(f, 0)
     }
 }

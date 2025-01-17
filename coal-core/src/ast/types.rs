@@ -68,6 +68,10 @@ impl Type {
         matches!(self, Type::Num(_))
     }
 
+    pub fn is_hashable(&self) -> bool {
+        matches!(self, Type::Str | Type::Num(_))
+    }
+
     pub fn is_defined(&self) -> bool {
         match self {
             Type::Unknown => false,
@@ -88,6 +92,7 @@ impl Type {
             Type::Num(_) => self.num_sig(method),
             Type::Str => self.str_sig(method),
             Type::List(t) => self.list_sig(method, t),
+            Type::Map(t) => self.map_sig(method, t),
             _ => None,
         }
     }
@@ -123,6 +128,13 @@ impl Type {
                 &[Type::Fn(vec![t.clone()], Box::new(t.clone()))],
                 Type::List(Box::new(Type::Unknown)),
             )),
+            _ => None,
+        }
+    }
+
+    fn map_sig(&self, method: &str, (kt, vt): &(Type, Type)) -> Option<MethodSignature> {
+        match method {
+            "get" => Some(MethodSignature::new(&[kt.clone()], vt.clone())),
             _ => None,
         }
     }
@@ -165,6 +177,7 @@ impl From<&Literal> for Type {
             Literal::F64(_) => F64,
             Literal::Bool(_) => Type::Bool,
             Literal::List(_, t, _) => Type::List(Box::new(t.to_owned())),
+            Literal::Map(_, (kt, vt)) => Type::Map(Box::new((kt.to_owned(), vt.to_owned()))),
             Literal::Nil => Type::Nil,
         }
     }

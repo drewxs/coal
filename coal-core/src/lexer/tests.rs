@@ -278,3 +278,26 @@ fn test_lex_iter() {
         }
     }
 }
+
+#[test]
+fn test_lex_hashmap() {
+    let input = r#"{key: "value"}"#;
+
+    let mut lexer = Lexer::new(input);
+
+    let expected = vec![
+        TokenKind::Lbrace,
+        TokenKind::Ident(String::from("key")),
+        TokenKind::Colon,
+        TokenKind::Str(String::from("value")),
+        TokenKind::Rbrace,
+        TokenKind::EOF,
+    ];
+
+    for (i, expected) in expected.iter().enumerate() {
+        if let Some(Token { token, .. }) = lexer.next() {
+            println!("[{i}] expected: {expected:?}, actual: {token:?}");
+            assert_eq!(*expected, token);
+        }
+    }
+}

@@ -58,6 +58,8 @@ pub enum Expr {
     },
 }
 
+pub type ExprPair = (Expr, Expr);
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct IfExpr {
     pub cond: Box<Expr>,

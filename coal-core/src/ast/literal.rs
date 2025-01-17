@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{Expr, Type};
+use super::{Expr, ExprPair, Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
@@ -14,45 +14,14 @@ pub enum Literal {
     Str(String),
     Bool(bool),
     List(Vec<Expr>, Type, Option<Box<Expr>>),
+    Map(Vec<ExprPair>, (Type, Type)),
     Nil,
 }
 
-impl From<&str> for Literal {
-    fn from(s: &str) -> Self {
-        match s.parse::<f64>() {
-            Ok(f) => {
-                if f.fract() == 0.0 {
-                    Literal::I64(f as i64)
-                } else {
-                    Literal::F64(f)
-                }
-            }
-            Err(_) => match s {
-                "true" => Literal::Bool(true),
-                "false" => Literal::Bool(false),
-                "nil" => Literal::Nil,
-                _ => Literal::Str(s.to_string()),
-            },
-        }
-    }
-}
+impl Literal {
+    pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
+        let indent = "    ".repeat(indent_level);
 
-impl TryInto<usize> for Literal {
-    type Error = ();
-
-    fn try_into(self) -> Result<usize, Self::Error> {
-        match self {
-            Literal::U32(i) => Ok(i as usize),
-            Literal::U64(i) => Ok(i as usize),
-            Literal::I32(i) => Ok(i as usize),
-            Literal::I64(i) => Ok(i as usize),
-            _ => Err(()),
-        }
-    }
-}
-
-impl fmt::Display for Literal {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Literal::Str(s) => {
                 let mut result = String::new();
@@ -91,33 +60,110 @@ impl fmt::Display for Literal {
                     result.push_str(&brace_content);
                 }
 
-                write!(f, "\"{result}\"")
+                write!(f, "{}\"{result}\"", indent)
             }
-            Literal::U32(i) => write!(f, "{i}"),
-            Literal::U64(i) => write!(f, "{i}"),
-            Literal::I32(i) => write!(f, "{i}"),
-            Literal::I64(i) => write!(f, "{i}"),
-            Literal::I128(i) => write!(f, "{i}"),
-            Literal::F32(x) => write!(f, "{x:?}"),
-            Literal::F64(x) => write!(f, "{x:?}"),
-            Literal::Bool(b) => write!(f, "{b}"),
+            Literal::U32(i) => write!(f, "{}{i}", indent),
+            Literal::U64(i) => write!(f, "{}{i}", indent),
+            Literal::I32(i) => write!(f, "{}{i}", indent),
+            Literal::I64(i) => write!(f, "{}{i}", indent),
+            Literal::I128(i) => write!(f, "{}{i}", indent),
+            Literal::F32(x) => write!(f, "{}{x:?}", indent),
+            Literal::F64(x) => write!(f, "{}{x:?}", indent),
+            Literal::Bool(b) => write!(f, "{}{b}", indent),
             Literal::List(l, _, repeat) => {
-                if let Some(n) = repeat {
-                    if let Some(e) = l.first() {
-                        write!(f, "[{e}; {n}]")
-                    } else {
-                        write!(f, "[?; {n}]",)
-                    }
+                if let (Some(n), Some(e)) = (repeat, l.first()) {
+                    write!(f, "{}[{e}; {n}]", indent)
                 } else {
-                    let list = l
-                        .iter()
-                        .map(|e| e.to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    write!(f, "[{list}]")
+                    match l.len() {
+                        0 => write!(f, "{}[]", indent),
+                        1 => write!(f, "{}[{}]", indent, l.first().unwrap()),
+                        _ => {
+                            writeln!(f, "{}[", indent)?;
+                            for i in l {
+                                match i {
+                                    Expr::Ident(i, _, _) => {
+                                        i.fmt_with_indent(f, indent_level + 1)?;
+                                    }
+                                    Expr::Literal(i, _) => {
+                                        i.fmt_with_indent(f, indent_level + 1)?;
+                                    }
+                                    _ => {
+                                        i.fmt_with_indent(f, indent_level + 1)?;
+                                    }
+                                }
+                                writeln!(f, ",")?;
+                            }
+                            write!(f, "{}]", indent)
+                        }
+                    }
                 }
             }
-            Literal::Nil => write!(f, "nil"),
+            Literal::Map(m, _) => match m.len() {
+                0 => write!(f, "{}{{}}", indent),
+                1 => {
+                    let (k, v) = m.first().unwrap();
+                    write!(f, "{}{{{k}: {v}}}", indent)
+                }
+                _ => {
+                    writeln!(f, "{}{{", indent)?;
+                    for (k, v) in m {
+                        match k {
+                            Expr::Ident(k, _, _) => {
+                                k.fmt_with_indent(f, indent_level + 1)?;
+                            }
+                            Expr::Literal(k, _) => {
+                                k.fmt_with_indent(f, indent_level + 1)?;
+                            }
+                            _ => {
+                                k.fmt_with_indent(f, indent_level + 1)?;
+                            }
+                        }
+                        writeln!(f, ": {v},")?;
+                    }
+                    write!(f, "{}}}", indent)
+                }
+            },
+            Literal::Nil => write!(f, "{}nil", indent),
         }
+    }
+}
+
+impl From<&str> for Literal {
+    fn from(s: &str) -> Self {
+        match s.parse::<f64>() {
+            Ok(f) => {
+                if f.fract() == 0.0 {
+                    Literal::I64(f as i64)
+                } else {
+                    Literal::F64(f)
+                }
+            }
+            Err(_) => match s {
+                "true" => Literal::Bool(true),
+                "false" => Literal::Bool(false),
+                "nil" => Literal::Nil,
+                _ => Literal::Str(s.to_string()),
+            },
+        }
+    }
+}
+
+impl TryInto<usize> for Literal {
+    type Error = ();
+
+    fn try_into(self) -> Result<usize, Self::Error> {
+        match self {
+            Literal::U32(i) => Ok(i as usize),
+            Literal::U64(i) => Ok(i as usize),
+            Literal::I32(i) => Ok(i as usize),
+            Literal::I64(i) => Ok(i as usize),
+            _ => Err(()),
+        }
+    }
+}
+
+impl fmt::Display for Literal {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.fmt_with_indent(f, 0)
     }
 }
