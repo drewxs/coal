@@ -435,7 +435,7 @@ impl Evaluator<'_> {
         if let Some(repeat) = &list.repeat {
             if let Some(i) = list.data.first() {
                 let item = self.eval_expr(i)?;
-                let n_obj = self.eval_expr(&*repeat)?;
+                let n_obj = self.eval_expr(repeat)?;
                 let n: usize = n_obj.try_into().ok()?;
                 data = vec![item; n];
             }
