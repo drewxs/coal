@@ -4,7 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use super::{builtins, Object};
+use super::Object;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Env {
@@ -62,7 +62,7 @@ impl Env {
 impl Default for Env {
     fn default() -> Self {
         Env {
-            store: RefCell::new(builtins::objects()),
+            store: RefCell::new(HashMap::new()),
             outer: None,
         }
     }
@@ -71,7 +71,7 @@ impl Default for Env {
 impl From<Rc<RefCell<Env>>> for Env {
     fn from(outer: Rc<RefCell<Env>>) -> Self {
         Self {
-            store: RefCell::new(builtins::objects()),
+            store: RefCell::new(HashMap::new()),
             outer: Some(outer),
         }
     }

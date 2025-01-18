@@ -315,12 +315,18 @@ impl Evaluator<'_> {
 
     fn eval_expr(&mut self, expr: &Expr) -> Option<Object> {
         match expr {
-            Expr::Ident(Ident(name), _, _) => self.env.borrow_mut().get(name).or_else(|| {
-                Some(Object::Error(RuntimeError::new(
-                    RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
-                    expr.span(),
-                )))
-            }),
+            Expr::Ident(Ident(name), _, _) => self
+                .builtins
+                .get(name.as_str())
+                .map(|b| Object::Builtin(b.clone()))
+                .or_else(|| {
+                    self.env.borrow_mut().get(name).or_else(|| {
+                        Some(Object::Error(RuntimeError::new(
+                            RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
+                            expr.span(),
+                        )))
+                    })
+                }),
             Expr::Literal(literal, _) => self.eval_literal_expr(literal, &expr.span()),
             Expr::Prefix(prefix, rhs, span) => self.eval_prefix_expr(prefix, rhs, span),
             Expr::Infix(op, lhs, rhs, span) => self.eval_infix_expr(op, lhs, rhs, span),
