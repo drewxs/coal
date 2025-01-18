@@ -8,6 +8,7 @@ pub enum TokenKind {
     Comment(String),
     NewLine,
     Dot,
+    Range,
     Pipe,
 
     // Identifiers + literals
@@ -67,7 +68,6 @@ pub enum TokenKind {
     While,
     For,
     In,
-    Range,
     Return,
     Nil,
 }
@@ -78,6 +78,7 @@ impl From<&str> for TokenKind {
             "\0" => TokenKind::EOF,
             "\n" => TokenKind::NewLine,
             "." => TokenKind::Dot,
+            ".." => TokenKind::Range,
             "true" => TokenKind::Bool(true),
             "false" => TokenKind::Bool(false),
             "+" => TokenKind::Add,
@@ -116,7 +117,6 @@ impl From<&str> for TokenKind {
             "while" => TokenKind::While,
             "for" => TokenKind::For,
             "in" => TokenKind::In,
-            ".." => TokenKind::Range,
             "return" => TokenKind::Return,
             "nil" => TokenKind::Nil,
             _ => TokenKind::Ident(s.to_string()),
@@ -132,6 +132,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Comment(s) => writeln!(f, "// {s}"),
             TokenKind::NewLine => writeln!(f),
             TokenKind::Dot => write!(f, "."),
+            TokenKind::Range => write!(f, ".."),
             TokenKind::Pipe => write!(f, "|"),
             TokenKind::Ident(name) => write!(f, "{name}"),
             TokenKind::U32(i) => write!(f, "{i}"),
@@ -179,7 +180,6 @@ impl fmt::Display for TokenKind {
             TokenKind::While => write!(f, "while"),
             TokenKind::For => write!(f, "for"),
             TokenKind::In => write!(f, "in"),
-            TokenKind::Range => write!(f, "range"),
             TokenKind::Return => write!(f, "return"),
             TokenKind::Nil => write!(f, "nil"),
         }
@@ -191,12 +191,12 @@ pub type Span = (Position, Position);
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Token {
-    pub token: TokenKind,
+    pub kind: TokenKind,
     pub span: Span,
 }
 
 impl Token {
     pub fn new(token: TokenKind, span: Span) -> Self {
-        Token { token, span }
+        Token { kind: token, span }
     }
 }

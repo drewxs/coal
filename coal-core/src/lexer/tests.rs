@@ -94,7 +94,7 @@ fn test_lex_let_statements() {
     ];
 
     for (i, expected) in expected.iter().enumerate() {
-        if let Some(Token { token, .. }) = lexer.next() {
+        if let Some(Token { kind: token, .. }) = lexer.next() {
             println!("[{i}] expected: {expected:?}, actual: {token:?}");
             assert_eq!(*expected, token);
         }
@@ -145,7 +145,7 @@ fn test_lex_functions() {
     ];
 
     for (i, expected) in expected.iter().enumerate() {
-        if let Some(Token { token, .. }) = lexer.next() {
+        if let Some(Token { kind: token, .. }) = lexer.next() {
             println!("[{i}] expected: {expected:?}, actual: {token:?}");
             assert_eq!(*expected, token);
         }
@@ -223,7 +223,7 @@ fn test_lex_operators() {
     ];
 
     for (i, expected) in expected.iter().enumerate() {
-        if let Some(Token { token, .. }) = lexer.next() {
+        if let Some(Token { kind: token, .. }) = lexer.next() {
             println!("[{i}] expected: {expected:?}, actual: {token:?}");
             assert_eq!(*expected, token);
         }
@@ -248,7 +248,7 @@ fn test_lex_lists() {
     ];
 
     for (i, expected) in expected.iter().enumerate() {
-        if let Some(Token { token, .. }) = lexer.next() {
+        if let Some(Token { kind: token, .. }) = lexer.next() {
             println!("[{i}] expected: {expected:?}, actual: {token:?}");
             assert_eq!(*expected, token);
         }
@@ -272,7 +272,7 @@ fn test_lex_iter() {
     ];
 
     for (i, expected) in expected.iter().enumerate() {
-        if let Some(Token { token, .. }) = lexer.next() {
+        if let Some(Token { kind: token, .. }) = lexer.next() {
             println!("[{i}] expected: {expected:?}, actual: {token:?}");
             assert_eq!(*expected, token);
         }
@@ -295,7 +295,7 @@ fn test_lex_hashmap() {
     ];
 
     for (i, expected) in expected.iter().enumerate() {
-        if let Some(Token { token, .. }) = lexer.next() {
+        if let Some(Token { kind: token, .. }) = lexer.next() {
             println!("[{i}] expected: {expected:?}, actual: {token:?}");
             assert_eq!(*expected, token);
         }

@@ -42,7 +42,7 @@ impl Lexer {
     pub fn tokens(&mut self) -> Vec<TokenKind> {
         let mut tokens = vec![];
         for node in self {
-            tokens.push(node.token)
+            tokens.push(node.kind)
         }
         tokens
     }
