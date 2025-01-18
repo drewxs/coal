@@ -413,7 +413,6 @@ impl Parser {
                 | TokenKind::Sub
                 | TokenKind::Mul
                 | TokenKind::Div
-                | TokenKind::IntDiv
                 | TokenKind::Rem
                 | TokenKind::EQ
                 | TokenKind::NEQ

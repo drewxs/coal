@@ -518,7 +518,6 @@ impl Evaluator<'_> {
             Infix::Sub => lhs - rhs,
             Infix::Mul => lhs * rhs,
             Infix::Div => lhs / rhs,
-            Infix::IntDiv => lhs.int_div(rhs),
             Infix::Rem => lhs % rhs,
             Infix::EQ => Some(Object::Bool(lhs == rhs)),
             Infix::NEQ => Some(Object::Bool(lhs != rhs)),

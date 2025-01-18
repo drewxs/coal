@@ -178,19 +178,13 @@ impl Iterator for Lexer {
                     self.read_ch();
                     Token::new(TokenKind::DivAssign, (cursor, (self.line, self.col)))
                 }
-                '/' => {
-                    if self.col <= 2 {
-                        let pos = self.pos + 3;
-                        while self.ch != '\n' && self.ch != '\0' {
-                            self.read_ch();
-                        }
-                        let val = self.input[pos..(self.pos.max(pos))].to_string();
-                        Token::new(TokenKind::Comment(val), (cursor, (self.line, self.col)))
-                    } else {
+                '/' if self.col <= 2 => {
+                    let pos = self.pos + 3;
+                    while self.ch != '\n' && self.ch != '\0' {
                         self.read_ch();
-                        self.read_ch();
-                        Token::new(TokenKind::IntDiv, (cursor, (self.line, self.col)))
                     }
+                    let val = self.input[pos..(self.pos.max(pos))].to_string();
+                    Token::new(TokenKind::Comment(val), (cursor, (self.line, self.col)))
                 }
                 _ => {
                     self.read_ch();

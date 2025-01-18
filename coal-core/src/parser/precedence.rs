@@ -21,9 +21,7 @@ impl From<&TokenKind> for Precedence {
                 Precedence::Cmp
             }
             TokenKind::Add | TokenKind::Sub => Precedence::Sum,
-            TokenKind::Mul | TokenKind::Div | TokenKind::IntDiv | TokenKind::Rem => {
-                Precedence::Product
-            }
+            TokenKind::Mul | TokenKind::Div | TokenKind::Rem => Precedence::Product,
             TokenKind::Lbracket => Precedence::Index,
             TokenKind::Lparen | TokenKind::Dot => Precedence::Call,
             _ => Precedence::Lowest,

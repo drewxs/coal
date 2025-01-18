@@ -9,7 +9,6 @@ pub enum Infix {
     Sub,
     Mul,
     Div,
-    IntDiv,
     Rem,
 
     // Comparisons
@@ -30,7 +29,6 @@ impl TryFrom<&TokenKind> for Infix {
             TokenKind::Sub | TokenKind::SubAssign => Ok(Infix::Sub),
             TokenKind::Mul | TokenKind::MulAssign => Ok(Infix::Mul),
             TokenKind::Div | TokenKind::DivAssign => Ok(Infix::Div),
-            TokenKind::IntDiv => Ok(Infix::IntDiv),
             TokenKind::Rem | TokenKind::RemAssign => Ok(Infix::Rem),
             TokenKind::EQ => Ok(Infix::EQ),
             TokenKind::NEQ => Ok(Infix::NEQ),
@@ -50,7 +48,6 @@ impl fmt::Display for Infix {
             Infix::Sub => write!(f, "-"),
             Infix::Mul => write!(f, "*"),
             Infix::Div => write!(f, "/"),
-            Infix::IntDiv => write!(f, "//"),
             Infix::Rem => write!(f, "%"),
             Infix::EQ => write!(f, "=="),
             Infix::NEQ => write!(f, "!="),

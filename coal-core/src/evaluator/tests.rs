@@ -72,8 +72,6 @@ fn test_eval_infix() {
         ("(7 + 2 * 3 / 2) % 3", Ok(Object::I32(1))),
         ("1 + 2 * 3 + 4 / 5", Ok(Object::I32(7))),
         ("(1 + 2 * 3 + 4 / 5) * 2 + -10", Ok(Object::I32(4))),
-        ("8 // 3", Ok(Object::I32(2))),
-        ("10.4 // 2", Ok(Object::F64(5.0))),
         ("true == true", Ok(TRUE)),
         ("false == false", Ok(TRUE)),
         ("true == false", Ok(FALSE)),
