@@ -9,6 +9,10 @@ fn main() {
 
     if let Some(cmd) = args.cmd {
         return match cmd {
+            Command::New { name } => match coal::new(&name) {
+                Ok(msg) => println!("{msg}"),
+                Err(err) => eprintln!("{err}"),
+            },
             Command::Run { path, tokens, ast } => match path::main_program(path) {
                 Ok(path) => {
                     if tokens {

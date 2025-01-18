@@ -14,6 +14,9 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Command {
+    #[command(about = "Create a new project")]
+    New { name: String },
+
     #[command(about = "Compile and run programs")]
     #[command(long_about = "Compile and run the current project or a given program")]
     #[command(short_flag = 'r')]
