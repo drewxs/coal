@@ -282,12 +282,14 @@ impl Expr {
             Expr::MethodCall {
                 lhs, name, args, ..
             } => {
-                let args = args
-                    .iter()
-                    .map(|arg| format!("{arg}"))
-                    .collect::<Vec<String>>()
-                    .join(", ");
-                write!(f, "{lhs}.{name}({args})")
+                write!(f, "{lhs}.{name}(")?;
+                for (i, arg) in args.iter().enumerate() {
+                    arg.fmt_with_indent(f, indent_level)?;
+                    if i < args.len() - 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, ")")
             }
         }
     }
