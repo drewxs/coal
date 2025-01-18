@@ -69,14 +69,23 @@ impl Type {
     }
 
     pub fn is_hashable(&self) -> bool {
-        matches!(self, Type::Str | Type::Num(_))
+        matches!(self, Type::Bool | Type::Str | Type::Num(_))
     }
 
     pub fn is_defined(&self) -> bool {
         match self {
-            Type::Unknown => false,
             Type::List(t) => t.is_defined(),
+            Type::Map(t) => t.0.is_defined() && t.1.is_defined(),
+            Type::Unknown => false,
             _ => true,
+        }
+    }
+
+    pub fn is_composite(&self) -> bool {
+        match self {
+            Type::UserDefined(_, t) => t.is_composite(),
+            Type::List(_) | Type::Map(_) | Type::Fn(_, _) => true,
+            _ => false,
         }
     }
 
@@ -177,7 +186,7 @@ impl From<&Literal> for Type {
             Literal::F64(_) => F64,
             Literal::Bool(_) => Type::Bool,
             Literal::List(_, t, _) => Type::List(Box::new(t.to_owned())),
-            Literal::Map(_, (kt, vt)) => Type::Map(Box::new((kt.to_owned(), vt.to_owned()))),
+            Literal::Map(_, t) => Type::Map(Box::new(t.to_owned())),
             Literal::Nil => Type::Nil,
         }
     }
@@ -230,6 +239,7 @@ impl TryFrom<&Expr> for Type {
             Expr::Infix(_, lhs, rhs, _) => infer_infix_type(lhs, rhs),
             Expr::Index(expr, _, _) => match Type::try_from(&**expr) {
                 Ok(Type::List(t)) => Ok(*t),
+                Ok(Type::Map(t)) => Ok((*t).1),
                 Ok(t) | Err(t) => Err(t),
             },
             Expr::Range(_, _, _) => Ok(U64),
@@ -273,10 +283,7 @@ impl fmt::Display for Type {
             &F32 => write!(f, "f32"),
             &F64 => write!(f, "f64"),
             Type::List(t) => write!(f, "list[{t}]"),
-            Type::Map(t) => {
-                let (k, v) = t.as_ref();
-                write!(f, "map[{k}, {v}]")
-            }
+            Type::Map(t) => write!(f, "map[{}, {}]", t.0, t.1),
             Type::Fn(args, ret_t) => {
                 let args_str = args
                     .iter()

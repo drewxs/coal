@@ -135,11 +135,6 @@ impl Parser {
         }
     }
 
-    fn error(&mut self, kind: ParserErrorKind) {
-        self.errors
-            .push(ParserError::new(kind, self.curr_node.span));
-    }
-
     fn expect_next(&mut self, token: TokenKind) -> Option<()> {
         if self.next_node.token == token {
             self.advance();
@@ -152,6 +147,11 @@ impl Parser {
         ));
 
         None
+    }
+
+    fn error(&mut self, kind: ParserErrorKind) {
+        self.errors
+            .push(ParserError::new(kind, self.curr_node.span));
     }
 
     fn lookup_expr_type(&mut self, expr: &Expr) -> Option<Type> {
@@ -267,13 +267,13 @@ impl Parser {
             }
         } else if let Ok(inf_t) = Type::try_from(&expr) {
             if inf_t.is_defined() {
-                if let Some(decl_t) = &declared_t {
-                    let decl_tx = decl_t.extract();
+                if let Some(dt) = &declared_t {
+                    let decl_tx = dt.extract();
                     let inf_tx = inf_t.extract();
 
                     if !decl_tx.is_numeric() || !inf_tx.is_numeric() {
-                        if matches!(inf_tx, Type::List(_)) {
-                            declared_t = Some(decl_t.clone());
+                        if inf_tx.is_composite() {
+                            declared_t = Some(dt.clone());
                         } else {
                             declared_t = Some(inf_tx.clone());
                         }
@@ -1032,6 +1032,7 @@ impl Parser {
             TokenKind::Ident(s) => match s.as_str() {
                 "Fn" => self.parse_fn_type(),
                 "list" => self.parse_list_type(),
+                "map" => self.parse_map_type(),
                 _ => Type::try_from(&self.curr_node.token).ok(),
             },
             _ => None,
@@ -1043,7 +1044,7 @@ impl Parser {
         self.consume(TokenKind::Lparen);
 
         let mut args = vec![];
-        while let TokenKind::Ident(_) = self.curr_node.token.clone() {
+        while let TokenKind::Ident(_) = self.curr_node.token {
             let t = self.parse_type().unwrap_or_default();
             self.advance();
             self.consume_next(TokenKind::Comma);
@@ -1071,6 +1072,20 @@ impl Parser {
         self.consume_next(TokenKind::Rbracket);
 
         Some(Type::List(Box::new(t)))
+    }
+
+    fn parse_map_type(&mut self) -> Option<Type> {
+        self.advance(); // 'map'
+        self.consume(TokenKind::Lbracket);
+
+        let kt = self.parse_type().unwrap_or_default();
+        self.consume_next(TokenKind::Comma);
+        self.advance();
+
+        let vt = self.parse_type().unwrap_or_default();
+        self.consume_next(TokenKind::Rbracket);
+
+        Some(Type::Map(Box::new((kt, vt))))
     }
 
     fn check_unreachable(&mut self, stmts: &[Stmt]) {

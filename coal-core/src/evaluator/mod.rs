@@ -675,20 +675,10 @@ impl Evaluator<'_> {
         self.eval_call_obj(&resolved_fn, &resolved_args, span)
     }
 
-    fn eval_call_obj(&mut self, func: &Object, args: &[Object], span: &Span) -> Option<Object> {
-        if let Object::Fn {
-            args: fn_args,
-            body: fn_body,
-            ..
-        }
-        | Object::Closure {
-            args: fn_args,
-            body: fn_body,
-            ..
-        } = func
-        {
-            let expected_arity = fn_args.len();
-            let actual_arity = args.len();
+    fn eval_call_obj(&mut self, func: &Object, argsc: &[Object], span: &Span) -> Option<Object> {
+        if let Object::Fn { args, body, .. } | Object::Closure { args, body, .. } = func {
+            let expected_arity = args.len();
+            let actual_arity = argsc.len();
 
             if expected_arity != actual_arity {
                 return Some(Object::Error(RuntimeError::new(
@@ -698,14 +688,14 @@ impl Evaluator<'_> {
             }
 
             let mut enclosed_env = Env::from(Rc::clone(&self.env));
-            for (var, value) in fn_args.iter().zip(args.iter()) {
+            for (var, value) in args.iter().zip(argsc.iter()) {
                 if Type::from(value) == var.t {
                     enclosed_env.set_in_store(var.name.to_owned(), value.to_owned());
                 } else if let Some(casted) = value.cast(&var.t) {
                     enclosed_env.set_in_store(var.name.to_owned(), casted);
                 } else {
-                    let expected_t = self.vars_str(fn_args);
-                    let resolved_t = self.objects_str(args);
+                    let expected_t = self.vars_str(args);
+                    let resolved_t = self.objects_str(argsc);
 
                     return Some(Object::Error(RuntimeError::new(
                         RuntimeErrorKind::InvalidArguments(expected_t, resolved_t),
@@ -715,7 +705,7 @@ impl Evaluator<'_> {
             }
 
             let mut res =
-                self.eval_stmts_in_scope(fn_body.to_owned(), Rc::new(RefCell::new(enclosed_env)));
+                self.eval_stmts_in_scope(body.to_owned(), Rc::new(RefCell::new(enclosed_env)));
             if let Some(Object::Return(val)) = res {
                 res = Some(*val);
             }

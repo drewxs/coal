@@ -308,6 +308,16 @@ impl Object {
                     None
                 }
             }
+            (Object::Map { data, t }, Type::Map(t2)) => {
+                if data.is_empty() && !(t.0.is_defined() && t.1.is_defined()) {
+                    Some(Object::Map {
+                        data: HashMap::new(),
+                        t: (t2.0.clone(), t2.1.clone()),
+                    })
+                } else {
+                    None
+                }
+            }
 
             _ => None,
         }
@@ -606,22 +616,48 @@ impl fmt::Display for Object {
             Object::I128(i) => write!(f, "{i}"),
             Object::F32(x) => write!(f, "{x:?}"),
             Object::F64(x) => write!(f, "{x:?}"),
-            Object::Str(s) => write!(f, "{s}"),
+            Object::Str(s) => write!(f, "\"{s}\""),
             Object::Bool(b) => write!(f, "{b}"),
             Object::Range(start, end) => write!(f, "({start}..{end})"),
-            Object::List { data, .. } => {
-                let items = data
-                    .iter()
-                    .map(|x| match x {
-                        Object::Str(s) => format!("\"{s}\""),
-                        _ => x.to_string(),
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", ");
-
-                write!(f, "[{items}]")
-            }
-            Object::Map { data, .. } => write!(f, "{data:?}"),
+            Object::List { data, .. } => match data.len() {
+                0 => write!(f, "[]"),
+                1 | 2 => {
+                    let v = data
+                        .iter()
+                        .map(|x| match x {
+                            Object::Str(s) => format!("\"{s}\""),
+                            _ => x.to_string(),
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    write!(f, "[{v}]")
+                }
+                _ => {
+                    writeln!(f, "[")?;
+                    for i in data {
+                        writeln!(f, "    {i},")?;
+                    }
+                    write!(f, "]")
+                }
+            },
+            Object::Map { data, .. } => match data.len() {
+                0 => write!(f, "{{}}"),
+                1 | 2 => {
+                    let v = data
+                        .iter()
+                        .map(|(k, v)| format!("{k}: {v}"))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    write!(f, "{{{v}}}")
+                }
+                _ => {
+                    writeln!(f, "{{")?;
+                    for (k, v) in data {
+                        writeln!(f, "    {k}: {v}")?;
+                    }
+                    write!(f, "}}")
+                }
+            },
             Object::Fn { .. } => write!(f, "<fn_{}>", self.calculate_hash()),
             Object::Closure { .. } => write!(f, "<closure_{}>", self.calculate_hash()),
             Object::Builtin(_) => write!(f, "<builtin_{}>", self.calculate_hash()),

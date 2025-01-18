@@ -548,7 +548,7 @@ fn test_eval_lists() {
             Ok(actual) => {
                 if expected != actual {
                     panic!(
-                        "input:\n{}\nexpected:\n{}\nactual:\n{}",
+                        "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
                         expr, expected, actual
                     );
                 }
@@ -571,7 +571,21 @@ fn test_eval_maps() {
             },
         ),
         (
+            "let x: map[i32, i32] = {}; x",
+            Object::Map {
+                data: HashMap::new(),
+                t: (I32, I32),
+            },
+        ),
+        (
             "{1: 2}",
+            Object::Map {
+                data: HashMap::from([(Object::I32(1), Object::I32(2))]),
+                t: (I32, I32),
+            },
+        ),
+        (
+            "let x: map[i32, i32] = {1: 2}; x",
             Object::Map {
                 data: HashMap::from([(Object::I32(1), Object::I32(2))]),
                 t: (I32, I32),
@@ -585,7 +599,21 @@ fn test_eval_maps() {
             },
         ),
         (
+            "let x = {1.2: 3}; x",
+            Object::Map {
+                data: HashMap::from([(Object::F64(1.2), Object::I32(3))]),
+                t: (F64, I32),
+            },
+        ),
+        (
             r#"{"one": 1}"#,
+            Object::Map {
+                data: HashMap::from([(Object::Str(String::from("one")), Object::I32(1))]),
+                t: (Type::Str, I32),
+            },
+        ),
+        (
+            r#"let x = {"one": 1}; x"#,
             Object::Map {
                 data: HashMap::from([(Object::Str(String::from("one")), Object::I32(1))]),
                 t: (Type::Str, I32),
@@ -598,7 +626,7 @@ fn test_eval_maps() {
             Ok(actual) => {
                 if expected != actual {
                     panic!(
-                        "input:\n{}\nexpected:\n{}\nactual:\n{}",
+                        "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
                         expr, expected, actual
                     );
                 }
