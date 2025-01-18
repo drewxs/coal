@@ -185,8 +185,8 @@ impl From<&Literal> for Type {
             Literal::F32(_) => F32,
             Literal::F64(_) => F64,
             Literal::Bool(_) => Type::Bool,
-            Literal::List(_, t, _) => Type::List(Box::new(t.to_owned())),
-            Literal::Map(_, t) => Type::Map(Box::new(t.to_owned())),
+            Literal::List(l) => Type::List(Box::new(l.t.to_owned())),
+            Literal::Map(m) => Type::Map(Box::new(m.t.to_owned())),
             Literal::Nil => Type::Nil,
         }
     }

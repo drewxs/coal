@@ -8,7 +8,9 @@ pub mod object;
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::{Builtin, Expr, Ident, IfExpr, Infix, Literal, Parser, Prefix, Span, Stmt, Type, Var};
+use crate::{
+    Builtin, Expr, Ident, IfExpr, Infix, List, Literal, Map, Parser, Prefix, Span, Stmt, Type, Var,
+};
 
 pub use builtins::Def;
 pub use env::Env;
@@ -371,8 +373,8 @@ impl Evaluator<'_> {
     fn eval_literal_expr(&mut self, literal: &Literal, span: &Span) -> Option<Object> {
         match literal {
             Literal::Str(s) => self.eval_str(s, span),
-            Literal::List(l, t, repeat) => self.eval_list_expr(l, t, repeat),
-            Literal::Map(m, t) => self.eval_map_expr(m, t),
+            Literal::List(l) => self.eval_list_expr(l),
+            Literal::Map(m) => self.eval_map_expr(m),
             _ => Some(Object::from(literal)),
         }
     }
@@ -427,23 +429,18 @@ impl Evaluator<'_> {
         Some(Object::Str(res))
     }
 
-    fn eval_list_expr(
-        &mut self,
-        list: &[Expr],
-        t: &Type,
-        repeat: &Option<Box<Expr>>,
-    ) -> Option<Object> {
+    fn eval_list_expr(&mut self, list: &List) -> Option<Object> {
         let mut data = vec![];
 
-        if let Some(repeat) = repeat {
-            if let Some(i) = list.first() {
+        if let Some(repeat) = &list.repeat {
+            if let Some(i) = list.data.first() {
                 let item = self.eval_expr(i)?;
-                let n_obj = self.eval_expr(repeat)?;
+                let n_obj = self.eval_expr(&*repeat)?;
                 let n: usize = n_obj.try_into().ok()?;
                 data = vec![item; n];
             }
         } else {
-            for item in list {
+            for item in &list.data {
                 if let Some(val) = self.eval_expr(item) {
                     if let Object::Error { .. } = val {
                         return Some(val);
@@ -453,13 +450,16 @@ impl Evaluator<'_> {
             }
         }
 
-        Some(Object::List { data, t: t.clone() })
+        Some(Object::List {
+            data,
+            t: list.t.clone(),
+        })
     }
 
-    fn eval_map_expr(&mut self, m: &[(Expr, Expr)], t: &(Type, Type)) -> Option<Object> {
+    fn eval_map_expr(&mut self, m: &Map) -> Option<Object> {
         let mut data = HashMap::new();
 
-        for (k, v) in m {
+        for (k, v) in &m.data {
             let k = self.eval_expr(k)?;
             let v = self.eval_expr(v)?;
 
@@ -473,7 +473,10 @@ impl Evaluator<'_> {
             data.insert(k, v);
         }
 
-        Some(Object::Map { data, t: t.clone() })
+        Some(Object::Map {
+            data,
+            t: m.t.clone(),
+        })
     }
 
     fn eval_prefix_expr(&mut self, prefix: &Prefix, rhs: &Expr, span: &Span) -> Option<Object> {

@@ -1040,14 +1040,14 @@ fn test_parse_closure_expressions() {
             "#,
             Stmt::Expr(Expr::MethodCall {
                 lhs: Box::new(Expr::Literal(
-                    Literal::List(
-                        vec![
+                    Literal::List(List::new(
+                        &[
                             Expr::Literal(Literal::I32(0), ((1, 2), (1, 2))),
                             Expr::Literal(Literal::I32(0), ((1, 5), (1, 5))),
                         ],
                         I32,
                         None,
-                    ),
+                    )),
                     ((1, 1), (1, 6)),
                 )),
                 name: String::from("map"),
@@ -1239,29 +1239,29 @@ fn test_parse_lists() {
         (
             "[]",
             Stmt::Expr(Expr::Literal(
-                Literal::List(vec![], Type::Unknown, None),
+                Literal::List(List::new(&[], Type::Unknown, None)),
                 ((1, 1), (1, 2)),
             )),
         ),
         (
             "[1, 2]",
             Stmt::Expr(Expr::Literal(
-                Literal::List(
-                    vec![
+                Literal::List(List::new(
+                    &[
                         Expr::Literal(Literal::I32(1), ((1, 2), (1, 2))),
                         Expr::Literal(Literal::I32(2), ((1, 5), (1, 5))),
                     ],
                     I32,
                     None,
-                ),
+                )),
                 ((1, 1), (1, 6)),
             )),
         ),
         (
             "[foo()]",
             Stmt::Expr(Expr::Literal(
-                Literal::List(
-                    vec![Expr::Call {
+                Literal::List(List::new(
+                    &[Expr::Call {
                         name: String::from("foo"),
                         args: vec![],
                         ret_t: Type::Unknown,
@@ -1269,7 +1269,7 @@ fn test_parse_lists() {
                     }],
                     Type::Unknown,
                     None,
-                ),
+                )),
                 ((1, 1), (1, 7)),
             )),
         ),
@@ -1281,8 +1281,8 @@ fn test_parse_lists() {
             [foo()]
             "#,
             Stmt::Expr(Expr::Literal(
-                Literal::List(
-                    vec![Expr::Call {
+                Literal::List(List::new(
+                    &[Expr::Call {
                         name: String::from("foo"),
                         args: vec![],
                         ret_t: Type::Str,
@@ -1290,7 +1290,7 @@ fn test_parse_lists() {
                     }],
                     Type::Str,
                     None,
-                ),
+                )),
                 ((4, 1), (4, 7)),
             )),
         ),
@@ -1298,15 +1298,15 @@ fn test_parse_lists() {
             "[1, 2, 3][1]",
             Stmt::Expr(Expr::Index(
                 Box::new(Expr::Literal(
-                    Literal::List(
-                        vec![
+                    Literal::List(List::new(
+                        &[
                             Expr::Literal(Literal::I32(1), ((1, 2), (1, 2))),
                             Expr::Literal(Literal::I32(2), ((1, 5), (1, 5))),
                             Expr::Literal(Literal::I32(3), ((1, 8), (1, 8))),
                         ],
                         I32,
                         None,
-                    ),
+                    )),
                     ((1, 1), (1, 9)),
                 )),
                 Box::new(Expr::Literal(Literal::I32(1), ((1, 11), (1, 11)))),
@@ -1316,8 +1316,8 @@ fn test_parse_lists() {
         (
             "let x = [1, 2, 3]; [x[1], 1]",
             Stmt::Expr(Expr::Literal(
-                Literal::List(
-                    vec![
+                Literal::List(List::new(
+                    &[
                         Expr::Index(
                             Box::new(Expr::Ident(
                                 Ident::from("x"),
@@ -1331,7 +1331,7 @@ fn test_parse_lists() {
                     ],
                     I32,
                     None,
-                ),
+                )),
                 ((1, 20), (1, 28)),
             )),
         ),
@@ -1340,10 +1340,7 @@ fn test_parse_lists() {
             Stmt::Let(
                 Ident(String::from("x")),
                 Type::List(Box::new(I32)),
-                Expr::Literal(
-                    Literal::List(vec![], Type::Unknown, None),
-                    ((1, 20), (1, 21)),
-                ),
+                Expr::Literal(Literal::List(List::default()), ((1, 20), (1, 21))),
             ),
         ),
     ];
@@ -1385,28 +1382,28 @@ fn test_parse_maps() {
         (
             "{}",
             Stmt::Expr(Expr::Literal(
-                Literal::Map(vec![], (Type::Unknown, Type::Unknown)),
+                Literal::Map(Map::default()),
                 ((1, 1), (1, 2)),
             )),
         ),
         (
             "{1: 2}",
             Stmt::Expr(Expr::Literal(
-                Literal::Map(
-                    vec![(
+                Literal::Map(Map::new(
+                    &[(
                         Expr::Literal(Literal::I32(1), ((1, 2), (1, 2))),
                         Expr::Literal(Literal::I32(2), ((1, 5), (1, 5))),
                     )],
                     (I32, I32),
-                ),
+                )),
                 ((1, 1), (1, 6)),
             )),
         ),
         (
             r#"{"one": 1, "two": 2}"#,
             Stmt::Expr(Expr::Literal(
-                Literal::Map(
-                    vec![
+                Literal::Map(Map::new(
+                    &[
                         (
                             Expr::Literal(Literal::Str(String::from("one")), ((1, 2), (1, 6))),
                             Expr::Literal(Literal::I32(1), ((1, 9), (1, 9))),
@@ -1417,7 +1414,7 @@ fn test_parse_maps() {
                         ),
                     ],
                     (Type::Str, I32),
-                ),
+                )),
                 ((1, 1), (1, 20)),
             )),
         ),

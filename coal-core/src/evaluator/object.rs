@@ -429,16 +429,17 @@ impl From<&Literal> for Object {
             Literal::I128(i) => Object::I128(*i),
             Literal::F32(f) => Object::F32(*f),
             Literal::F64(f) => Object::F64(*f),
-            Literal::List(l, t, _) => Object::List {
-                data: l.iter().map(Object::from).collect(),
-                t: t.clone(),
+            Literal::List(l) => Object::List {
+                data: l.data.iter().map(Object::from).collect(),
+                t: l.t.clone(),
             },
-            Literal::Map(m, t) => Object::Map {
+            Literal::Map(m) => Object::Map {
                 data: m
+                    .data
                     .iter()
                     .map(|(k, v)| (Object::from(k), Object::from(v)))
                     .collect(),
-                t: t.clone(),
+                t: m.t.clone(),
             },
             Literal::Nil => Object::Nil,
         }

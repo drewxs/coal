@@ -9,7 +9,7 @@ mod warning;
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 use crate::{
-    Comment, Expr, ExprPair, Ident, IfExpr, Infix, Lexer, Literal, Prefix, Stmt, Token, TokenKind,
+    Comment, Expr, Ident, IfExpr, Infix, Lexer, List, Literal, Map, Prefix, Stmt, Token, TokenKind,
     Type, Var, U32,
 };
 
@@ -542,22 +542,23 @@ impl Parser {
         Some(list)
     }
 
-    fn parse_uniform_expr_list(
-        &mut self,
-        end_tok: TokenKind,
-    ) -> Option<(Vec<Expr>, Type, Option<Box<Expr>>)> {
-        let mut list = vec![];
+    fn parse_list(&mut self, end_tok: TokenKind) -> Option<List> {
+        let mut data = vec![];
 
         if self.next_node.token == end_tok {
             self.advance();
-            return Some((list, Type::Unknown, None));
+            return Some(List {
+                data,
+                t: Type::Unknown,
+                repeat: None,
+            });
         }
 
         self.advance();
 
         let expr = self.parse_expr(Precedence::Lowest)?;
         let t = Type::try_from(&expr).unwrap_or_default();
-        list.push(expr.clone());
+        data.push(expr.clone());
 
         if self.next_node.token == TokenKind::Semicolon {
             self.advance();
@@ -588,7 +589,7 @@ impl Parser {
                         return None;
                     }
 
-                    list.push(expr);
+                    data.push(expr);
                 }
                 Err(e) => {
                     let (_, end) = self.curr_node.span;
@@ -603,16 +604,16 @@ impl Parser {
 
         self.expect_next(end_tok)?;
 
-        Some((list, t, None))
+        Some(List {
+            data,
+            t,
+            repeat: None,
+        })
     }
 
-    fn parse_repeat_expr_list(
-        &mut self,
-        expr: &Expr,
-        t: &Type,
-    ) -> Option<(Vec<Expr>, Type, Option<Box<Expr>>)> {
+    fn parse_repeat_expr_list(&mut self, expr: &Expr, t: &Type) -> Option<List> {
         let rhs = self.parse_expr(Precedence::Lowest)?;
-        let (list, repeat) = match &rhs {
+        let (data, repeat) = match &rhs {
             Expr::Literal(Literal::U32(i), _) => {
                 (vec![expr.clone(); *i as usize], Some(Box::new(rhs.clone())))
             }
@@ -645,15 +646,22 @@ impl Parser {
             }
         };
 
-        Some((list, t.clone(), repeat))
+        Some(List {
+            data,
+            t: t.clone(),
+            repeat,
+        })
     }
 
-    fn parse_kv_pairs(&mut self) -> Option<(Vec<ExprPair>, (Type, Type))> {
-        let mut map = vec![];
+    fn parse_map(&mut self) -> Option<Map> {
+        let mut data = vec![];
 
         if self.next_node.token == TokenKind::Rbrace {
             self.advance();
-            return Some((map, (Type::Unknown, Type::Unknown)));
+            return Some(Map {
+                data,
+                t: (Type::Unknown, Type::Unknown),
+            });
         }
 
         self.advance();
@@ -670,7 +678,7 @@ impl Parser {
         let vt = Type::try_from(&v).unwrap_or_default();
 
         keys.insert(k.to_string());
-        map.push((k, v));
+        data.push((k, v));
 
         while self.next_node.token == TokenKind::Comma {
             self.advance();
@@ -711,12 +719,12 @@ impl Parser {
                 return None;
             }
 
-            map.push((k, v));
+            data.push((k, v));
         }
 
         self.expect_next(TokenKind::Rbrace)?;
 
-        Some((map, (kt, vt)))
+        Some(Map { data, t: (kt, vt) })
     }
 
     fn parse_method_call(&mut self, lhs: Expr) -> Option<Expr> {
@@ -783,18 +791,18 @@ impl Parser {
 
     fn parse_list_expr(&mut self) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
-        let (items, t, repeat) = self.parse_uniform_expr_list(TokenKind::Rbracket)?;
+        let list = self.parse_list(TokenKind::Rbracket)?;
         let (_, end) = self.curr_node.span;
 
-        Some(Expr::Literal(Literal::List(items, t, repeat), (start, end)))
+        Some(Expr::Literal(Literal::List(list), (start, end)))
     }
 
     fn parse_map_expr(&mut self) -> Option<Expr> {
         let (start, _) = self.curr_node.span;
-        let (pairs, t) = self.parse_kv_pairs()?;
+        let map = self.parse_map()?;
         let (_, end) = self.curr_node.span;
 
-        Some(Expr::Literal(Literal::Map(pairs, t), (start, end)))
+        Some(Expr::Literal(Literal::Map(map), (start, end)))
     }
 
     fn parse_if_expr(&mut self) -> Option<Expr> {

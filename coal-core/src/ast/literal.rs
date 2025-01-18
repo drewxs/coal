@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{Expr, ExprPair, Type};
+use super::{Expr, List, Map};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
@@ -13,8 +13,8 @@ pub enum Literal {
     F64(f64),
     Str(String),
     Bool(bool),
-    List(Vec<Expr>, Type, Option<Box<Expr>>),
-    Map(Vec<ExprPair>, (Type, Type)),
+    List(List),
+    Map(Map),
     Nil,
 }
 
@@ -70,16 +70,16 @@ impl Literal {
             Literal::F32(x) => write!(f, "{}{x:?}", indent),
             Literal::F64(x) => write!(f, "{}{x:?}", indent),
             Literal::Bool(b) => write!(f, "{}{b}", indent),
-            Literal::List(l, _, repeat) => {
-                if let (Some(n), Some(e)) = (repeat, l.first()) {
+            Literal::List(l) => {
+                if let (Some(n), Some(e)) = (&l.repeat, l.data.first()) {
                     write!(f, "{}[{e}; {n}]", indent)
                 } else {
-                    match l.len() {
+                    match l.data.len() {
                         0 => write!(f, "{}[]", indent),
-                        1 => write!(f, "{}[{}]", indent, l.first().unwrap()),
+                        1 => write!(f, "{}[{}]", indent, l.data.first().unwrap()),
                         _ => {
                             writeln!(f, "{}[", indent)?;
-                            for i in l {
+                            for i in &l.data {
                                 match i {
                                     Expr::Ident(i, _, _) => {
                                         i.fmt_with_indent(f, indent_level + 1)?;
@@ -98,15 +98,15 @@ impl Literal {
                     }
                 }
             }
-            Literal::Map(m, _) => match m.len() {
+            Literal::Map(m) => match m.data.len() {
                 0 => write!(f, "{}{{}}", indent),
                 1 => {
-                    let (k, v) = m.first().unwrap();
+                    let (k, v) = m.data.first().unwrap();
                     write!(f, "{}{{{k}: {v}}}", indent)
                 }
                 _ => {
                     writeln!(f, "{}{{", indent)?;
-                    for (k, v) in m {
+                    for (k, v) in &m.data {
                         match k {
                             Expr::Ident(k, _, _) => {
                                 k.fmt_with_indent(f, indent_level + 1)?;
