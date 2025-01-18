@@ -353,7 +353,7 @@ fn editor() -> Editor<ReplHelper, FileHistory> {
 
     rl.bind_sequence(
         Event::KeySeq(vec![KeyEvent(KeyCode::Tab, Modifiers::NONE)]),
-        EventHandler::Simple(Cmd::Insert(1, String::from("    "))),
+        EventHandler::Simple(Cmd::Insert(1, TAB.to_string())),
     );
     rl.bind_sequence(
         Event::KeySeq(vec![KeyEvent(KeyCode::Enter, Modifiers::NONE)]),
