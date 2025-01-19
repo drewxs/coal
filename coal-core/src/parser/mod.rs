@@ -570,6 +570,9 @@ impl Parser {
 
         while self.next_tok.kind == TokenKind::Comma {
             self.advance();
+            if self.next_tok.kind == end_tok {
+                break;
+            }
             self.advance();
 
             let (start, _) = self.curr_tok.span;
