@@ -131,13 +131,10 @@ impl Literal {
 impl From<&str> for Literal {
     fn from(s: &str) -> Self {
         match s.parse::<f64>() {
-            Ok(f) => {
-                if f.fract() == 0.0 {
-                    Literal::I64(f as i64)
-                } else {
-                    Literal::F64(f)
-                }
-            }
+            Ok(f) => match f.fract() {
+                0.0 => Literal::I64(f as i64),
+                _ => Literal::F64(f),
+            },
             Err(_) => match s {
                 "true" => Literal::Bool(true),
                 "false" => Literal::Bool(false),

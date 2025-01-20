@@ -291,10 +291,9 @@ impl Evaluator<'_> {
                 }
             }
             _ => {
-                let updated_val = if let Some(op) = op {
-                    self.eval_infix_objects(&op, curr, val, &rhs.span())?
-                } else {
-                    val
+                let updated_val = match op {
+                    Some(op) => self.eval_infix_objects(&op, curr, val, &rhs.span())?,
+                    None => val,
                 };
 
                 self.env
