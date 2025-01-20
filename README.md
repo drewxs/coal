@@ -29,14 +29,17 @@ make
 # Start the REPL
 coal
 
-# Run from file
-coal run FILE
+# Create a new project
+coal new PROJECT_NAME
 
-# Run from string
+# Run the current project or a given program
+coal run [PROGRAM_PATH]
+
+# Evaluate a string
 coal eval STRING
 
-# Format a file
-coal fmt FILE
+# Format all files in the current project or from a given path
+coal fmt [PATH]
 ```
 
 Run `coal --help` for more information.
