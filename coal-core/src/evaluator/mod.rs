@@ -46,8 +46,8 @@ impl Evaluator<'_> {
         let mut res = None;
         let mut errors = vec![];
 
-        for stmt in stmts {
-            if stmt == Stmt::Void {
+        for stmt in &stmts {
+            if stmt == &Stmt::Void {
                 continue;
             }
 
@@ -71,22 +71,22 @@ impl Evaluator<'_> {
         Ok(res)
     }
 
-    fn eval_stmt(&mut self, stmt: Stmt) -> Option<Object> {
+    fn eval_stmt(&mut self, stmt: &Stmt) -> Option<Object> {
         match stmt {
-            Stmt::Let(ident, _, expr) => self.eval_let_stmt(&ident, &expr),
-            Stmt::Assign(lhs, rhs) => self.eval_assign_stmt(&lhs, &rhs, None),
-            Stmt::OpAssign(op, lhs, rhs) => self.eval_assign_stmt(&lhs, &rhs, Some(op)),
-            Stmt::Return(expr) => self.eval_return_stmt(&expr),
-            Stmt::Expr(expr) => self.eval_expr(&expr),
+            Stmt::Let(ident, _, expr) => self.eval_let_stmt(ident, expr),
+            Stmt::Assign(lhs, rhs) => self.eval_assign_stmt(lhs, rhs, None),
+            Stmt::OpAssign(op, lhs, rhs) => self.eval_assign_stmt(lhs, rhs, Some(op)),
+            Stmt::Return(expr) => self.eval_return_stmt(expr),
+            Stmt::Expr(expr) => self.eval_expr(expr),
             _ => None,
         }
     }
 
-    fn eval_stmts(&mut self, stmts: Vec<Stmt>) -> Option<Object> {
+    fn eval_stmts(&mut self, stmts: &[Stmt]) -> Option<Object> {
         let mut res = None;
 
         for stmt in stmts {
-            if stmt == Stmt::Void {
+            if stmt == &Stmt::Void {
                 continue;
             }
 
@@ -100,7 +100,7 @@ impl Evaluator<'_> {
         res
     }
 
-    fn eval_stmts_in_scope(&mut self, stmts: Vec<Stmt>, env: Rc<RefCell<Env>>) -> Option<Object> {
+    fn eval_stmts_in_scope(&mut self, stmts: &[Stmt], env: Rc<RefCell<Env>>) -> Option<Object> {
         let curr_env = Rc::clone(&self.env);
         self.env = env;
         let res = self.eval_stmts(stmts);
@@ -109,7 +109,7 @@ impl Evaluator<'_> {
         res
     }
 
-    fn eval_block(&mut self, stmts: Vec<Stmt>) -> Option<Object> {
+    fn eval_block(&mut self, stmts: &[Stmt]) -> Option<Object> {
         let curr_env = Rc::clone(&self.env);
         self.env = Rc::new(RefCell::new(Env::from(Rc::clone(&self.env))));
         let res = self.eval_stmts(stmts);
@@ -131,7 +131,7 @@ impl Evaluator<'_> {
         None
     }
 
-    fn eval_assign_stmt(&mut self, lhs: &Expr, rhs: &Expr, op: Option<Infix>) -> Option<Object> {
+    fn eval_assign_stmt(&mut self, lhs: &Expr, rhs: &Expr, op: Option<&Infix>) -> Option<Object> {
         // Create list of indices for nested indexing
         let (name, indices) = match lhs {
             Expr::Ident(ident, _, _) => (ident.name(), vec![]),
@@ -204,7 +204,7 @@ impl Evaluator<'_> {
                         if i == indices.len() - 1 {
                             if let Some(op) = op {
                                 target[idx] = self.eval_infix_objects(
-                                    &op,
+                                    op,
                                     target[idx].clone(),
                                     val,
                                     &index.span(),
@@ -249,7 +249,7 @@ impl Evaluator<'_> {
             }
             _ => {
                 let updated_val = match op {
-                    Some(op) => self.eval_infix_objects(&op, curr, val, &rhs.span())?,
+                    Some(op) => self.eval_infix_objects(op, curr, val, &rhs.span())?,
                     None => val,
                 };
 
@@ -522,8 +522,8 @@ impl Evaluator<'_> {
     fn eval_if_expr(
         &mut self,
         cond: &Expr,
-        then: &Vec<Stmt>,
-        elifs: &Vec<IfExpr>,
+        then: &[Stmt],
+        elifs: &[IfExpr],
         alt: &Option<Vec<Stmt>>,
     ) -> Option<Object> {
         let cond = self.eval_expr(cond)?;
@@ -531,24 +531,28 @@ impl Evaluator<'_> {
             return Some(cond);
         }
         if cond.is_truthy() {
-            return self.eval_block(then.to_owned());
+            return self.eval_block(then);
         }
         for elif in elifs {
             if self.eval_expr(&elif.cond)?.is_truthy() {
-                return self.eval_block(elif.then.to_owned());
+                return self.eval_block(&elif.then);
             }
         }
-        self.eval_block(alt.to_owned()?)
+        if let Some(alt) = alt {
+            self.eval_block(alt)
+        } else {
+            None
+        }
     }
 
-    fn eval_while_expr(&mut self, cond: &Expr, body: &Vec<Stmt>) -> Option<Object> {
+    fn eval_while_expr(&mut self, cond: &Expr, body: &[Stmt]) -> Option<Object> {
         let mut resolved_cond = self.eval_expr(cond)?;
         if let Object::Error { .. } = resolved_cond {
             return Some(resolved_cond);
         }
 
         while resolved_cond.is_truthy() {
-            self.eval_block(body.to_owned());
+            self.eval_block(body);
             resolved_cond = self.eval_expr(cond)?;
         }
 
@@ -568,14 +572,14 @@ impl Evaluator<'_> {
                 for i in start..end {
                     let mut enclosed_env = Env::from(Rc::clone(&self.env));
                     enclosed_env.set_in_store(ident.name(), Object::U64(i as u64));
-                    self.eval_stmts_in_scope(body.to_owned(), Rc::new(RefCell::new(enclosed_env)));
+                    self.eval_stmts_in_scope(body, Rc::new(RefCell::new(enclosed_env)));
                 }
             }
             Object::List { data, .. } => {
                 for item in data {
                     let mut enclosed_env = Env::from(Rc::clone(&self.env));
                     enclosed_env.set_in_store(ident.name(), item);
-                    self.eval_stmts_in_scope(body.to_owned(), Rc::new(RefCell::new(enclosed_env)));
+                    self.eval_stmts_in_scope(body, Rc::new(RefCell::new(enclosed_env)));
                 }
             }
             _ => {}
@@ -668,8 +672,7 @@ impl Evaluator<'_> {
                 }
             }
 
-            let mut res =
-                self.eval_stmts_in_scope(body.to_owned(), Rc::new(RefCell::new(enclosed_env)));
+            let mut res = self.eval_stmts_in_scope(body, Rc::new(RefCell::new(enclosed_env)));
             if let Some(Object::Return(val)) = res {
                 res = Some(*val);
             }
