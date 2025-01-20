@@ -779,10 +779,9 @@ impl Evaluator<'_> {
 
         {
             let env = Rc::clone(&self.env);
-            let env_ref = env.borrow_mut();
-            let mut store_ref = env_ref.store.borrow_mut();
+            let mut env_ref = env.borrow_mut();
 
-            if let Some(obj) = store_ref.get_mut(&var) {
+            if let Some(obj) = env_ref.store.get_mut(&var) {
                 match obj {
                     Object::List { .. } => match name {
                         "map" => {
@@ -821,10 +820,7 @@ impl Evaluator<'_> {
             }
 
             if let Some(outer_rc) = &env_ref.outer {
-                let outer_ref = outer_rc.borrow_mut();
-                let mut store_ref = outer_ref.store.borrow_mut();
-
-                if let Some(obj) = store_ref.get_mut(&var) {
+                if let Some(obj) = outer_rc.borrow_mut().store.get_mut(&var) {
                     return obj.call(name, &args, span);
                 }
             }
