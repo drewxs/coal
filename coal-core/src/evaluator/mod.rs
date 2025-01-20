@@ -567,23 +567,28 @@ impl Evaluator<'_> {
     }
 
     fn eval_iter_expr(&mut self, ident: &Ident, expr: &Expr, body: &[Stmt]) -> Option<Object> {
+        let curr_env = Rc::clone(&self.env);
+        self.env = Rc::new(RefCell::new(Env::from(Rc::clone(&self.env))));
+
         match self.eval_expr(expr)? {
             Object::Range(start, end) => {
                 for i in start..end {
-                    let mut enclosed_env = Env::from(Rc::clone(&self.env));
-                    enclosed_env.set_in_store(ident.name(), Object::U64(i as u64));
-                    self.eval_stmts_in_scope(body, Rc::new(RefCell::new(enclosed_env)));
+                    self.env
+                        .borrow_mut()
+                        .set_in_store(ident.name(), Object::U64(i as u64));
+                    self.eval_stmts(body);
                 }
             }
             Object::List { data, .. } => {
                 for item in data {
-                    let mut enclosed_env = Env::from(Rc::clone(&self.env));
-                    enclosed_env.set_in_store(ident.name(), item);
-                    self.eval_stmts_in_scope(body, Rc::new(RefCell::new(enclosed_env)));
+                    self.env.borrow_mut().set_in_store(ident.name(), item);
+                    self.eval_stmts(body);
                 }
             }
             _ => {}
         }
+
+        self.env = curr_env;
 
         None
     }
