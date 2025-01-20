@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{List, Map, Type};
+use super::{List, Map, Type, F32, F64, I128, I32, I64, U32, U64};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
@@ -57,6 +57,61 @@ impl Literal {
                 }
             }
             _ => {}
+        }
+    }
+
+    pub fn cast(&self, to: &Type) -> Literal {
+        match (self, to) {
+            (Literal::U32(from), &U64) => Literal::U64(*from as u64),
+            (Literal::U32(from), &I32) => Literal::I32(*from as i32),
+            (Literal::U32(from), &I64) => Literal::I64(*from as i64),
+            (Literal::U32(from), &I128) => Literal::I128(*from as i128),
+            (Literal::U32(from), &F32) => Literal::F32(*from as f32),
+            (Literal::U32(from), &F64) => Literal::F64(*from as f64),
+
+            (Literal::U64(from), &U32) => Literal::U32(*from as u32),
+            (Literal::U64(from), &I32) => Literal::I32(*from as i32),
+            (Literal::U64(from), &I64) => Literal::I64(*from as i64),
+            (Literal::U64(from), &I128) => Literal::I128(*from as i128),
+            (Literal::U64(from), &F32) => Literal::F32(*from as f32),
+            (Literal::U64(from), &F64) => Literal::F64(*from as f64),
+
+            (Literal::I32(from), &U32) => Literal::U32(*from as u32),
+            (Literal::I32(from), &U64) => Literal::U64(*from as u64),
+            (Literal::I32(from), &I64) => Literal::I64(*from as i64),
+            (Literal::I32(from), &I128) => Literal::I128(*from as i128),
+            (Literal::I32(from), &F32) => Literal::F32(*from as f32),
+            (Literal::I32(from), &F64) => Literal::F64(*from as f64),
+
+            (Literal::I64(from), &U32) => Literal::U32(*from as u32),
+            (Literal::I64(from), &U64) => Literal::U64(*from as u64),
+            (Literal::I64(from), &I32) => Literal::I32(*from as i32),
+            (Literal::I64(from), &I128) => Literal::I128(*from as i128),
+            (Literal::I64(from), &F32) => Literal::F32(*from as f32),
+            (Literal::I64(from), &F64) => Literal::F64(*from as f64),
+
+            (Literal::I128(from), &U32) => Literal::U32(*from as u32),
+            (Literal::I128(from), &U64) => Literal::U64(*from as u64),
+            (Literal::I128(from), &I32) => Literal::I32(*from as i32),
+            (Literal::I128(from), &I64) => Literal::I64(*from as i64),
+            (Literal::I128(from), &F32) => Literal::F32(*from as f32),
+            (Literal::I128(from), &F64) => Literal::F64(*from as f64),
+
+            (Literal::F32(from), &U32) => Literal::U32(*from as u32),
+            (Literal::F32(from), &U64) => Literal::U64(*from as u64),
+            (Literal::F32(from), &I32) => Literal::I32(*from as i32),
+            (Literal::F32(from), &I64) => Literal::I64(*from as i64),
+            (Literal::F32(from), &I128) => Literal::I128(*from as i128),
+            (Literal::F32(from), &F64) => Literal::F64(*from as f64),
+
+            (Literal::F64(from), &U32) => Literal::U32(*from as u32),
+            (Literal::F64(from), &U64) => Literal::U64(*from as u64),
+            (Literal::F64(from), &I32) => Literal::I32(*from as i32),
+            (Literal::F64(from), &I64) => Literal::I64(*from as i64),
+            (Literal::F64(from), &I128) => Literal::I128(*from as i128),
+            (Literal::F64(from), &F32) => Literal::F32(*from as f32),
+
+            _ => self.clone(),
         }
     }
 

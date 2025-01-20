@@ -197,6 +197,13 @@ impl Expr {
         rets
     }
 
+    pub fn cast(&self, to: &Type) -> Expr {
+        match self {
+            Expr::Literal(l, _) => Expr::Literal(l.cast(to), self.span()),
+            _ => self.clone(),
+        }
+    }
+
     pub fn fmt_inner(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
         match self {
             Expr::Literal(literal, _) => literal.fmt_with_indent(f, indent_level, false),

@@ -601,16 +601,16 @@ impl Rem for Object {
 
 impl PartialOrd for Object {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match (self, other) {
-            (Object::Bool(lhs), Object::Bool(rhs)) => lhs.partial_cmp(rhs),
-            (Object::Str(lhs), Object::Str(rhs)) => lhs.partial_cmp(rhs),
-            (Object::U32(lhs), Object::U32(rhs)) => lhs.partial_cmp(rhs),
-            (Object::U64(lhs), Object::U64(rhs)) => lhs.partial_cmp(rhs),
-            (Object::I32(lhs), Object::I32(rhs)) => lhs.partial_cmp(rhs),
-            (Object::I64(lhs), Object::I64(rhs)) => lhs.partial_cmp(rhs),
-            (Object::I128(lhs), Object::I128(rhs)) => lhs.partial_cmp(rhs),
-            (Object::F32(lhs), Object::F32(rhs)) => lhs.partial_cmp(rhs),
-            (Object::F64(lhs), Object::F64(rhs)) => lhs.partial_cmp(rhs),
+        match Object::promote(self, other) {
+            (Object::Bool(lhs), Object::Bool(rhs)) => lhs.partial_cmp(&rhs),
+            (Object::Str(lhs), Object::Str(rhs)) => lhs.partial_cmp(&rhs),
+            (Object::U32(lhs), Object::U32(rhs)) => lhs.partial_cmp(&rhs),
+            (Object::U64(lhs), Object::U64(rhs)) => lhs.partial_cmp(&rhs),
+            (Object::I32(lhs), Object::I32(rhs)) => lhs.partial_cmp(&rhs),
+            (Object::I64(lhs), Object::I64(rhs)) => lhs.partial_cmp(&rhs),
+            (Object::I128(lhs), Object::I128(rhs)) => lhs.partial_cmp(&rhs),
+            (Object::F32(lhs), Object::F32(rhs)) => lhs.partial_cmp(&rhs),
+            (Object::F64(lhs), Object::F64(rhs)) => lhs.partial_cmp(&rhs),
             _ => None,
         }
     }

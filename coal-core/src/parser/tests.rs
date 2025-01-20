@@ -34,7 +34,7 @@ fn test_parse_let_statements() {
             Stmt::Let(
                 Ident(String::from("foo")),
                 F64,
-                Expr::Literal(Literal::I32(0), ((1, 16), (1, 16))),
+                Expr::Literal(Literal::F64(0.0), ((1, 16), (1, 16))),
             ),
         ),
     ];
