@@ -94,14 +94,14 @@ impl Expr {
         }
     }
 
-    pub fn ret_t(&self, expected: &Type) -> Result<Type, ParserError> {
+    pub fn ret_t(&self, expected: &Type, last: bool) -> Result<Type, ParserError> {
         match self {
             Expr::If {
                 then, elifs, alt, ..
             } => {
                 let mut returning = None;
                 for stmt in then {
-                    let t = stmt.ret_t(expected)?;
+                    let t = stmt.ret_t(expected, last)?;
                     if t != Type::Void && t != *expected {
                         return Err(ParserError::new(
                             ParserErrorKind::TypeMismatch(expected.clone(), t.clone()),
@@ -112,7 +112,7 @@ impl Expr {
                 }
                 for elif in elifs {
                     for stmt in &elif.then {
-                        let t = stmt.ret_t(expected)?;
+                        let t = stmt.ret_t(expected, last)?;
                         if t != *expected {
                             return Err(ParserError::new(
                                 ParserErrorKind::TypeMismatch(expected.clone(), t.clone()),
@@ -123,7 +123,7 @@ impl Expr {
                 }
                 if let Some(alt) = alt {
                     for stmt in alt {
-                        let t = stmt.ret_t(expected)?;
+                        let t = stmt.ret_t(expected, last)?;
                         if let Some((rt, if_then)) = &returning {
                             if rt != expected {
                                 return Err(ParserError::new(
@@ -139,7 +139,7 @@ impl Expr {
                             ));
                         }
                     }
-                } else if *expected != Type::Void {
+                } else if last && *expected != Type::Void {
                     return Err(ParserError::new(
                         ParserErrorKind::MissingElseClause,
                         self.span(),
@@ -149,7 +149,7 @@ impl Expr {
             }
             Expr::While { body, .. } => {
                 for stmt in body {
-                    let t = stmt.ret_t(expected)?;
+                    let t = stmt.ret_t(expected, last)?;
                     if t != Type::Void && t != *expected {
                         return Err(ParserError::new(
                             ParserErrorKind::TypeMismatch(expected.clone(), t.clone()),

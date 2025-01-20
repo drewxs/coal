@@ -28,7 +28,7 @@ impl Stmt {
         }
     }
 
-    pub fn ret_t(&self, expected: &Type) -> Result<Type, ParserError> {
+    pub fn ret_t(&self, expected: &Type, last: bool) -> Result<Type, ParserError> {
         match self {
             Stmt::Return(e) => Type::try_from(e).map_err(|_| {
                 ParserError::new(
@@ -36,7 +36,7 @@ impl Stmt {
                     e.span(),
                 )
             }),
-            Stmt::Expr(e) => e.ret_t(expected),
+            Stmt::Expr(e) => e.ret_t(expected, last),
             _ => Ok(Type::Void),
         }
     }

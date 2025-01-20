@@ -998,8 +998,8 @@ impl Parser {
                 ));
             }
 
-            for stmt in &body {
-                if let Err(e) = stmt.ret_t(&dt) {
+            for (i, stmt) in body.iter().enumerate() {
+                if let Err(e) = stmt.ret_t(&dt, i == body.len() - 1) {
                     self.errors.push(e);
                 }
             }
@@ -1176,11 +1176,6 @@ impl Parser {
                 Stmt::Expr(expr) if matches!(expr, Expr::If { .. }) => {
                     if let Ok(t) = Type::try_from(expr) {
                         ret_t = t;
-                    } else {
-                        self.errors.push(ParserError::new(
-                            ParserErrorKind::MissingElseClause,
-                            expr.span(),
-                        ));
                     }
                 }
                 _ => {}
