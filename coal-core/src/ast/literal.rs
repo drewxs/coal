@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{Expr, List, Map};
+use super::{List, Map};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
@@ -19,8 +19,26 @@ pub enum Literal {
 }
 
 impl Literal {
-    pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
+    pub fn is_primitive(&self) -> bool {
+        !self.is_composite()
+    }
+
+    pub fn is_composite(&self) -> bool {
+        matches!(self, Literal::List(_) | Literal::Map(_))
+    }
+
+    pub fn is_indexable(&self) -> bool {
+        matches!(self, Literal::Str(_) | Literal::List(_) | Literal::Map(_))
+    }
+
+    pub fn fmt_with_indent(
+        &self,
+        f: &mut fmt::Formatter,
+        indent_level: usize,
+        inner: bool,
+    ) -> fmt::Result {
         let indent = "    ".repeat(indent_level);
+        let inner_indent = if inner { "" } else { &indent };
 
         match self {
             Literal::Str(s) => {
@@ -60,37 +78,35 @@ impl Literal {
                     result.push_str(&brace_content);
                 }
 
-                write!(f, "{}\"{result}\"", indent)
+                write!(f, "{}\"{result}\"", inner_indent)
             }
-            Literal::U32(i) => write!(f, "{}{i}", indent),
-            Literal::U64(i) => write!(f, "{}{i}", indent),
-            Literal::I32(i) => write!(f, "{}{i}", indent),
-            Literal::I64(i) => write!(f, "{}{i}", indent),
-            Literal::I128(i) => write!(f, "{}{i}", indent),
-            Literal::F32(x) => write!(f, "{}{x:?}", indent),
-            Literal::F64(x) => write!(f, "{}{x:?}", indent),
-            Literal::Bool(b) => write!(f, "{}{b}", indent),
+            Literal::U32(i) => write!(f, "{}{i}", inner_indent),
+            Literal::U64(i) => write!(f, "{}{i}", inner_indent),
+            Literal::I32(i) => write!(f, "{}{i}", inner_indent),
+            Literal::I64(i) => write!(f, "{}{i}", inner_indent),
+            Literal::I128(i) => write!(f, "{}{i}", inner_indent),
+            Literal::F32(x) => write!(f, "{}{x:?}", inner_indent),
+            Literal::F64(x) => write!(f, "{}{x:?}", inner_indent),
+            Literal::Bool(b) => write!(f, "{}{b}", inner_indent),
             Literal::List(l) => {
                 if let (Some(n), Some(e)) = (&l.repeat, l.data.first()) {
-                    write!(f, "{}[{e}; {n}]", indent)
+                    write!(f, "{}[{e}; {n}]", inner_indent)
                 } else {
                     match l.data.len() {
-                        0 => write!(f, "{}[]", indent),
-                        1 => write!(f, "{}[{}]", indent, l.data.first().unwrap()),
+                        0 => write!(f, "{}[]", inner_indent),
+                        1 | 2 => {
+                            let v = l
+                                .data
+                                .iter()
+                                .map(|x| x.to_string())
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            write!(f, "{}[{v}]", inner_indent)
+                        }
                         _ => {
-                            writeln!(f, "{}[", indent)?;
-                            for i in &l.data {
-                                match i {
-                                    Expr::Ident(i, _, _) => {
-                                        i.fmt_with_indent(f, indent_level + 1)?;
-                                    }
-                                    Expr::Literal(i, _) => {
-                                        i.fmt_with_indent(f, indent_level + 1)?;
-                                    }
-                                    _ => {
-                                        i.fmt_with_indent(f, indent_level + 1)?;
-                                    }
-                                }
+                            writeln!(f, "{}[", inner_indent)?;
+                            for item in &l.data {
+                                item.fmt_inner(f, indent_level + 1)?;
                                 writeln!(f, ",")?;
                             }
                             write!(f, "{}]", indent)
@@ -99,31 +115,21 @@ impl Literal {
                 }
             }
             Literal::Map(m) => match m.data.len() {
-                0 => write!(f, "{}{{}}", indent),
+                0 => write!(f, "{}{{}}", inner_indent),
                 1 => {
                     let (k, v) = m.data.first().unwrap();
-                    write!(f, "{}{{{k}: {v}}}", indent)
+                    write!(f, "{}{{{k}: {v}}}", inner_indent)
                 }
                 _ => {
-                    writeln!(f, "{}{{", indent)?;
+                    writeln!(f, "{}{{", inner_indent)?;
                     for (k, v) in &m.data {
-                        match k {
-                            Expr::Ident(k, _, _) => {
-                                k.fmt_with_indent(f, indent_level + 1)?;
-                            }
-                            Expr::Literal(k, _) => {
-                                k.fmt_with_indent(f, indent_level + 1)?;
-                            }
-                            _ => {
-                                k.fmt_with_indent(f, indent_level + 1)?;
-                            }
-                        }
+                        k.fmt_inner(f, indent_level + 1)?;
                         writeln!(f, ": {v},")?;
                     }
                     write!(f, "{}}}", indent)
                 }
             },
-            Literal::Nil => write!(f, "{}nil", indent),
+            Literal::Nil => write!(f, "{}nil", inner_indent),
         }
     }
 }
@@ -161,6 +167,6 @@ impl TryInto<usize> for Literal {
 
 impl fmt::Display for Literal {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.fmt_with_indent(f, 0)
+        self.fmt_with_indent(f, 0, false)
     }
 }

@@ -83,6 +83,17 @@ impl Expr {
         }
     }
 
+    pub fn is_indexable(&self) -> bool {
+        match self {
+            Expr::Ident(_, t, _) => t.is_indexable(),
+            Expr::Literal(l, _) => l.is_indexable(),
+            Expr::Prefix(_, rhs, _) => rhs.is_indexable(),
+            Expr::Infix(_, lhs, rhs, _) => lhs.is_indexable() && rhs.is_indexable(),
+            Expr::Index(lhs, _, _) => lhs.is_indexable(),
+            _ => false,
+        }
+    }
+
     pub fn ret_t(&self, expected: &Type) -> Result<Type, ParserError> {
         match self {
             Expr::If {
@@ -185,12 +196,32 @@ impl Expr {
         rets
     }
 
+    pub fn fmt_inner(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
+        match self {
+            Expr::Literal(literal, _) => literal.fmt_with_indent(f, indent_level, false),
+            _ => self.fmt_with_indent(f, indent_level),
+        }
+    }
+
+    pub fn fmt_inner_start(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
+        match self {
+            Expr::Literal(literal, _) => literal.fmt_with_indent(f, indent_level, true),
+            _ => self.fmt_with_indent(f, indent_level),
+        }
+    }
+
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
         let indent = "    ".repeat(indent_level);
 
         match self {
             Expr::Ident(ident, _, _) => write!(f, "{ident}"),
-            Expr::Literal(literal, _) => write!(f, "{literal}"),
+            Expr::Literal(l, _) => {
+                if l.is_composite() {
+                    l.fmt_with_indent(f, indent_level, true)
+                } else {
+                    write!(f, "{l}")
+                }
+            }
             Expr::Prefix(prefix, expr, _) => write!(f, "{prefix}{expr}"),
             Expr::Infix(infix, lhs, rhs, _) => write!(f, "{lhs} {infix} {rhs}"),
             Expr::Index(lhs, rhs, _) => write!(f, "{lhs}[{rhs}]"),
@@ -272,19 +303,21 @@ impl Expr {
                 write!(f, "{}}}", indent)
             }
             Expr::Call { name, args, .. } => {
-                let args = args
-                    .iter()
-                    .map(|arg| format!("{arg}"))
-                    .collect::<Vec<String>>()
-                    .join(", ");
-                write!(f, "{name}({args})")
+                write!(f, "{name}(")?;
+                for (i, arg) in args.iter().enumerate() {
+                    arg.fmt_inner_start(f, indent_level)?;
+                    if i < args.len() - 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, ")")
             }
             Expr::MethodCall {
                 lhs, name, args, ..
             } => {
                 write!(f, "{lhs}.{name}(")?;
                 for (i, arg) in args.iter().enumerate() {
-                    arg.fmt_with_indent(f, indent_level)?;
+                    arg.fmt_inner_start(f, indent_level)?;
                     if i < args.len() - 1 {
                         write!(f, ", ")?;
                     }

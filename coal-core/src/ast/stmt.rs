@@ -48,7 +48,7 @@ impl Stmt {
     }
 
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
-        let indent = " ".repeat(indent_level * 4);
+        let indent = "    ".repeat(indent_level);
 
         match self {
             Stmt::Void => Ok(()),
@@ -60,10 +60,14 @@ impl Stmt {
                 writeln!(f, ";")
             }
             Stmt::Assign(lhs, rhs) => {
-                writeln!(f, "{}{lhs} = {rhs};", indent)
+                write!(f, "{}{lhs} = ", indent)?;
+                rhs.fmt_with_indent(f, indent_level)?;
+                writeln!(f, ";")
             }
             Stmt::OpAssign(op, lhs, rhs) => {
-                writeln!(f, "{}{lhs} {op}= {rhs};", indent)
+                write!(f, "{}{lhs} {op}= ", indent)?;
+                rhs.fmt_with_indent(f, indent_level)?;
+                writeln!(f, ";")
             }
             Stmt::Return(expr) => {
                 write!(f, "{}return ", indent)?;
@@ -77,7 +81,9 @@ impl Stmt {
                 | Expr::Infix(_, _, _, _)
                 | Expr::Call { .. }
                 | Expr::MethodCall { .. } => {
-                    writeln!(f, "{}{expr};", indent)
+                    write!(f, "{indent}")?;
+                    expr.fmt_with_indent(f, indent_level)?;
+                    writeln!(f, ";")
                 }
                 _ => expr.fmt_with_indent(f, indent_level),
             },

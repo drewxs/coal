@@ -155,6 +155,7 @@ x + n;
  return  add; }
 
   let  add_two :   Fn ( u32  )  ->    u32  =   adder( x )
+add_two( 2 )
             ";
 
         let expected = "fn adder(x: u32) -> Fn(u32) -> u32 {
@@ -169,6 +170,63 @@ x + n;
 }
 
 let add_two: Fn(u32) -> u32 = adder(x);
+add_two(2);
+";
+
+        assert_eq!(expected, fmt(input));
+    }
+
+    #[test]
+    fn test_fmt_lists() {
+        let input = "
+let l1 = [0 ;   100];
+let l2     = [
+    [1, 2],    [3, 4],
+[5, 6],
+];
+
+println([
+[1, 2],    [3, 4],[5, 6]  ]);
+";
+
+        let expected = "let l1: list[i32] = [0; 100];
+let l2: list[list[i32]] = [
+    [1, 2],
+    [3, 4],
+    [5, 6],
+];
+
+println([
+    [1, 2],
+    [3, 4],
+    [5, 6],
+]);
+";
+
+        assert_eq!(expected, fmt(input));
+    }
+
+    #[test]
+    fn test_fmt_maps() {
+        let input = "
+let m: map[i32, i32] = {};
+let m2 = {1: 2};
+let m3: map[i32, i32] = { 1: 2, 3: 4, };
+
+println ({1:2,3:4});
+";
+
+        let expected = "let m: map[i32, i32] = {};
+let m2: map[i32, i32] = {1: 2};
+let m3: map[i32, i32] = {
+    1: 2,
+    3: 4,
+};
+
+println({
+    1: 2,
+    3: 4,
+});
 ";
 
         assert_eq!(expected, fmt(input));
