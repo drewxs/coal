@@ -30,7 +30,8 @@ pub enum ParserErrorKind {
     TypeAnnotationsNeeded,
     InvalidArgumentsLength(usize, usize),
     TypeMismatch(Type, Type),
-    InvalidIndex(Type),
+    NonIndexableType(Type),
+    InvalidIndex(Type, Type),
     MissingElseClause,
     UnhashableMapKey(Type),
 }
@@ -62,8 +63,11 @@ impl fmt::Display for ParserErrorKind {
             ParserErrorKind::TypeMismatch(t1, t2) => {
                 write!(f, "type mismatch. expected: `{t1}`, got: `{t2}`")
             }
-            ParserErrorKind::InvalidIndex(t) => {
-                write!(f, "cannot index into a value of type `{t}`")
+            ParserErrorKind::NonIndexableType(t) => {
+                write!(f, "type `{t}` is not indexable")
+            }
+            ParserErrorKind::InvalidIndex(t, idx_t) => {
+                write!(f, "the type `{t}` cannot be indexed by `{idx_t}`")
             }
             ParserErrorKind::MissingElseClause => {
                 write!(f, "`if` may be missing an `else` clause")

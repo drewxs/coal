@@ -8,11 +8,19 @@ pub struct List {
 }
 
 impl List {
-    pub fn new(data: &[Expr], t: Type, repeat: Option<Box<Expr>>) -> Self {
+    pub fn new(data: &[Expr], t: Type) -> Self {
         List {
             data: data.to_owned(),
             t,
-            repeat,
+            repeat: None,
+        }
+    }
+
+    pub fn new_repeat(data: &[Expr], t: Type, repeat: Box<Expr>) -> Self {
+        List {
+            data: data.to_owned(),
+            t,
+            repeat: Some(repeat),
         }
     }
 }

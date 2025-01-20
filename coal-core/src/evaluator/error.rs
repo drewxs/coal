@@ -45,53 +45,49 @@ pub enum RuntimeErrorKind {
     InvalidArguments(String, String),
     InvalidArgumentsLength(usize, usize),
     IndexOutOfBounds(usize, usize),
-    InvalidIndex(Type, Type),
     FailedToEvaluate,
 }
 
 impl fmt::Display for RuntimeErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            RuntimeErrorKind::Custom(s) => write!(f, "{s}"),
-            RuntimeErrorKind::ParserError(e) => write!(f, "{e}"),
+            RuntimeErrorKind::Custom(s) => write!(f, "[custom] {s}"),
+            RuntimeErrorKind::ParserError(e) => write!(f, "[parse err] {e}"),
             RuntimeErrorKind::Mismatch(t1, t2) => {
-                write!(f, "mismatch: expected={t1}, got={t2}")
+                write!(f, "[eval] mismatch: expected={t1}, got={t2}")
             }
             RuntimeErrorKind::TypeMismatch(t1, t2) => {
-                write!(f, "type mismatch: expected={t1}, got={t2}")
+                write!(f, "[eval] type mismatch: expected={t1}, got={t2}")
             }
             RuntimeErrorKind::IdentifierNotFound(name) => {
-                write!(f, "identifier not found: {name}")
+                write!(f, "[eval] identifier not found: {name}")
             }
             RuntimeErrorKind::IdentifierExists(name) => {
-                write!(f, "identifier already exists: {name}")
+                write!(f, "[eval] identifier already exists: {name}")
             }
             RuntimeErrorKind::MethodNotFound(name) => {
-                write!(f, "method not found: {name}")
+                write!(f, "[eval] method not found: {name}")
             }
             RuntimeErrorKind::BadOperandTypeForUnary(op, t) => {
-                write!(f, "bad operand type for unary {op}: {t}")
+                write!(f, "[eval] bad operand type for unary {op}: {t}")
             }
             RuntimeErrorKind::UnsupportedOperation(op, t1, t2) => {
-                write!(f, "unsupported operation: {t1} {op} {t2}")
+                write!(f, "[eval] unsupported operation: {t1} {op} {t2}")
             }
             RuntimeErrorKind::ReassignmentToFunction => {
-                write!(f, "cannot assign to function")
+                write!(f, "[eval] cannot assign to function")
             }
             RuntimeErrorKind::InvalidArguments(n1, n2) => {
-                write!(f, "invalid args: expected={n1}, got={n2}")
+                write!(f, "[eval] invalid args: expected={n1}, got={n2}")
             }
             RuntimeErrorKind::InvalidArgumentsLength(n1, n2) => {
-                write!(f, "invalid # args: expected={n1}, got={n2}",)
+                write!(f, "[eval] invalid # args: expected={n1}, got={n2}",)
             }
             RuntimeErrorKind::IndexOutOfBounds(i, len) => {
-                write!(f, "index out of bounds. len={len}, index={i}")
-            }
-            RuntimeErrorKind::InvalidIndex(t, idx_t) => {
-                write!(f, "the type `{t}` cannot be indexed by `{idx_t}`")
+                write!(f, "[eval] index out of bounds. len={len}, index={i}")
             }
             RuntimeErrorKind::FailedToEvaluate => {
-                write!(f, "failed to evaluate expression")
+                write!(f, "[eval] failed to evaluate expression")
             }
         }
     }

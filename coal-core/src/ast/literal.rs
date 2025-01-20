@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{List, Map};
+use super::{List, Map, Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
@@ -29,6 +29,35 @@ impl Literal {
 
     pub fn is_indexable(&self) -> bool {
         matches!(self, Literal::Str(_) | Literal::List(_) | Literal::Map(_))
+    }
+
+    pub fn is_defined(&self) -> bool {
+        match self {
+            Literal::List(l) => l.t.is_defined(),
+            Literal::Map(m) => m.t.0.is_defined() && m.t.1.is_defined(),
+            _ => true,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Literal::List(l) => l.data.is_empty(),
+            Literal::Map(m) => m.data.is_empty(),
+            _ => false,
+        }
+    }
+
+    pub fn set_type(&mut self, t1: Type, t2: Option<Type>) {
+        match self {
+            Literal::List(l) => l.t = t1,
+            Literal::Map(m) => {
+                m.t.0 = t1;
+                if let Some(t2) = t2 {
+                    m.t.1 = t2;
+                }
+            }
+            _ => {}
+        }
     }
 
     pub fn fmt_with_indent(

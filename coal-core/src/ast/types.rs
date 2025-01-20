@@ -68,6 +68,10 @@ impl Type {
         matches!(self, Type::Num(_))
     }
 
+    pub fn is_int(&self) -> bool {
+        matches!(self, &U32 | &U64 | &I32 | &I64 | &I128)
+    }
+
     pub fn is_hashable(&self) -> bool {
         matches!(self, Type::Bool | Type::Str | Type::Num(_))
     }
@@ -85,6 +89,14 @@ impl Type {
         match self {
             Type::UserDefined(_, t) => t.is_composite(),
             Type::List(_) | Type::Map(_) | Type::Fn(_, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_indexable(&self) -> bool {
+        match self {
+            Type::List(_) | Type::Map(_) => true,
+            Type::UserDefined(_, t) => t.is_indexable(),
             _ => false,
         }
     }
@@ -237,8 +249,11 @@ impl TryFrom<&Expr> for Type {
                 _ => Type::try_from(&**rhs),
             },
             Expr::Infix(_, lhs, rhs, _) => infer_infix_type(lhs, rhs),
-            Expr::Index(expr, _, _) => match Type::try_from(&**expr) {
-                Ok(Type::List(t)) => Ok(*t),
+            Expr::Index(expr, idx, _) => match Type::try_from(&**expr) {
+                Ok(Type::List(t)) => match &**idx {
+                    Expr::Index(i, _, _) => Type::try_from(&*i.clone()),
+                    _ => Ok(*t.clone()),
+                },
                 Ok(Type::Map(t)) => Ok((*t).1),
                 Ok(t) | Err(t) => Err(t),
             },

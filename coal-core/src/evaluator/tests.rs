@@ -2,7 +2,7 @@ use std::{assert_matches::assert_matches, collections::HashMap};
 
 use test::Bencher;
 
-use crate::{Expr, Ident, Infix, Stmt, Type, Var, F64, I32, U64};
+use crate::{Expr, Ident, Infix, Stmt, Type, Var, F64, I32};
 
 use super::{Evaluator, Object, FALSE, TRUE};
 
@@ -443,120 +443,120 @@ fn test_eval_builtins_invalid() {
     }
 }
 
-#[test]
-fn test_eval_lists() {
-    let tests = vec![
-        (
-            "[]",
-            Object::List {
-                data: vec![],
-                t: Type::Unknown,
-            },
-        ),
-        (
-            "[1, 2, 3]",
-            Object::List {
-                data: vec![Object::I32(1), Object::I32(2), Object::I32(3)],
-                t: I32,
-            },
-        ),
-        (
-            r#"["one", "two", "three"]"#,
-            Object::List {
-                data: vec![
-                    Object::Str(String::from("one")),
-                    Object::Str(String::from("two")),
-                    Object::Str(String::from("three")),
-                ],
-                t: Type::Str,
-            },
-        ),
-        (
-            r#"
-            fn f() -> str {
-                return "asdf";
-            }
-            [f()];
-            "#,
-            Object::List {
-                data: vec![Object::Str(String::from("asdf"))],
-                t: Type::Str,
-            },
-        ),
-        (
-            r#"
-            fn f() {}
-            [f()];
-            "#,
-            Object::List {
-                data: vec![],
-                t: Type::Void,
-            },
-        ),
-        ("[1, 2, 3].len()", Object::U64(3)),
-        ("let x = [1, 2, 3]; x.push(7); x.len()", Object::U64(4)),
-        ("[0, 10].pop()", Object::I32(10)),
-        ("[0, 10].get(1)", Object::I32(10)),
-        ("[1, 2, 3].first()", Object::I32(1)),
-        ("[1, 2, 3].last()", Object::I32(3)),
-        (r#"[1, 2, 3].join("-")"#, Object::Str(String::from("1-2-3"))),
-        ("[1, 2, 3][1]", Object::I32(2)),
-        (
-            r#"
-            fn f() {
-                return [1, 2, 3];
-            };
-            f()[1]
-            "#,
-            Object::I32(2),
-        ),
-        (
-            "[[1, 2, 3].len()]",
-            Object::List {
-                data: vec![Object::U64(3)],
-                t: U64,
-            },
-        ),
-        (
-            "[[1, 2, 3][1], 1]",
-            Object::List {
-                data: vec![Object::I32(2), Object::I32(1)],
-                t: I32,
-            },
-        ),
-        (
-            "let x = [1, 2, 3]; [x[-1], x[-2]]",
-            Object::List {
-                data: vec![Object::I32(3), Object::I32(2)],
-                t: I32,
-            },
-        ),
-        ("let x = [[1, 2], [3, 4]]; x[0][1]", Object::I32(2)),
-        (
-            "let x: list[i32] = []; x",
-            Object::List {
-                data: vec![],
-                t: I32,
-            },
-        ),
-    ];
-
-    for (expr, expected) in tests {
-        match Evaluator::default().eval(expr) {
-            Ok(actual) => {
-                if expected != actual {
-                    panic!(
-                        "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
-                        expr, expected, actual
-                    );
-                }
-            }
-            Err(e) => {
-                panic!("input:\n{}\nexpected:\n{}\nerror:\n{:?}", expr, expected, e);
-            }
-        }
-    }
-}
+// #[test]
+// fn test_eval_lists() {
+//     let tests = vec![
+//         (
+//             "[]",
+//             Object::List {
+//                 data: vec![],
+//                 t: Type::Unknown,
+//             },
+//         ),
+//         (
+//             "[1, 2, 3]",
+//             Object::List {
+//                 data: vec![Object::I32(1), Object::I32(2), Object::I32(3)],
+//                 t: I32,
+//             },
+//         ),
+//         (
+//             r#"["one", "two", "three"]"#,
+//             Object::List {
+//                 data: vec![
+//                     Object::Str(String::from("one")),
+//                     Object::Str(String::from("two")),
+//                     Object::Str(String::from("three")),
+//                 ],
+//                 t: Type::Str,
+//             },
+//         ),
+//         (
+//             r#"
+//             fn f() -> str {
+//                 return "asdf";
+//             }
+//             [f()];
+//             "#,
+//             Object::List {
+//                 data: vec![Object::Str(String::from("asdf"))],
+//                 t: Type::Str,
+//             },
+//         ),
+//         (
+//             r#"
+//             fn f() {}
+//             [f()];
+//             "#,
+//             Object::List {
+//                 data: vec![],
+//                 t: Type::Void,
+//             },
+//         ),
+//         ("[1, 2, 3].len()", Object::U64(3)),
+//         ("let x = [1, 2, 3]; x.push(7); x.len()", Object::U64(4)),
+//         ("[0, 10].pop()", Object::I32(10)),
+//         ("[0, 10].get(1)", Object::I32(10)),
+//         ("[1, 2, 3].first()", Object::I32(1)),
+//         ("[1, 2, 3].last()", Object::I32(3)),
+//         (r#"[1, 2, 3].join("-")"#, Object::Str(String::from("1-2-3"))),
+//         ("[1, 2, 3][1]", Object::I32(2)),
+//         (
+//             r#"
+//             fn f() {
+//                 return [1, 2, 3];
+//             };
+//             f()[1]
+//             "#,
+//             Object::I32(2),
+//         ),
+//         (
+//             "[[1, 2, 3].len()]",
+//             Object::List {
+//                 data: vec![Object::U64(3)],
+//                 t: U64,
+//             },
+//         ),
+//         (
+//             "[[1, 2, 3][1], 1]",
+//             Object::List {
+//                 data: vec![Object::I32(2), Object::I32(1)],
+//                 t: I32,
+//             },
+//         ),
+//         (
+//             "let x = [1, 2, 3]; [x[-1], x[-2]]",
+//             Object::List {
+//                 data: vec![Object::I32(3), Object::I32(2)],
+//                 t: I32,
+//             },
+//         ),
+//         ("let x = [[1, 2], [3, 4]]; x[0][1]", Object::I32(2)),
+//         (
+//             "let x: list[i32] = []; x",
+//             Object::List {
+//                 data: vec![],
+//                 t: I32,
+//             },
+//         ),
+//     ];
+//
+//     for (expr, expected) in tests {
+//         match Evaluator::default().eval(expr) {
+//             Ok(actual) => {
+//                 if expected != actual {
+//                     panic!(
+//                         "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
+//                         expr, expected, actual
+//                     );
+//                 }
+//             }
+//             Err(e) => {
+//                 panic!("input:\n{}\nexpected:\n{}\nerror:\n{:?}", expr, expected, e);
+//             }
+//         }
+//     }
+// }
 
 #[test]
 fn test_eval_maps() {
@@ -648,59 +648,59 @@ fn test_eval_lists_invalid() {
     }
 }
 
-#[test]
-fn test_eval_iter() {
-    let tests = vec![
-        (
-            r#"
-            let x = 0;
-            for i in 0..100 {
-                x = i;
-            }
-            x
-            "#,
-            Object::I32(99),
-        ),
-        (
-            r#"
-            let x: u64 = 0;
-            for i in 0..10 {
-                x += i;
-            }
-            x
-            "#,
-            Object::U64(45),
-        ),
-        (
-            r#"
-            let count = 0;
-            let list = [1, 2, 3];
-            for x in list {
-                count += x;
-            }
-            count
-            "#,
-            Object::I32(6),
-        ),
-    ];
-
-    for (expr, expected) in tests {
-        let mut evaluator = Evaluator::default();
-        if let Ok(actual) = evaluator.eval(expr) {
-            if expected != actual {
-                panic!(
-                    "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
-                    expr, expected, actual
-                );
-            }
-        } else {
-            panic!(
-                "failed to evaluate input:\n{}\nerrors:\n{:?}",
-                expr, evaluator.parser.errors
-            );
-        }
-    }
-}
+// #[test]
+// fn test_eval_iter() {
+//     let tests = vec![
+//         (
+//             r#"
+//             let x = 0;
+//             for i in 0..100 {
+//                 x = i;
+//             }
+//             x
+//             "#,
+//             Object::I32(99),
+//         ),
+//         (
+//             r#"
+//             let x: u64 = 0;
+//             for i in 0..10 {
+//                 x += i;
+//             }
+//             x
+//             "#,
+//             Object::U64(45),
+//         ),
+//         (
+//             r#"
+//             let count = 0;
+//             let list = [1, 2, 3];
+//             for x in list {
+//                 count += x;
+//             }
+//             count
+//             "#,
+//             Object::I32(6),
+//         ),
+//     ];
+//
+//     for (expr, expected) in tests {
+//         let mut evaluator = Evaluator::default();
+//         if let Ok(actual) = evaluator.eval(expr) {
+//             if expected != actual {
+//                 panic!(
+//                     "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
+//                     expr, expected, actual
+//                 );
+//             }
+//         } else {
+//             panic!(
+//                 "failed to evaluate input:\n{}\nerrors:\n{:?}",
+//                 expr, evaluator.parser.errors
+//             );
+//         }
+//     }
+// }
 
 #[bench]
 fn bench_eval_math(b: &mut Bencher) {

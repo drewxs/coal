@@ -256,29 +256,50 @@ impl Parser {
         self.expect_next(TokenKind::Assign)?;
         self.advance();
 
-        let expr = self.parse_expr(Precedence::Lowest)?;
+        let mut expr = self.parse_expr(Precedence::Lowest)?;
 
-        if let Expr::Ident(Ident(name), _, _) = &expr {
-            if let Some(t) = self.symbol_table.borrow().get(name) {
-                declared_t = Some(t.clone());
-            } else if let Some(t) = self.symbol_table.borrow().get_ret_t(name) {
-                declared_t = Some(t.clone());
+        match &mut expr {
+            Expr::Ident(Ident(name), _, _) => {
+                if let Some(t) = self.symbol_table.borrow().get(name) {
+                    declared_t = Some(t.clone());
+                } else if let Some(t) = self.symbol_table.borrow().get_ret_t(name) {
+                    declared_t = Some(t.clone());
+                }
             }
-        } else if let Ok(inf_t) = Type::try_from(&expr) {
-            if inf_t.is_defined() {
-                if let Some(dt) = &declared_t {
-                    let decl_tx = dt.extract();
-                    let inf_tx = inf_t.extract();
+            Expr::Literal(l, _) if !l.is_defined() => {
+                // Empty composite literals are unknown when they're parsed, and need type annotations
+                // Update their types using the declared type, or err
+                match &declared_t {
+                    Some(Type::List(t)) => {
+                        l.set_type(*t.clone(), None);
+                    }
+                    Some(Type::Map(t)) => {
+                        l.set_type(t.0.clone(), Some(t.1.clone()));
+                    }
+                    _ => self.errors.push(ParserError::new(
+                        ParserErrorKind::TypeAnnotationsNeeded,
+                        expr.span(),
+                    )),
+                }
+            }
+            _ => {
+                if let Ok(inf_t) = Type::try_from(&expr) {
+                    if inf_t.is_defined() {
+                        if let Some(dt) = &declared_t {
+                            let decl_tx = dt.extract();
+                            let inf_tx = inf_t.extract();
 
-                    if !decl_tx.is_numeric() || !inf_tx.is_numeric() {
-                        if inf_tx.is_composite() {
-                            declared_t = Some(dt.clone());
+                            if !decl_tx.is_numeric() || !inf_tx.is_numeric() {
+                                if inf_tx.is_composite() {
+                                    declared_t = Some(dt.clone());
+                                } else {
+                                    declared_t = Some(inf_tx.clone());
+                                }
+                            }
                         } else {
-                            declared_t = Some(inf_tx.clone());
+                            declared_t = Some(inf_t);
                         }
                     }
-                } else {
-                    declared_t = Some(inf_t);
                 }
             }
         }
@@ -324,7 +345,6 @@ impl Parser {
         self.advance(); // '='
 
         let lhs_t = self.lookup_expr_type(&lhs)?;
-
         let rhs = self.parse_expr(Precedence::Lowest)?;
         let rhs_t = self.lookup_expr_type(&rhs)?;
 
@@ -507,9 +527,45 @@ impl Parser {
         let (start, _) = lhs.span();
         self.advance(); // '['
 
-        let idx = self.parse_expr(Precedence::Lowest)?;
-        self.expect_next(TokenKind::Rbracket)?;
+        let lhs_t = Type::try_from(lhs).ok()?;
 
+        if !lhs.is_indexable() {
+            let (_, end) = self.curr_tok.span;
+            self.errors.push(ParserError::new(
+                ParserErrorKind::NonIndexableType(lhs_t.clone()),
+                (start, (end.0, end.1 + 1)),
+            ));
+        }
+
+        let idx = self.parse_expr(Precedence::Lowest)?;
+        let idx_t = Type::try_from(&idx).ok()?;
+
+        match lhs_t {
+            Type::List(_) => {
+                if !idx_t.is_int() {
+                    self.errors.push(ParserError::new(
+                        ParserErrorKind::InvalidIndex(lhs_t, idx_t),
+                        idx.span(),
+                    ));
+                }
+            }
+            Type::Map(_) => {
+                if !idx_t.is_hashable() {
+                    self.errors.push(ParserError::new(
+                        ParserErrorKind::InvalidIndex(lhs_t, idx_t),
+                        idx.span(),
+                    ));
+                } else if lhs_t.extract() != &idx_t {
+                    self.errors.push(ParserError::new(
+                        ParserErrorKind::InvalidIndex(lhs_t.clone(), idx_t),
+                        idx.span(),
+                    ));
+                }
+            }
+            _ => {}
+        }
+
+        self.expect_next(TokenKind::Rbracket)?;
         let (_, end) = self.curr_tok.span;
 
         Some(Expr::Index(
@@ -545,11 +601,7 @@ impl Parser {
 
         if self.next_tok.kind == end_tok {
             self.advance();
-            return Some(List {
-                data,
-                t: Type::Unknown,
-                repeat: None,
-            });
+            return Some(List::new(&data, Type::Unknown));
         }
 
         self.advance();
@@ -595,7 +647,7 @@ impl Parser {
                 Err(e) => {
                     let (_, end) = self.curr_tok.span;
                     self.errors.push(ParserError::new(
-                        ParserErrorKind::InvalidIndex(e),
+                        ParserErrorKind::TypeMismatch(t, e),
                         (start, end),
                     ));
                     return None;
@@ -605,11 +657,7 @@ impl Parser {
 
         self.expect_next(end_tok)?;
 
-        Some(List {
-            data,
-            t,
-            repeat: None,
-        })
+        Some(List::new(&data, t))
     }
 
     fn parse_repeat_expr_list(&mut self, expr: &Expr, t: &Type) -> Option<List> {

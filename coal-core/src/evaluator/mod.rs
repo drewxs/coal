@@ -73,7 +73,7 @@ impl Evaluator<'_> {
 
     fn eval_stmt(&mut self, stmt: Stmt) -> Option<Object> {
         match stmt {
-            Stmt::Let(ident, t, expr) => self.eval_let_stmt(&ident, &t, &expr),
+            Stmt::Let(ident, _, expr) => self.eval_let_stmt(&ident, &expr),
             Stmt::Assign(lhs, rhs) => self.eval_assign_stmt(&lhs, &rhs, None),
             Stmt::OpAssign(op, lhs, rhs) => self.eval_assign_stmt(&lhs, &rhs, Some(op)),
             Stmt::Return(expr) => self.eval_return_stmt(&expr),
@@ -118,24 +118,12 @@ impl Evaluator<'_> {
         res
     }
 
-    fn eval_let_stmt(&mut self, ident: &Ident, declared_t: &Type, expr: &Expr) -> Option<Object> {
+    fn eval_let_stmt(&mut self, ident: &Ident, expr: &Expr) -> Option<Object> {
         let Ident(name) = ident;
 
-        let mut val = self.eval_expr(expr)?;
+        let val = self.eval_expr(expr)?;
         if let Object::Error { .. } = val {
             return Some(val);
-        }
-
-        let resolved_t = Type::from(&val);
-        if declared_t != &resolved_t {
-            if let Some(casted) = val.cast(declared_t) {
-                val = casted;
-            } else {
-                return Some(Object::Error(RuntimeError::new(
-                    RuntimeErrorKind::TypeMismatch(declared_t.to_owned(), resolved_t),
-                    expr.span(),
-                )));
-            }
         }
 
         self.env.borrow_mut().set_in_scope(name.to_owned(), val);
@@ -165,6 +153,7 @@ impl Evaluator<'_> {
             }
             _ => unreachable!(),
         };
+        let lhs_t = Type::try_from(lhs).ok()?;
 
         let curr = match self.env.borrow_mut().get(&name) {
             Some(value) => value,
@@ -181,6 +170,15 @@ impl Evaluator<'_> {
             return Some(val);
         }
 
+        let val_t = Type::from(&val);
+        if val_t.is_numeric() && val_t != lhs_t {
+            if let Some(casted) = val.cast(&lhs_t) {
+                val = casted;
+            } else {
+                return None;
+            }
+        }
+
         if let Object::Fn { .. } = curr {
             return Some(Object::Error(RuntimeError::new(
                 RuntimeErrorKind::ReassignmentToFunction,
@@ -188,46 +186,31 @@ impl Evaluator<'_> {
             )));
         }
 
-        let lhs_t = Type::try_from(lhs).unwrap_or_default();
-        let curr_t = Type::from(&curr);
-        let resolved_t = Type::from(&val);
-
-        if lhs_t != resolved_t {
-            if let Some(casted) = val.cast(&lhs_t) {
-                val = casted;
-            } else {
-                return Some(Object::Error(RuntimeError::new(
-                    RuntimeErrorKind::TypeMismatch(lhs_t, resolved_t),
-                    rhs.span(),
-                )));
-            }
-        }
-
         match curr {
             Object::List { mut data, t } => {
                 let mut target = &mut data;
 
                 // Nested indexing (e.g. list[0][1])
-                for idx in indices.iter() {
-                    if let Ok(i) = self.eval_expr(idx)?.try_into() {
-                        if i >= target.len() {
+                for (i, index) in indices.iter().enumerate() {
+                    if let Ok(idx) = self.eval_expr(index)?.try_into() {
+                        if idx >= target.len() {
                             return Some(Object::Error(RuntimeError::new(
-                                RuntimeErrorKind::IndexOutOfBounds(i, target.len()),
-                                idx.span(),
+                                RuntimeErrorKind::IndexOutOfBounds(idx, target.len()),
+                                index.span(),
                             )));
                         }
 
-                        if indices.last() == Some(idx) {
-                            // Final index, assign value
+                        // Final index, assign value
+                        if i == indices.len() - 1 {
                             if let Some(op) = op {
-                                target[i] = self.eval_infix_objects(
+                                target[idx] = self.eval_infix_objects(
                                     &op,
-                                    target[i].clone(),
+                                    target[idx].clone(),
                                     val,
-                                    &idx.span(),
+                                    &index.span(),
                                 )?;
                             } else {
-                                target[i] = val;
+                                target[idx] = val;
                             }
 
                             self.env
@@ -235,58 +218,32 @@ impl Evaluator<'_> {
                                 .set_in_scope(name.to_owned(), Object::List { data, t });
 
                             return None;
-                        } else if let Object::List {
+                        }
+
+                        if let Object::List {
                             data: inner_data, ..
-                        } = &mut target[i]
+                        } = &mut target[idx]
                         {
                             // Drill down into the nested list
                             target = inner_data;
-                        } else {
-                            return Some(Object::Error(RuntimeError::new(
-                                RuntimeErrorKind::InvalidIndex(
-                                    curr_t,
-                                    Type::try_from(idx).unwrap_or_default(),
-                                ),
-                                idx.span(),
-                            )));
+                            continue;
                         }
-                    } else {
-                        return Some(Object::Error(RuntimeError::new(
-                            RuntimeErrorKind::InvalidIndex(
-                                curr_t,
-                                Type::try_from(idx).unwrap_or_default(),
-                            ),
-                            idx.span(),
-                        )));
+
+                        return None;
                     }
+
+                    return None;
                 }
             }
             Object::Map { mut data, t } => {
                 if let Some(idx) = indices.first() {
                     if let Some(i) = self.eval_expr(idx) {
-                        let it = Type::from(&i);
-                        let (kt, _) = &t;
-
-                        if it != *kt {
-                            return Some(Object::Error(RuntimeError::new(
-                                RuntimeErrorKind::InvalidIndex(kt.clone(), it),
-                                idx.span(),
-                            )));
-                        }
-
                         data.insert(i, val);
-
                         self.env
                             .borrow_mut()
                             .set_in_scope(name.to_owned(), Object::Map { data, t });
                     } else {
-                        return Some(Object::Error(RuntimeError::new(
-                            RuntimeErrorKind::InvalidIndex(
-                                curr_t,
-                                Type::try_from(idx).unwrap_or_default(),
-                            ),
-                            idx.span(),
-                        )));
+                        return None;
                     }
                 }
             }
