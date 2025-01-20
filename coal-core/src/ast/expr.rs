@@ -90,6 +90,7 @@ impl Expr {
             Expr::Prefix(_, rhs, _) => rhs.is_indexable(),
             Expr::Infix(_, lhs, rhs, _) => lhs.is_indexable() && rhs.is_indexable(),
             Expr::Index(lhs, _, _) => lhs.is_indexable(),
+            Expr::Call { ret_t, .. } => ret_t.is_indexable(),
             _ => false,
         }
     }
