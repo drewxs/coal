@@ -1,4 +1,7 @@
-use std::fmt;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+};
 
 use crate::Type;
 
@@ -14,6 +17,13 @@ impl Var {
             name: name.to_string(),
             t,
         }
+    }
+}
+
+impl Hash for Var {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.t.hash(state);
     }
 }
 

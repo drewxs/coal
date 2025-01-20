@@ -476,12 +476,36 @@ impl Hash for Object {
             Object::F64(f) => f.to_bits().hash(state),
             Object::Bool(b) => b.hash(state),
             Object::Str(s) => s.hash(state),
+            Object::Range(start, end) => {
+                start.hash(state);
+                end.hash(state);
+            }
+            Object::List { data, .. } => {
+                data.len().hash(state);
+                data.hash(state);
+            }
+            Object::Map { data, .. } => {
+                data.len().hash(state);
+                for (k, v) in data {
+                    k.hash(state);
+                    v.hash(state);
+                }
+            }
+            Object::Fn { name, args, .. } => {
+                name.hash(state);
+                args.len().hash(state);
+                args.hash(state);
+            }
+            Object::Closure { args, .. } => {
+                args.len().hash(state);
+                args.hash(state);
+            }
             Object::Builtin(b) => b.func.hash(state),
             Object::Return(v) => v.hash(state),
             Object::Type(t) => t.hash(state),
             Object::Error(e) => e.hash(state),
-            Object::Nil | Object::Void => {}
-            _ => self.to_string().hash(state),
+            Object::Nil => 0.hash(state),
+            Object::Void => 0.hash(state),
         }
     }
 }
