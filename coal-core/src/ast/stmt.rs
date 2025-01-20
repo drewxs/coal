@@ -30,8 +30,12 @@ impl Stmt {
 
     pub fn ret_t(&self, expected: &Type) -> Result<Type, ParserError> {
         match self {
-            Stmt::Return(e) => Type::try_from(e)
-                .map_err(|_| ParserError::new(ParserErrorKind::TypeAnnotationsNeeded, e.span())),
+            Stmt::Return(e) => Type::try_from(e).map_err(|_| {
+                ParserError::new(
+                    ParserErrorKind::TypeMismatch(expected.clone(), Type::Void),
+                    e.span(),
+                )
+            }),
             Stmt::Expr(e) => e.ret_t(expected),
             _ => Ok(Type::Void),
         }
