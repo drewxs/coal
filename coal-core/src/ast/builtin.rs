@@ -1,4 +1,4 @@
-use crate::{Object, Type, Param};
+use crate::{Object, Param, Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Builtin {

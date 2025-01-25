@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{Object, TokenKind};
 
-use super::{Expr, Literal, Prefix};
+use super::{Expr, Func, Literal, Prefix};
 
 #[derive(Clone, Debug, Hash, PartialEq, Default)]
 pub enum Type {
@@ -271,7 +271,7 @@ impl TryFrom<&Expr> for Type {
                 Ok(t) | Err(t) => Err(t),
             },
             Expr::Range(_, _, _) => Ok(U64),
-            Expr::Fn { args, ret_t, .. } | Expr::Closure { args, ret_t, .. } => Ok(Type::Fn(
+            Expr::Fn(Func { args, ret_t, .. }) | Expr::Closure { args, ret_t, .. } => Ok(Type::Fn(
                 args.iter().map(|arg| arg.t.to_owned()).collect(),
                 Box::new(ret_t.to_owned()),
             )),

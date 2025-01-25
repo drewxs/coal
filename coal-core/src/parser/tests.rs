@@ -877,19 +877,19 @@ fn test_parse_function_expressions() {
     let tests = [
         (
             "fn foo() {}",
-            Stmt::Expr(Expr::Fn {
+            Stmt::Expr(Expr::Fn(Func {
                 name: String::from("foo"),
                 args: vec![],
                 ret_t: Type::Void,
                 body: vec![],
                 span: ((1, 1), (1, 11)),
-            }),
+            })),
         ),
         (
             r#"fn foo() {
                    return 0;
                }"#,
-            Stmt::Expr(Expr::Fn {
+            Stmt::Expr(Expr::Fn(Func {
                 name: String::from("foo"),
                 args: vec![],
                 ret_t: I32,
@@ -898,13 +898,13 @@ fn test_parse_function_expressions() {
                     ((2, 8), (2, 8)),
                 ))],
                 span: ((1, 1), (3, 1)),
-            }),
+            })),
         ),
         (
             r#"fn foo() -> i32 {
                    return 0;
                }"#,
-            Stmt::Expr(Expr::Fn {
+            Stmt::Expr(Expr::Fn(Func {
                 name: String::from("foo"),
                 args: vec![],
                 ret_t: I32,
@@ -913,13 +913,13 @@ fn test_parse_function_expressions() {
                     ((2, 8), (2, 8)),
                 ))],
                 span: ((1, 1), (3, 1)),
-            }),
+            })),
         ),
         (
             r#"fn add(x: i32, y: i32) -> i32 {
                    return x + y;
                }"#,
-            Stmt::Expr(Expr::Fn {
+            Stmt::Expr(Expr::Fn(Func {
                 name: String::from("add"),
                 args: vec![Param::new("x", I32), Param::new("y", I32)],
                 ret_t: I32,
@@ -930,13 +930,13 @@ fn test_parse_function_expressions() {
                     ((2, 8), (2, 12)),
                 ))],
                 span: ((1, 1), (3, 1)),
-            }),
+            })),
         ),
         (
             r#"fn add(x: u32, f: Fn(u32, u32) -> u32) -> u32 {
                    return f(x, 0);
                }"#,
-            Stmt::Expr(Expr::Fn {
+            Stmt::Expr(Expr::Fn(Func {
                 name: String::from("add"),
                 args: vec![
                     Param::new("x", U32),
@@ -953,7 +953,7 @@ fn test_parse_function_expressions() {
                     span: ((2, 8), (2, 14)),
                 })],
                 span: ((1, 1), (3, 1)),
-            }),
+            })),
         ),
     ];
 

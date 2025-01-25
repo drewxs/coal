@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{ParserError, ParserErrorKind, Span};
 
-use super::{Comment, Expr, Ident, Infix, Type};
+use super::{Comment, Expr, Func, Ident, Infix, Param, Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {

@@ -2,7 +2,7 @@ use std::{assert_matches::assert_matches, collections::HashMap};
 
 use test::Bencher;
 
-use crate::{Expr, Ident, Infix, Stmt, Type, Param, F64, I32, U64};
+use crate::{Expr, Ident, Infix, Param, Stmt, Type, F64, I32, U64};
 
 use super::{Evaluator, Object, FALSE, TRUE};
 

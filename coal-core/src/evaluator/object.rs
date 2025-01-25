@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    Expr, Literal, ParserError, Span, Stmt, Type, Param, F32, F64, I128, I32, I64, U32, U64,
+    Expr, Literal, Param, ParserError, Span, Stmt, Type, F32, F64, I128, I32, I64, U32, U64,
 };
 
 use super::{Builtin, RuntimeError, RuntimeErrorKind};

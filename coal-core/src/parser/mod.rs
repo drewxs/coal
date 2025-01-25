@@ -9,8 +9,8 @@ mod warning;
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 use crate::{
-    Comment, Expr, Ident, IfExpr, Infix, Lexer, List, Literal, Map, Prefix, Stmt, Token, TokenKind,
-    Type, Param, U32,
+    Comment, Expr, Func, Ident, IfExpr, Infix, Lexer, List, Literal, Map, Param, Prefix, Stmt,
+    Token, TokenKind, Type, U32,
 };
 
 pub use error::{ParserError, ParserErrorKind};
@@ -1023,13 +1023,13 @@ impl Parser {
             .borrow_mut()
             .set(ident.name(), Type::Fn(args_t, Box::new(ret_t.clone())));
 
-        Some(Expr::Fn {
+        Some(Expr::Fn(Func {
             name: ident.name(),
             args,
             ret_t,
             body,
             span: (start, end),
-        })
+        }))
     }
 
     fn parse_closure_expr(&mut self) -> Option<Expr> {

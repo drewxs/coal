@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{ParserError, ParserErrorKind, Span};
 
-use super::{Ident, Infix, Literal, Param, Prefix, Stmt, Type};
+use super::{Func, Ident, Infix, Literal, Param, Prefix, Stmt, Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
@@ -30,13 +30,7 @@ pub enum Expr {
         body: Vec<Stmt>,
         span: Span,
     },
-    Fn {
-        name: String,
-        args: Vec<Param>,
-        ret_t: Type,
-        body: Vec<Stmt>,
-        span: Span,
-    },
+    Fn(Func),
     Closure {
         args: Vec<Param>,
         ret_t: Type,
@@ -76,7 +70,7 @@ impl Expr {
             Expr::If { span, .. } => *span,
             Expr::While { span, .. } => *span,
             Expr::Iter { span, .. } => *span,
-            Expr::Fn { span, .. } => *span,
+            Expr::Fn(Func { span, .. }) => *span,
             Expr::Closure { span, .. } => *span,
             Expr::Call { span, .. } => *span,
             Expr::MethodCall { span, .. } => *span,
@@ -275,29 +269,7 @@ impl Expr {
                 }
                 writeln!(f, "{indent}}}")
             }
-            Expr::Fn {
-                name,
-                args,
-                ret_t,
-                body,
-                ..
-            } => {
-                write!(f, "{}fn {name}(", indent)?;
-                let args = args
-                    .iter()
-                    .map(|arg| format!("{arg}"))
-                    .collect::<Vec<String>>()
-                    .join(", ");
-                if *ret_t == Type::Void {
-                    writeln!(f, "{args}) {{")?;
-                } else {
-                    writeln!(f, "{args}) -> {ret_t} {{")?;
-                }
-                for stmt in body {
-                    stmt.fmt_with_indent(f, indent_level + 1)?;
-                }
-                writeln!(f, "{}}}", indent)
-            }
+            Expr::Fn(func) => func.fmt_with_indent(f, indent_level),
             Expr::Closure { args, body, .. } => {
                 let args = args
                     .iter()

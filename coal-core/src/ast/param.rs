@@ -1,5 +1,5 @@
 use std::{
-    fmt,
+    fmt::{self, Display},
     hash::{Hash, Hasher},
 };
 
@@ -27,8 +27,16 @@ impl Hash for Param {
     }
 }
 
-impl fmt::Display for Param {
+impl Param {
+    pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
+        let indent = "    ".repeat(indent_level);
+        let Param { name, t } = self;
+        write!(f, "{}{name}: {t}", indent)
+    }
+}
+
+impl Display for Param {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}: {}", self.name, self.t)
+        self.fmt_with_indent(f, 0)
     }
 }

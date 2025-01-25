@@ -1,6 +1,7 @@
 mod builtin;
 mod comment;
 mod expr;
+mod func;
 mod ident;
 mod infix;
 mod list;
@@ -14,6 +15,7 @@ mod types;
 pub use builtin::*;
 pub use comment::*;
 pub use expr::*;
+pub use func::*;
 pub use ident::*;
 pub use infix::*;
 pub use list::*;

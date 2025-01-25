@@ -1,4 +1,4 @@
-use crate::{Builtin, Object, Type, Param};
+use crate::{Builtin, Object, Param, Type};
 
 use super::Def;
 

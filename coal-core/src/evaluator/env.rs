@@ -6,7 +6,7 @@ use std::{
 
 use super::Object;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct Env {
     pub store: HashMap<String, Object>,
     pub outer: Option<Rc<RefCell<Env>>>,
@@ -55,15 +55,6 @@ impl Env {
                 }
                 vacant_entry.insert(value);
             }
-        }
-    }
-}
-
-impl Default for Env {
-    fn default() -> Self {
-        Env {
-            store: HashMap::new(),
-            outer: None,
         }
     }
 }

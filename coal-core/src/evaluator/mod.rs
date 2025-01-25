@@ -9,8 +9,8 @@ pub mod object;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
-    Builtin, Expr, Ident, IfExpr, Infix, List, Literal, Map, Param, Parser, Prefix, Span, Stmt,
-    Type,
+    Builtin, Expr, Func, Ident, IfExpr, Infix, List, Literal, Map, Param, Parser, Prefix, Span,
+    Stmt, Type,
 };
 
 pub use builtins::Def;
@@ -300,13 +300,13 @@ impl Evaluator<'_> {
             Expr::Iter {
                 ident, expr, body, ..
             } => self.eval_iter_expr(ident, expr, body),
-            Expr::Fn {
+            Expr::Fn(Func {
                 name,
                 args,
                 ret_t,
                 body,
                 span,
-            } => self.eval_fn_expr(name, args, ret_t, body, span),
+            }) => self.eval_fn_expr(name, args, ret_t, body, span),
             Expr::Closure {
                 args, ret_t, body, ..
             } => self.eval_closure_expr(args, ret_t, body),
