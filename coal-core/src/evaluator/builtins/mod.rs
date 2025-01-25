@@ -1,3 +1,5 @@
+mod assert;
+mod assert_eq;
 mod dbg;
 mod def;
 mod print;
@@ -8,6 +10,8 @@ use std::collections::HashMap;
 
 use crate::{Builtin, Object, Type};
 
+use assert::Assert;
+use assert_eq::AssertEq;
 use dbg::Dbg;
 pub use def::Def;
 use print::Print;
@@ -21,6 +25,8 @@ pub fn map<'s>() -> HashMap<&'s str, Builtin> {
     builtins.insert(Print::name(), Print::def());
     builtins.insert(Println::name(), Println::def());
     builtins.insert(Typeof::name(), Typeof::def());
+    builtins.insert(Assert::name(), Assert::def());
+    builtins.insert(AssertEq::name(), AssertEq::def());
 
     builtins
 }
