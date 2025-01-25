@@ -10,7 +10,7 @@ use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 use crate::{
     Comment, Expr, Ident, IfExpr, Infix, Lexer, List, Literal, Map, Prefix, Stmt, Token, TokenKind,
-    Type, Var, U32,
+    Type, Param, U32,
 };
 
 pub use error::{ParserError, ParserErrorKind};
@@ -1062,7 +1062,7 @@ impl Parser {
         })
     }
 
-    fn parse_decl_args(&mut self) -> Option<Vec<Var>> {
+    fn parse_decl_args(&mut self) -> Option<Vec<Param>> {
         let mut args = vec![];
 
         while let TokenKind::Ident(name) = self.curr_tok.kind.clone() {
@@ -1074,7 +1074,7 @@ impl Parser {
             self.consume_next(TokenKind::Comma);
             self.advance();
 
-            args.push(Var { name, t });
+            args.push(Param { name, t });
         }
 
         self.advance();

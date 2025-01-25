@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    Expr, Literal, ParserError, Span, Stmt, Type, Var, F32, F64, I128, I32, I64, U32, U64,
+    Expr, Literal, ParserError, Span, Stmt, Type, Param, F32, F64, I128, I32, I64, U32, U64,
 };
 
 use super::{Builtin, RuntimeError, RuntimeErrorKind};
@@ -34,12 +34,12 @@ pub enum Object {
     },
     Fn {
         name: String,
-        args: Vec<Var>,
+        args: Vec<Param>,
         body: Vec<Stmt>,
         ret_t: Type,
     },
     Closure {
-        args: Vec<Var>,
+        args: Vec<Param>,
         body: Vec<Stmt>,
         ret_t: Type,
     },

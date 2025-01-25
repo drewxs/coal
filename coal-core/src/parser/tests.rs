@@ -921,7 +921,7 @@ fn test_parse_function_expressions() {
                }"#,
             Stmt::Expr(Expr::Fn {
                 name: String::from("add"),
-                args: vec![Var::new("x", I32), Var::new("y", I32)],
+                args: vec![Param::new("x", I32), Param::new("y", I32)],
                 ret_t: I32,
                 body: vec![Stmt::Return(Expr::Infix(
                     Infix::Add,
@@ -939,8 +939,8 @@ fn test_parse_function_expressions() {
             Stmt::Expr(Expr::Fn {
                 name: String::from("add"),
                 args: vec![
-                    Var::new("x", U32),
-                    Var::new("f", Type::Fn(vec![U32, U32], Box::new(U32))),
+                    Param::new("x", U32),
+                    Param::new("f", Type::Fn(vec![U32, U32], Box::new(U32))),
                 ],
                 ret_t: U32,
                 body: vec![Stmt::Return(Expr::Call {
@@ -1001,7 +1001,7 @@ fn test_parse_closure_expressions() {
         (
             "|x: i32| {}",
             Stmt::Expr(Expr::Closure {
-                args: vec![Var::new("x", I32)],
+                args: vec![Param::new("x", I32)],
                 body: vec![],
                 ret_t: Type::Void,
                 span: ((1, 1), (1, 11)),
@@ -1022,7 +1022,7 @@ fn test_parse_closure_expressions() {
         (
             "|x: i32| { return x; }",
             Stmt::Expr(Expr::Closure {
-                args: vec![Var::new("x", I32)],
+                args: vec![Param::new("x", I32)],
                 body: vec![Stmt::Return(Expr::Ident(
                     Ident::from("x"),
                     I32,

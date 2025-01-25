@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{ParserError, ParserErrorKind, Span};
 
-use super::{Ident, Infix, Literal, Prefix, Stmt, Type, Var};
+use super::{Ident, Infix, Literal, Param, Prefix, Stmt, Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
@@ -32,13 +32,13 @@ pub enum Expr {
     },
     Fn {
         name: String,
-        args: Vec<Var>,
+        args: Vec<Param>,
         ret_t: Type,
         body: Vec<Stmt>,
         span: Span,
     },
     Closure {
-        args: Vec<Var>,
+        args: Vec<Param>,
         ret_t: Type,
         body: Vec<Stmt>,
         span: Span,

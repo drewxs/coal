@@ -9,7 +9,8 @@ pub mod object;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
-    Builtin, Expr, Ident, IfExpr, Infix, List, Literal, Map, Parser, Prefix, Span, Stmt, Type, Var,
+    Builtin, Expr, Ident, IfExpr, Infix, List, Literal, Map, Param, Parser, Prefix, Span, Stmt,
+    Type,
 };
 
 pub use builtins::Def;
@@ -596,7 +597,7 @@ impl Evaluator<'_> {
     fn eval_fn_expr(
         &mut self,
         name: &str,
-        args: &[Var],
+        args: &[Param],
         ret_t: &Type,
         body: &Vec<Stmt>,
         span: &Span,
@@ -623,7 +624,7 @@ impl Evaluator<'_> {
 
     fn eval_closure_expr(
         &mut self,
-        args: &[Var],
+        args: &[Param],
         ret_t: &Type,
         body: &Vec<Stmt>,
     ) -> Option<Object> {
@@ -744,7 +745,7 @@ impl Evaluator<'_> {
         }
     }
 
-    fn vars_str(&self, args: &[Var]) -> String {
+    fn vars_str(&self, args: &[Param]) -> String {
         args.iter()
             .map(|arg| format!("{}", arg.t))
             .collect::<Vec<String>>()

@@ -1,4 +1,4 @@
-use crate::{Builtin, Object, Type, Var};
+use crate::{Builtin, Object, Type, Param};
 
 use super::Def;
 
@@ -12,7 +12,7 @@ impl Def for Dbg {
     fn def() -> Builtin {
         Builtin {
             func: Dbg::func,
-            args: vec![Var::new("args", Type::Any)],
+            args: vec![Param::new("args", Type::Any)],
             ret_t: Type::Void,
         }
     }

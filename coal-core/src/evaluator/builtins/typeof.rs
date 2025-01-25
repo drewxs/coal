@@ -1,4 +1,4 @@
-use crate::{Builtin, Object, Type, Var};
+use crate::{Builtin, Object, Type, Param};
 
 use super::Def;
 
@@ -13,7 +13,7 @@ impl Def for Typeof {
     fn def() -> Builtin {
         Builtin {
             func: Typeof::func,
-            args: vec![Var::new("args", Type::Any)],
+            args: vec![Param::new("args", Type::Any)],
             ret_t: Type::Str,
         }
     }

@@ -2,7 +2,7 @@ use std::{assert_matches::assert_matches, collections::HashMap};
 
 use test::Bencher;
 
-use crate::{Expr, Ident, Infix, Stmt, Type, Var, F64, I32, U64};
+use crate::{Expr, Ident, Infix, Stmt, Type, Param, F64, I32, U64};
 
 use super::{Evaluator, Object, FALSE, TRUE};
 
@@ -378,7 +378,7 @@ fn test_eval_function() {
         }"#,
         Ok(Object::Fn {
             name: String::from("add"),
-            args: vec![Var::new("x", I32), Var::new("y", I32)],
+            args: vec![Param::new("x", I32), Param::new("y", I32)],
             body: vec![Stmt::Expr(Expr::If {
                 cond: Box::new(Expr::Infix(
                     Infix::GT,
