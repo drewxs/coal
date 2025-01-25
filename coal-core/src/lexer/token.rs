@@ -62,6 +62,7 @@ pub enum TokenKind {
     // Keywords
     Fn,
     Let,
+    Struct,
     If,
     Elif,
     Else,
@@ -111,6 +112,7 @@ impl From<&str> for TokenKind {
             "]" => TokenKind::Rbracket,
             "fn" => TokenKind::Fn,
             "let" => TokenKind::Let,
+            "struct" => TokenKind::Struct,
             "if" => TokenKind::If,
             "elif" => TokenKind::Elif,
             "else" => TokenKind::Else,
@@ -174,6 +176,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Rbracket => write!(f, "]"),
             TokenKind::Fn => write!(f, "fn"),
             TokenKind::Let => write!(f, "let"),
+            TokenKind::Struct => write!(f, "struct"),
             TokenKind::If => write!(f, "if"),
             TokenKind::Elif => write!(f, "elif"),
             TokenKind::Else => write!(f, "else"),
