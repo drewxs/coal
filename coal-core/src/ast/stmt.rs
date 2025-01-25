@@ -14,6 +14,7 @@ pub enum Stmt {
     OpAssign(Infix, Expr, Expr),
     Return(Expr),
     Expr(Expr),
+    Struct(Ident, Vec<(Param, Option<Expr>)>, Vec<Func>, Span),
 }
 
 impl Stmt {
@@ -25,6 +26,7 @@ impl Stmt {
             Stmt::OpAssign(_, lhs, rhs) => (lhs.span().0, rhs.span().1),
             Stmt::Return(e) => e.span(),
             Stmt::Expr(e) => e.span(),
+            Stmt::Struct(_, _, _, span) => *span,
         }
     }
 
@@ -91,6 +93,25 @@ impl Stmt {
                 }
                 _ => expr.fmt_with_indent(f, indent_level),
             },
+            Stmt::Struct(Ident(ident), params, funcs, _) => {
+                writeln!(f, "{}struct {ident} {{", indent)?;
+                for (param, default) in params {
+                    param.fmt_with_indent(f, indent_level + 1)?;
+                    if let Some(expr) = default {
+                        write!(f, "= ")?;
+                        expr.fmt_with_indent(f, 0)?;
+                    }
+                    writeln!(f, ";")?;
+                }
+                if !params.is_empty() && !funcs.is_empty() {
+                    writeln!(f)?;
+                }
+                for func in funcs {
+                    func.fmt_with_indent(f, indent_level + 1)?;
+                    writeln!(f)?
+                }
+                Ok(())
+            }
         }
     }
 }

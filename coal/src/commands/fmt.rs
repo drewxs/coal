@@ -231,4 +231,24 @@ println({
 
         assert_eq!(expected, fmt(input));
     }
+
+    //     #[test]
+    //     fn test_fmt_structs() {
+    //         let input = r#"struct Foo {    bar: i32;   baz  : str = "bazz"; blonk: u32 = 2;
+    //                                 fn bleetz(blontz: i32) -> u64 { let bluntz: u64 = blontz; return bluntz;}}"#;
+
+    //         let expected = r#"struct Foo {
+    //     bar: i32;
+    //     baz: str = "bazz";
+    //     blonk: u32 = 2;
+
+    //     fn bleetz(blontz: i32) -> u64 {
+    //         let bluntz: u64 = blontz;
+    //         return bluntz;
+    //     }
+    // }
+    // "#;
+
+    //         assert_eq!(expected, fmt(input));
+    //     }
 }
