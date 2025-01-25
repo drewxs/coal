@@ -14,6 +14,7 @@ pub enum Type {
     Fn(Vec<Type>, Box<Type>),
     Range,
     UserDefined(String, Box<Type>),
+    Struct(String, Vec<(String, Type)>),
     Nil,
     Any,
     Void,
@@ -88,7 +89,7 @@ impl Type {
     pub fn is_composite(&self) -> bool {
         match self {
             Type::UserDefined(_, t) => t.is_composite(),
-            Type::List(_) | Type::Map(_) | Type::Fn(_, _) => true,
+            Type::List(_) | Type::Map(_) | Type::Fn(_, _) | Type::Struct(_, _) => true,
             _ => false,
         }
     }
@@ -114,6 +115,7 @@ impl Type {
             Type::Str => self.str_sig(method),
             Type::List(t) => self.list_sig(method, t),
             Type::Map(t) => self.map_sig(method, t),
+            Type::Struct(_, fields) => self.struct_sig(method, fields),
             _ => None,
         }
     }
@@ -158,6 +160,17 @@ impl Type {
             "get" => Some(MethodSignature::new(&[kt.clone()], vt.clone())),
             _ => None,
         }
+    }
+
+    fn struct_sig(&self, method: &str, fields: &Vec<(String, Type)>) -> Option<MethodSignature> {
+        for (field_name, t) in fields {
+            if field_name == method {
+                if let Type::Fn(arg, ret) = t {
+                    return Some(MethodSignature::new(arg, *ret.clone()));
+                }
+            }
+        }
+        None
     }
 }
 
@@ -313,6 +326,7 @@ impl fmt::Display for Type {
             }
             Type::Range => write!(f, "range"),
             Type::UserDefined(name, _) => write!(f, "{name}"),
+            Type::Struct(name, _) => write!(f, "{name}"),
             Type::Nil => write!(f, "nil"),
             Type::Any => write!(f, "any"),
             Type::Void => write!(f, "void"),
