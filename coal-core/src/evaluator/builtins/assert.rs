@@ -1,4 +1,4 @@
-use crate::{Builtin, Object, Type, Var};
+use crate::{Builtin, Object, Param, Type};
 
 use super::Def;
 
@@ -12,7 +12,7 @@ impl Def for Assert {
     fn def() -> Builtin {
         Builtin {
             func: Assert::func,
-            args: vec![Var::new("cond", Type::Any)],
+            args: vec![Param::new("cond", Type::Any)],
             ret_t: Type::Void,
         }
     }

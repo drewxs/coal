@@ -1,4 +1,4 @@
-use crate::{Builtin, Object, Type, Var};
+use crate::{Builtin, Object, Param, Type};
 
 use super::Def;
 
@@ -12,7 +12,7 @@ impl Def for AssertEq {
     fn def() -> Builtin {
         Builtin {
             func: AssertEq::func,
-            args: vec![Var::new("lhs", Type::Any), Var::new("rhs", Type::Any)],
+            args: vec![Param::new("lhs", Type::Any), Param::new("rhs", Type::Any)],
             ret_t: Type::Void,
         }
     }
