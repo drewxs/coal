@@ -1,0 +1,14 @@
+struct User {
+    id: u64;
+    email: str;
+    enabled: bool = true;
+
+    fn new(id: u64, email: str) {
+        println("hello, world!");
+    }
+
+}
+
+fn main() {
+}
+

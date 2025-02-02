@@ -10,6 +10,7 @@ mod map;
 mod param;
 mod prefix;
 mod stmt;
+mod r#struct;
 mod types;
 
 pub use builtin::*;
@@ -23,5 +24,6 @@ pub use literal::*;
 pub use map::*;
 pub use param::*;
 pub use prefix::*;
+pub use r#struct::*;
 pub use stmt::*;
 pub use types::*;

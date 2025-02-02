@@ -10,7 +10,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
     Builtin, Expr, Func, Ident, IfExpr, Infix, List, Literal, Map, Param, Parser, Prefix, Span,
-    Stmt, Type,
+    Stmt, Struct, Type,
 };
 
 pub use builtins::Def;
@@ -310,6 +310,7 @@ impl Evaluator<'_> {
             Expr::Closure {
                 args, ret_t, body, ..
             } => self.eval_closure_expr(args, ret_t, body),
+            Expr::Struct(s, _) => self.eval_struct_expr(s),
             Expr::Call {
                 name,
                 args,
@@ -632,6 +633,22 @@ impl Evaluator<'_> {
             args: args.to_owned(),
             body: body.to_owned(),
             ret_t: ret_t.to_owned(),
+        })
+    }
+
+    fn eval_struct_expr(&mut self, s: &Struct) -> Option<Object> {
+        let mut state = vec![];
+        for (k, v) in &s.state {
+            let v = self.eval_expr(v)?;
+            if let Object::Error { .. } = v {
+                return Some(v);
+            }
+            state.push((k.clone(), v));
+        }
+
+        Some(Object::Struct {
+            name: s.name.clone(),
+            state,
         })
     }
 

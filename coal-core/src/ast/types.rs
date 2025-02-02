@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{Object, TokenKind};
 
-use super::{Expr, Func, Literal, Prefix};
+use super::{Expr, Func, Literal, Prefix, StructDecl};
 
 #[derive(Clone, Debug, Hash, PartialEq, Default)]
 pub enum Type {
@@ -115,7 +115,7 @@ impl Type {
             Type::Str => self.str_sig(method),
             Type::List(t) => self.list_sig(method, t),
             Type::Map(t) => self.map_sig(method, t),
-            Type::Struct(_, fields) => self.struct_sig(method, fields),
+            Type::Struct(_, attrs) => self.struct_sig(method, attrs),
             _ => None,
         }
     }
@@ -162,9 +162,9 @@ impl Type {
         }
     }
 
-    fn struct_sig(&self, method: &str, fields: &Vec<(String, Type)>) -> Option<MethodSignature> {
-        for (field_name, t) in fields {
-            if field_name == method {
+    fn struct_sig(&self, method: &str, attrs: &Vec<(String, Type)>) -> Option<MethodSignature> {
+        for (attr_name, t) in attrs {
+            if attr_name == method {
                 if let Type::Fn(arg, ret) = t {
                     return Some(MethodSignature::new(arg, *ret.clone()));
                 }
@@ -279,6 +279,23 @@ impl TryFrom<&Expr> for Type {
             Expr::MethodCall { ret_t, .. } => Ok(ret_t.to_owned()),
             _ => Err(Type::Unknown),
         }
+    }
+}
+
+impl From<&Func> for Type {
+    fn from(f: &Func) -> Self {
+        Type::Fn(
+            f.args.iter().map(|arg| arg.t.to_owned()).collect(),
+            Box::new(f.ret_t.to_owned()),
+        )
+    }
+}
+
+impl From<&StructDecl> for Type {
+    fn from(s: &StructDecl) -> Self {
+        let attrs = s.attrs.iter().map(|(p, _)| (p.name.clone(), p.t.clone()));
+        let fns = s.funcs.iter().map(|f| (f.name.clone(), Type::from(f)));
+        Type::Struct(s.name.to_owned(), attrs.chain(fns).collect())
     }
 }
 

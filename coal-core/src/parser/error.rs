@@ -34,6 +34,7 @@ pub enum ParserErrorKind {
     InvalidIndex(Type, Type),
     MissingElseClause,
     UnhashableMapKey(Type),
+    InvalidStructAttr(String),
 }
 
 impl fmt::Display for ParserErrorKind {
@@ -74,6 +75,9 @@ impl fmt::Display for ParserErrorKind {
             }
             ParserErrorKind::UnhashableMapKey(t) => {
                 write!(f, "map key not hashable: type `{t}`")
+            }
+            ParserErrorKind::InvalidStructAttr(name) => {
+                write!(f, "invalid struct attribute: `{name}`")
             }
         }
     }

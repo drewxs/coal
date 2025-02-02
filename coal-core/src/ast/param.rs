@@ -1,9 +1,9 @@
 use std::{
-    fmt::{self, Display},
+    fmt,
     hash::{Hash, Hasher},
 };
 
-use crate::Type;
+use crate::{indent, Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Param {
@@ -29,13 +29,11 @@ impl Hash for Param {
 
 impl Param {
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
-        let indent = "    ".repeat(indent_level);
-        let Param { name, t } = self;
-        write!(f, "{}{name}: {t}", indent)
+        write!(f, "{}{}: {}", indent(indent_level), self.name, self.t)
     }
 }
 
-impl Display for Param {
+impl fmt::Display for Param {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.fmt_with_indent(f, 0)
     }

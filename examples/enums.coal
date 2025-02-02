@@ -1,0 +1,8 @@
+enum Color {
+    Red,
+    Green,  
+    Blue,
+}
+
+type RGB = (Color, Color, Color);
+

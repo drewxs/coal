@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::TokenKind;
+use crate::{indent, TokenKind};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Ident(pub String);
@@ -11,8 +11,7 @@ impl Ident {
     }
 
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
-        let indent = "    ".repeat(indent_level);
-        write!(f, "{}{}", indent, self.0)
+        write!(f, "{}{}", indent(indent_level), self.0)
     }
 }
 

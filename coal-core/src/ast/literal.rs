@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::indent;
+
 use super::{List, Map, Type, F32, F64, I128, I32, I64, U32, U64};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -121,8 +123,8 @@ impl Literal {
         indent_level: usize,
         inner: bool,
     ) -> fmt::Result {
-        let indent = "    ".repeat(indent_level);
-        let inner_indent = if inner { "" } else { &indent };
+        let base_indent = indent(indent_level);
+        let inner_indent = if inner { "" } else { &base_indent };
 
         match self {
             Literal::Str(s) => {
@@ -193,7 +195,7 @@ impl Literal {
                                 item.fmt_inner(f, indent_level + 1)?;
                                 writeln!(f, ",")?;
                             }
-                            write!(f, "{}]", indent)
+                            write!(f, "{}]", base_indent)
                         }
                     }
                 }
@@ -210,7 +212,7 @@ impl Literal {
                         k.fmt_inner(f, indent_level + 1)?;
                         writeln!(f, ": {v},")?;
                     }
-                    write!(f, "{}}}", indent)
+                    write!(f, "{}}}", base_indent)
                 }
             },
             Literal::Nil => write!(f, "{}nil", inner_indent),

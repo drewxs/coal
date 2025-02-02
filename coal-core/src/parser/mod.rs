@@ -10,7 +10,7 @@ use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 use crate::{
     Comment, Expr, Func, Ident, IfExpr, Infix, Lexer, List, Literal, Map, Param, Prefix, Stmt,
-    Token, TokenKind, Type, U32,
+    Struct, StructDecl, Token, TokenKind, Type, U32,
 };
 
 pub use error::{ParserError, ParserErrorKind};
@@ -135,6 +135,12 @@ impl Parser {
         }
     }
 
+    fn consume_newlines(&mut self) {
+        while self.curr_tok.kind == TokenKind::NewLine {
+            self.advance();
+        }
+    }
+
     fn expect_next(&mut self, token: TokenKind) -> Option<()> {
         if self.next_tok.kind == token {
             self.advance();
@@ -151,6 +157,13 @@ impl Parser {
 
     fn error(&mut self, kind: ParserErrorKind) {
         self.errors.push(ParserError::new(kind, self.curr_tok.span));
+    }
+
+    fn syntax_error(&mut self) {
+        self.errors.push(ParserError::new(
+            ParserErrorKind::SyntaxError(self.curr_tok.kind.clone()),
+            self.curr_tok.span,
+        ));
     }
 
     fn lookup_expr_type(&mut self, expr: &Expr) -> Option<Type> {
@@ -219,11 +232,12 @@ impl Parser {
 
     fn parse_stmt(&mut self) -> Option<Stmt> {
         match &self.curr_tok.kind {
+            TokenKind::NewLine => Some(Stmt::Newline),
+            TokenKind::Comment(c) => Some(Stmt::Comment(Comment(c.clone()))),
             TokenKind::Let => self.parse_let_stmt(),
             TokenKind::Ident(_) => self.parse_ident_stmt(),
             TokenKind::Return => self.parse_ret_stmt(),
-            TokenKind::Comment(c) => Some(Stmt::Comment(Comment(c.clone()))),
-            TokenKind::NewLine => Some(Stmt::Newline),
+            TokenKind::Struct => self.parse_struct_decl(),
             _ => self.parse_expr_stmt(),
         }
     }
@@ -231,7 +245,7 @@ impl Parser {
     fn parse_let_stmt(&mut self) -> Option<Stmt> {
         self.advance(); // 'let'
         if !matches!(self.curr_tok.kind, TokenKind::Ident(_)) {
-            self.error(ParserErrorKind::SyntaxError(self.curr_tok.kind.clone()));
+            self.syntax_error();
             self.advance_line();
             return None;
         }
@@ -380,19 +394,93 @@ impl Parser {
         expr
     }
 
+    fn parse_struct_decl(&mut self) -> Option<Stmt> {
+        let (start, _) = self.curr_tok.span;
+        self.advance(); // 'struct'
+
+        let ident = Ident::try_from(&self.curr_tok.kind).ok()?;
+
+        self.advance();
+        self.consume(TokenKind::Lbrace);
+
+        let mut attrs = vec![];
+        while !matches!(
+            self.curr_tok.kind,
+            TokenKind::Rbrace | TokenKind::Fn | TokenKind::EOF
+        ) {
+            if let TokenKind::Ident(name) = &self.curr_tok.kind {
+                let name = name.clone();
+                self.advance();
+                self.consume(TokenKind::Colon);
+
+                let t = self.parse_type()?;
+                self.advance();
+
+                let default_val = match self.curr_tok.kind {
+                    TokenKind::Assign => {
+                        self.advance();
+                        self.parse_expr(Precedence::Lowest)
+                            .inspect(|_| self.advance())
+                    }
+                    _ => None,
+                };
+
+                if let Some(v) = &default_val {
+                    let val_t = Type::try_from(v).ok()?;
+                    if val_t != t {
+                        self.errors.push(ParserError::new(
+                            ParserErrorKind::TypeMismatch(t.clone(), val_t),
+                            v.span(),
+                        ));
+                    }
+                }
+
+                attrs.push((Param { name, t }, default_val));
+                self.consume(TokenKind::Semicolon);
+                self.consume_newlines();
+            } else {
+                self.syntax_error();
+                self.advance_line();
+                return None;
+            }
+        }
+
+        let mut funcs = vec![];
+        while !matches!(self.curr_tok.kind, TokenKind::Rbrace | TokenKind::EOF) {
+            funcs.push(self.parse_fn()?);
+            self.advance();
+        }
+
+        let s = StructDecl {
+            name: ident.name(),
+            attrs,
+            funcs,
+        };
+
+        self.symbol_table
+            .borrow_mut()
+            .set(ident.name(), Type::from(&s));
+
+        let (_, end) = self.curr_tok.span;
+
+        Some(Stmt::Struct(s, (start, end)))
+    }
+
     fn parse_expr(&mut self, precedence: Precedence) -> Option<Expr> {
         let Token { kind: token, span } = &self.curr_tok;
 
         let mut lhs = match token {
-            TokenKind::Ident(name) => Ident::try_from(&self.curr_tok.kind)
-                .map(|ident| {
-                    Expr::Ident(
-                        ident,
-                        self.symbol_table.borrow().get(name).unwrap_or_default(),
+            TokenKind::Ident(name) => {
+                let ident_t = self.symbol_table.borrow().get(name);
+                match ident_t {
+                    Some(Type::Struct(name, attrs)) => self.parse_struct_expr(&name, &attrs),
+                    t => Some(Expr::Ident(
+                        Ident::from(name.as_str()),
+                        t.unwrap_or_default(),
                         *span,
-                    )
-                })
-                .ok(),
+                    )),
+                }
+            }
             TokenKind::U32(i) => Some(Expr::Literal(Literal::U32(*i), *span)),
             TokenKind::U64(i) => Some(Expr::Literal(Literal::U64(*i), *span)),
             TokenKind::I32(i) => Some(Expr::Literal(Literal::I32(*i), *span)),
@@ -413,7 +501,7 @@ impl Parser {
             TokenKind::Pipe => self.parse_closure_expr(),
             TokenKind::Nil => Some(Expr::Literal(Literal::Nil, *span)),
             _ => {
-                self.error(ParserErrorKind::SyntaxError(self.curr_tok.kind.clone()));
+                self.syntax_error();
                 return None;
             }
         };
@@ -795,7 +883,7 @@ impl Parser {
         let method_name = if let TokenKind::Ident(name) = &self.curr_tok.kind {
             name.clone()
         } else {
-            self.error(ParserErrorKind::SyntaxError(self.curr_tok.kind.clone()));
+            self.syntax_error();
             return None;
         };
 
@@ -972,6 +1060,11 @@ impl Parser {
     }
 
     fn parse_fn_expr(&mut self) -> Option<Expr> {
+        let func = self.parse_fn()?;
+        Some(Expr::Fn(func))
+    }
+
+    fn parse_fn(&mut self) -> Option<Func> {
         let (start, _) = self.curr_tok.span;
         self.advance(); // 'fn'
 
@@ -1023,13 +1116,13 @@ impl Parser {
             .borrow_mut()
             .set(ident.name(), Type::Fn(args_t, Box::new(ret_t.clone())));
 
-        Some(Expr::Fn(Func {
+        Some(Func {
             name: ident.name(),
             args,
             ret_t,
             body,
             span: (start, end),
-        }))
+        })
     }
 
     fn parse_closure_expr(&mut self) -> Option<Expr> {
@@ -1060,6 +1153,55 @@ impl Parser {
             body,
             span: (start, end),
         })
+    }
+
+    fn parse_struct_expr(&mut self, name: &str, attrs: &[(String, Type)]) -> Option<Expr> {
+        let (start, _) = self.curr_tok.span;
+        self.advance();
+        self.consume(TokenKind::Lbrace);
+
+        let mut state = vec![];
+        while !matches!(self.curr_tok.kind, TokenKind::Rbrace | TokenKind::EOF) {
+            if let TokenKind::Ident(ident) = &self.curr_tok.kind {
+                let ident = ident.clone();
+                if let Some((_, expected_t)) =
+                    attrs.iter().find(|(attr_name, _)| *attr_name == ident)
+                {
+                    self.expect_next(TokenKind::Colon)?;
+                    self.advance();
+
+                    dbg!(&self.curr_tok.kind);
+                    let val = self.parse_expr(Precedence::Lowest)?;
+                    let val_t = Type::try_from(&val).ok()?;
+                    if val_t != *expected_t {
+                        self.errors.push(ParserError::new(
+                            ParserErrorKind::TypeMismatch(expected_t.clone(), val_t),
+                            val.span(),
+                        ));
+                    }
+
+                    state.push((ident.to_string(), val));
+                    self.consume_next(TokenKind::Comma);
+                    self.consume_newlines();
+                } else {
+                    self.errors.push(ParserError::new(
+                        ParserErrorKind::InvalidStructAttr(ident.to_string()),
+                        self.curr_tok.span,
+                    ));
+                }
+            }
+            self.advance();
+        }
+
+        let (_, end) = self.curr_tok.span;
+
+        Some(Expr::Struct(
+            Struct {
+                name: name.to_owned(),
+                state,
+            },
+            (start, end),
+        ))
     }
 
     fn parse_decl_args(&mut self) -> Option<Vec<Param>> {

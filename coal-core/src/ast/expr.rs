@@ -1,8 +1,8 @@
 use std::fmt;
 
-use crate::{ParserError, ParserErrorKind, Span};
+use crate::{indent, ParserError, ParserErrorKind, Span};
 
-use super::{Func, Ident, Infix, Literal, Param, Prefix, Stmt, Type};
+use super::{Func, Ident, Infix, Literal, Param, Prefix, Stmt, Struct, Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
@@ -37,6 +37,7 @@ pub enum Expr {
         body: Vec<Stmt>,
         span: Span,
     },
+    Struct(Struct, Span),
     Call {
         name: String,
         args: Vec<Expr>,
@@ -72,6 +73,7 @@ impl Expr {
             Expr::Iter { span, .. } => *span,
             Expr::Fn(Func { span, .. }) => *span,
             Expr::Closure { span, .. } => *span,
+            Expr::Struct(_, span) => *span,
             Expr::Call { span, .. } => *span,
             Expr::MethodCall { span, .. } => *span,
         }
@@ -213,7 +215,7 @@ impl Expr {
     }
 
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
-        let indent = "    ".repeat(indent_level);
+        let base_indent = indent(indent_level);
 
         match self {
             Expr::Ident(ident, _, _) => write!(f, "{ident}"),
@@ -235,39 +237,39 @@ impl Expr {
                 alt,
                 ..
             } => {
-                writeln!(f, "{}if {cond} {{", indent)?;
+                writeln!(f, "{}if {cond} {{", base_indent)?;
                 for stmt in then {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
                 for elif in elifs {
-                    writeln!(f, "{}}} elif {} {{", indent, elif.cond)?;
+                    writeln!(f, "{}}} elif {} {{", base_indent, elif.cond)?;
                     for stmt in &elif.then {
                         stmt.fmt_with_indent(f, indent_level + 1)?;
                     }
                 }
                 if let Some(else_block) = alt {
-                    writeln!(f, "{}}} else {{", indent)?;
+                    writeln!(f, "{}}} else {{", base_indent)?;
                     for stmt in else_block {
                         stmt.fmt_with_indent(f, indent_level + 1)?;
                     }
                 }
-                writeln!(f, "{indent}}}")
+                writeln!(f, "{base_indent}}}")
             }
             Expr::While { cond, body, .. } => {
-                writeln!(f, "{}while {cond} {{", indent)?;
+                writeln!(f, "{}while {cond} {{", base_indent)?;
                 for stmt in body {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
-                writeln!(f, "{indent}}}")
+                writeln!(f, "{base_indent}}}")
             }
             Expr::Iter {
                 ident, expr, body, ..
             } => {
-                writeln!(f, "{}for {ident} in {expr} {{", indent)?;
+                writeln!(f, "{}for {ident} in {expr} {{", base_indent)?;
                 for stmt in body {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
-                writeln!(f, "{indent}}}")
+                writeln!(f, "{base_indent}}}")
             }
             Expr::Fn(func) => func.fmt_with_indent(f, indent_level),
             Expr::Closure { args, body, .. } => {
@@ -280,8 +282,9 @@ impl Expr {
                 for stmt in body {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
-                write!(f, "{}}}", indent)
+                write!(f, "{}}}", base_indent)
             }
+            Expr::Struct(s, _) => s.fmt_with_indent(f, indent_level),
             Expr::Call { name, args, .. } => {
                 write!(f, "{name}(")?;
                 for (i, arg) in args.iter().enumerate() {

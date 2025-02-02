@@ -2,9 +2,41 @@ use crate::{F64, I32, I64, U32, U64};
 
 use super::*;
 
+fn check(tests: &[(&str, Stmt)]) {
+    for (input, expected) in tests {
+        let mut parser = Parser::from(*input);
+        let parsed = parser.parse();
+        if let Err(errors) = parser.check() {
+            println!("input:\n{}", input);
+            for e in errors {
+                println!("{e}");
+            }
+        }
+
+        let actual = parsed.last().unwrap();
+        if expected != actual {
+            panic!(
+                "input:\n{}\n\nexpected:\n{}{:?}\n\nactual:\n{}{:?}\n",
+                input, expected, expected, actual, actual
+            );
+        }
+    }
+}
+
+fn check_invalid(tests: &[&str]) {
+    for input in tests {
+        let mut parser = Parser::from(*input);
+        parser.parse();
+
+        if parser.errors.is_empty() && parser.warnings.is_empty() {
+            panic!("expected invalid:\n{}", input);
+        }
+    }
+}
+
 #[test]
 fn test_parse_let_statements() {
-    let tests = vec![
+    check(&[
         (
             "let x: i32 = 5;",
             Stmt::Let(
@@ -37,12 +69,7 @@ fn test_parse_let_statements() {
                 Expr::Literal(Literal::F64(0.0), ((1, 16), (1, 16))),
             ),
         ),
-    ];
-
-    for (input, expected) in tests {
-        let actual = Parser::from(input).parse();
-        assert_eq!(expected, actual[0]);
-    }
+    ]);
 }
 
 #[test]
@@ -245,7 +272,7 @@ fn test_parse_prefix_expressions() {
 
 #[test]
 fn test_parse_infix_expressions() {
-    let tests = vec![
+    check(&[
         (
             "3 + 2",
             Stmt::Expr(Expr::Infix(
@@ -372,17 +399,12 @@ fn test_parse_infix_expressions() {
                 ((1, 1), (1, 13)),
             )),
         ),
-    ];
-
-    for (input, expected) in tests {
-        let actual = Parser::from(input).parse();
-        assert_eq!(expected, actual[0]);
-    }
+    ]);
 }
 
 #[test]
 fn test_parse_operator_precedence() {
-    let tests = vec![
+    check(&[
         (
             "-1 * 2",
             Stmt::Expr(Expr::Infix(
@@ -646,20 +668,7 @@ fn test_parse_operator_precedence() {
                 ((1, 1), (1, 14)),
             )),
         ),
-    ];
-
-    for (input, expected) in tests {
-        let actual = Parser::from(input).parse();
-        if actual.is_empty() {
-            panic!("input:\n{}", input);
-        }
-        if expected != actual[0] {
-            panic!(
-                "input:\n{}\n\nexpected:\n{:?}\n\nactual:\n{:?}\n\n",
-                input, expected, actual,
-            );
-        }
-    }
+    ]);
 }
 
 #[test]
@@ -874,7 +883,7 @@ fn test_parse_while_expression() {
 
 #[test]
 fn test_parse_function_expressions() {
-    let tests = [
+    check(&[
         (
             "fn foo() {}",
             Stmt::Expr(Expr::Fn(Func {
@@ -955,40 +964,21 @@ fn test_parse_function_expressions() {
                 span: ((1, 1), (3, 1)),
             })),
         ),
-    ];
+    ]);
 
-    for (input, expected) in tests {
-        let actual = Parser::from(input).parse();
-        if expected != actual[0] {
-            panic!(
-                "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
-                input, expected, actual[0]
-            );
-        }
-    }
-
-    let tests = vec![
+    check_invalid(&[
         "fn f() -> i32 {}",
         "fn f() -> i32 { if true { return 0; } }",
         "fn f() -> i32 { if true { return 0; } else { print(0); } }",
         "fn f() -> i32 { if true { let x = 0; } else { print(0); } }",
         "fn f() -> i32 { if true { let x = 0; } else { return 0; } }",
         "fn f() -> i32 { return 1; if true { return 2; } else { return 3; } }",
-    ];
-
-    for input in tests {
-        let mut parser = Parser::from(input);
-        parser.parse();
-
-        if parser.errors.is_empty() && parser.warnings.is_empty() {
-            panic!("expected invalid:\n{}", input);
-        }
-    }
+    ]);
 }
 
 #[test]
 fn test_parse_closure_expressions() {
-    let tests = vec![
+    check(&[
         (
             "|| {}",
             Stmt::Expr(Expr::Closure {
@@ -1090,19 +1080,7 @@ fn test_parse_closure_expressions() {
                 span: ((2, 1), (4, 2)),
             }),
         ),
-    ];
-
-    for (input, expected) in tests {
-        let parsed = Parser::from(input).parse();
-        let actual = parsed.last().unwrap().clone();
-
-        if expected != actual {
-            panic!(
-                "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
-                input, expected, actual
-            );
-        }
-    }
+    ]);
 }
 
 #[test]
@@ -1234,7 +1212,7 @@ fn test_parse_promote_infix_i32_u64() {
 
 #[test]
 fn test_parse_lists() {
-    let tests = vec![
+    check(&[
         (
             "[]",
             Stmt::Expr(Expr::Literal(
@@ -1337,42 +1315,14 @@ fn test_parse_lists() {
                 Expr::Literal(Literal::List(List::new(&[], I32)), ((1, 20), (1, 21))),
             ),
         ),
-    ];
+    ]);
 
-    for (input, expected) in tests {
-        let mut parser = Parser::from(input);
-        let parsed = parser.parse();
-        if let Err(errors) = parser.check() {
-            println!("input:\n{}", input);
-            for e in errors {
-                println!("{e}");
-            }
-        }
-
-        let actual = parsed.last().unwrap();
-        if expected != *actual {
-            panic!(
-                "input:\n{}\n\nexpected:\n{}{:?}\n\nactual:\n{}{:?}\n",
-                input, expected, expected, actual, actual
-            );
-        }
-    }
-
-    let tests = vec![r#"[1, "2"]"#, r#"["1", 2]"#, r#"[1, 2.0]"#];
-
-    for input in tests {
-        let mut parser = Parser::from(input);
-        let actual = parser.parse();
-
-        if parser.errors.is_empty() || !actual.is_empty() {
-            panic!("expected invalid:\n{}", input);
-        }
-    }
+    check_invalid(&[r#"[1, "2"]"#, r#"["1", 2]"#, r#"[1, 2.0]"#]);
 }
 
 #[test]
 fn test_parse_maps() {
-    let tests = vec![
+    check(&[
         (
             "{}",
             Stmt::Expr(Expr::Literal(
@@ -1412,31 +1362,12 @@ fn test_parse_maps() {
                 ((1, 1), (1, 20)),
             )),
         ),
-    ];
-
-    for (input, expected) in tests {
-        let mut parser = Parser::from(input);
-        let parsed = parser.parse();
-        if let Err(errors) = parser.check() {
-            println!("input:\n{}", input);
-            for e in errors {
-                println!("{e}");
-            }
-        }
-
-        let actual = parsed.last().unwrap();
-        if expected != *actual {
-            panic!(
-                "input:\n{}\n\nexpected:\n{}{:?}\n\nactual:\n{}{:?}\n",
-                input, expected, expected, actual, actual
-            );
-        }
-    }
+    ]);
 }
 
 #[test]
 fn test_parse_iter() {
-    let tests = vec![
+    check(&[
         (
             "for i in 0..10 {}",
             Stmt::Expr(Expr::Iter {
@@ -1511,24 +1442,211 @@ fn test_parse_iter() {
                 span: ((2, 1), (4, 1)),
             }),
         ),
-    ];
+    ]);
+}
 
-    for (input, expected) in tests {
-        let mut parser = Parser::from(input);
-        let parsed = parser.parse();
-        if let Err(errors) = parser.check() {
-            println!("input:\n{}", input);
-            for e in errors {
-                println!("{e}");
+#[test]
+fn test_parse_struct_decls() {
+    check(&[
+        (
+            r#"struct Foo {}"#,
+            Stmt::Struct(
+                StructDecl {
+                    name: String::from("Foo"),
+                    attrs: vec![],
+                    funcs: vec![],
+                },
+                ((1, 1), (1, 13)),
+            ),
+        ),
+        (
+            r#"
+            struct Foo2 {
+                x: i32;
             }
-        }
+            "#,
+            Stmt::Struct(
+                StructDecl {
+                    name: String::from("Foo2"),
+                    attrs: vec![(
+                        Param {
+                            name: String::from("x"),
+                            t: I32,
+                        },
+                        None,
+                    )],
+                    funcs: vec![],
+                },
+                ((1, 1), (3, 1)),
+            ),
+        ),
+        (
+            r#"
+            struct Foo3 {
+                x: i32 = 0;
+                y: str;
+            }
+            "#,
+            Stmt::Struct(
+                StructDecl {
+                    name: String::from("Foo3"),
+                    attrs: vec![
+                        (
+                            Param {
+                                name: String::from("x"),
+                                t: I32,
+                            },
+                            Some(Expr::Literal(Literal::I32(0), ((2, 10), (2, 10)))),
+                        ),
+                        (
+                            Param {
+                                name: String::from("y"),
+                                t: Type::Str,
+                            },
+                            None,
+                        ),
+                    ],
+                    funcs: vec![],
+                },
+                ((1, 1), (4, 1)),
+            ),
+        ),
+        (
+            r#"
+            struct Foo4 {
+                fn f() -> str {
+                    return "foo";
+                }
+            }
+            "#,
+            Stmt::Struct(
+                StructDecl {
+                    name: String::from("Foo4"),
+                    attrs: vec![],
+                    funcs: vec![Func {
+                        name: String::from("f"),
+                        args: vec![],
+                        ret_t: Type::Str,
+                        body: vec![Stmt::Return(Expr::Literal(
+                            Literal::Str(String::from("foo")),
+                            ((3, 8), (3, 12)),
+                        ))],
+                        span: ((2, 1), (4, 1)),
+                    }],
+                },
+                ((1, 1), (5, 1)),
+            ),
+        ),
+        (
+            r#"
+            struct Foo5 {
+                x: i32 = 0;
+                y: str = "foo";
 
-        let actual = parsed.last().unwrap();
-        if expected != *actual {
-            panic!(
-                "input:\n{}\n\nexpected:\n{}{:?}\n\nactual:\n{}{:?}\n",
-                input, expected, expected, actual, actual
-            );
-        }
-    }
+                fn f() -> str {
+                    return "foo";
+                }
+            }
+            "#,
+            Stmt::Struct(
+                StructDecl {
+                    name: String::from("Foo5"),
+                    attrs: vec![
+                        (
+                            Param {
+                                name: String::from("x"),
+                                t: I32,
+                            },
+                            Some(Expr::Literal(Literal::I32(0), ((2, 10), (2, 10)))),
+                        ),
+                        (
+                            Param {
+                                name: String::from("y"),
+                                t: Type::Str,
+                            },
+                            Some(Expr::Literal(
+                                Literal::Str(String::from("foo")),
+                                ((3, 10), (3, 14)),
+                            )),
+                        ),
+                    ],
+                    funcs: vec![Func {
+                        name: String::from("f"),
+                        args: vec![],
+                        ret_t: Type::Str,
+                        body: vec![Stmt::Return(Expr::Literal(
+                            Literal::Str(String::from("foo")),
+                            ((6, 8), (6, 12)),
+                        ))],
+                        span: ((5, 1), (7, 1)),
+                    }],
+                },
+                ((1, 1), (8, 1)),
+            ),
+        ),
+    ]);
+}
+
+#[test]
+fn test_parse_struct_exprs() {
+    check(&[
+        (
+            r#"
+            struct Foo {
+                x: i32;
+            }
+            Foo { x: 1 }
+            "#,
+            Stmt::Expr(Expr::Struct(
+                Struct {
+                    name: String::from("Foo"),
+                    state: vec![(
+                        String::from("x"),
+                        Expr::Literal(Literal::I32(1), ((4, 10), (4, 10))),
+                    )],
+                },
+                ((4, 1), (4, 12)),
+            )),
+        ),
+        (
+            r#"
+            struct Foo2 {
+                x: i32 = 0;
+            }
+            Foo2 { x: 1 }
+            "#,
+            Stmt::Expr(Expr::Struct(
+                Struct {
+                    name: String::from("Foo2"),
+                    state: vec![(
+                        String::from("x"),
+                        Expr::Literal(Literal::I32(1), ((4, 11), (4, 11))),
+                    )],
+                },
+                ((4, 1), (4, 13)),
+            )),
+        ),
+        (
+            r#"
+            struct Foo3 {
+                x: i32 = 0;
+                y: str;
+            }
+
+            Foo3 {
+                y: "foo",
+            }
+            "#,
+            Stmt::Expr(Expr::Struct(
+                Struct {
+                    name: String::from("Foo3"),
+                    state: vec![(
+                        String::from("y"),
+                        Expr::Literal(Literal::Str(String::from("foo")), ((7, 4), (7, 8))),
+                    )],
+                },
+                ((6, 1), (8, 1)),
+            )),
+        ),
+    ]);
 }

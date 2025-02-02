@@ -24,7 +24,7 @@ impl SymbolTable {
             || self
                 .outer
                 .as_ref()
-                .and_then(|outer| outer.borrow().get(key))
+                .map(|outer| outer.borrow().has(key))
                 .is_some()
     }
 

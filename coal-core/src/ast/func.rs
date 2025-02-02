@@ -1,6 +1,6 @@
-use std::fmt::{self, Display};
+use std::fmt;
 
-use crate::Span;
+use crate::{indent, Span};
 
 use super::{Param, Stmt, Type};
 
@@ -15,7 +15,7 @@ pub struct Func {
 
 impl Func {
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
-        let indent = "    ".repeat(indent_level);
+        let base_indent = indent(indent_level);
         let Func {
             name,
             args,
@@ -24,7 +24,7 @@ impl Func {
             ..
         } = self;
 
-        write!(f, "{}fn {name}(", indent)?;
+        write!(f, "{}fn {name}(", base_indent)?;
         let args = args
             .iter()
             .map(|arg| format!("{arg}"))
@@ -38,11 +38,11 @@ impl Func {
         for stmt in body {
             stmt.fmt_with_indent(f, indent_level + 1)?;
         }
-        writeln!(f, "{}}}", indent)
+        writeln!(f, "{}}}", base_indent)
     }
 }
 
-impl Display for Func {
+impl fmt::Display for Func {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.fmt_with_indent(f, 0)
     }

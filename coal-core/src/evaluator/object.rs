@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    Expr, Literal, Param, ParserError, Span, Stmt, Type, F32, F64, I128, I32, I64, U32, U64,
+    indent, Expr, Literal, Param, ParserError, Span, Stmt, Type, F32, F64, I128, I32, I64, U32, U64,
 };
 
 use super::{Builtin, RuntimeError, RuntimeErrorKind};
@@ -42,6 +42,10 @@ pub enum Object {
         args: Vec<Param>,
         body: Vec<Stmt>,
         ret_t: Type,
+    },
+    Struct {
+        name: String,
+        state: Vec<(String, Object)>,
     },
     Builtin(Builtin),
     Return(Box<Object>),
@@ -500,6 +504,17 @@ impl Hash for Object {
                 args.len().hash(state);
                 args.hash(state);
             }
+            Object::Struct {
+                name,
+                state: struct_state,
+            } => {
+                name.hash(state);
+                struct_state.len().hash(state);
+                for (k, v) in struct_state {
+                    k.hash(state);
+                    v.hash(state);
+                }
+            }
             Object::Builtin(b) => b.func.hash(state),
             Object::Return(v) => v.hash(state),
             Object::Type(t) => t.hash(state),
@@ -633,6 +648,8 @@ impl TryInto<usize> for Object {
 
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let base_indent = indent(1);
+
         match self {
             Object::U32(i) => write!(f, "{i}"),
             Object::U64(i) => write!(f, "{i}"),
@@ -660,7 +677,7 @@ impl fmt::Display for Object {
                 _ => {
                     writeln!(f, "[")?;
                     for i in data {
-                        writeln!(f, "    {i},")?;
+                        writeln!(f, "{}{i},", base_indent)?;
                     }
                     write!(f, "]")
                 }
@@ -678,13 +695,20 @@ impl fmt::Display for Object {
                 _ => {
                     writeln!(f, "{{")?;
                     for (k, v) in data {
-                        writeln!(f, "    {k}: {v}")?;
+                        writeln!(f, "{}{k}: {v}", base_indent)?;
                     }
                     write!(f, "}}")
                 }
             },
             Object::Fn { .. } => write!(f, "<fn_{}>", self.calculate_hash()),
             Object::Closure { .. } => write!(f, "<closure_{}>", self.calculate_hash()),
+            Object::Struct { name, state } => {
+                writeln!(f, "{name} {{")?;
+                for (k, v) in state {
+                    writeln!(f, "{k}: {v},")?;
+                }
+                write!(f, "}}")
+            }
             Object::Builtin(_) => write!(f, "<builtin_{}>", self.calculate_hash()),
             Object::Return(v) => write!(f, "{v}"),
             Object::Type(t) => write!(f, "{t}"),

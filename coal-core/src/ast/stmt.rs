@@ -1,8 +1,8 @@
 use std::fmt;
 
-use crate::{ParserError, ParserErrorKind, Span};
+use crate::{indent, ParserError, ParserErrorKind, Span};
 
-use super::{Comment, Expr, Func, Ident, Infix, Param, Type};
+use super::{Comment, Expr, Ident, Infix, StructDecl, Type};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
@@ -14,7 +14,7 @@ pub enum Stmt {
     OpAssign(Infix, Expr, Expr),
     Return(Expr),
     Expr(Expr),
-    Struct(Ident, Vec<(Param, Option<Expr>)>, Vec<Func>, Span),
+    Struct(StructDecl, Span),
 }
 
 impl Stmt {
@@ -26,7 +26,7 @@ impl Stmt {
             Stmt::OpAssign(_, lhs, rhs) => (lhs.span().0, rhs.span().1),
             Stmt::Return(e) => e.span(),
             Stmt::Expr(e) => e.span(),
-            Stmt::Struct(_, _, _, span) => *span,
+            Stmt::Struct(_, span) => *span,
         }
     }
 
@@ -54,29 +54,29 @@ impl Stmt {
     }
 
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
-        let indent = "    ".repeat(indent_level);
+        let base_indent = indent(indent_level);
 
         match self {
             Stmt::Void => Ok(()),
             Stmt::Newline => writeln!(f),
-            Stmt::Comment(comment) => write!(f, "{}{comment}", indent),
+            Stmt::Comment(comment) => write!(f, "{}{comment}", base_indent),
             Stmt::Let(ident, t, expr) => {
-                write!(f, "{}let {ident}: {t} = ", indent)?;
+                write!(f, "{}let {ident}: {t} = ", base_indent)?;
                 expr.fmt_with_indent(f, indent_level)?;
                 writeln!(f, ";")
             }
             Stmt::Assign(lhs, rhs) => {
-                write!(f, "{}{lhs} = ", indent)?;
+                write!(f, "{}{lhs} = ", base_indent)?;
                 rhs.fmt_with_indent(f, indent_level)?;
                 writeln!(f, ";")
             }
             Stmt::OpAssign(op, lhs, rhs) => {
-                write!(f, "{}{lhs} {op}= ", indent)?;
+                write!(f, "{}{lhs} {op}= ", base_indent)?;
                 rhs.fmt_with_indent(f, indent_level)?;
                 writeln!(f, ";")
             }
             Stmt::Return(expr) => {
-                write!(f, "{}return ", indent)?;
+                write!(f, "{}return ", base_indent)?;
                 expr.fmt_with_indent(f, indent_level)?;
                 writeln!(f, ";")
             }
@@ -87,31 +87,13 @@ impl Stmt {
                 | Expr::Infix(_, _, _, _)
                 | Expr::Call { .. }
                 | Expr::MethodCall { .. } => {
-                    write!(f, "{indent}")?;
+                    write!(f, "{base_indent}")?;
                     expr.fmt_with_indent(f, indent_level)?;
                     writeln!(f, ";")
                 }
                 _ => expr.fmt_with_indent(f, indent_level),
             },
-            Stmt::Struct(Ident(ident), params, funcs, _) => {
-                writeln!(f, "{}struct {ident} {{", indent)?;
-                for (param, default) in params {
-                    param.fmt_with_indent(f, indent_level + 1)?;
-                    if let Some(expr) = default {
-                        write!(f, "= ")?;
-                        expr.fmt_with_indent(f, 0)?;
-                    }
-                    writeln!(f, ";")?;
-                }
-                if !params.is_empty() && !funcs.is_empty() {
-                    writeln!(f)?;
-                }
-                for func in funcs {
-                    func.fmt_with_indent(f, indent_level + 1)?;
-                    writeln!(f)?
-                }
-                Ok(())
-            }
+            Stmt::Struct(s, _) => s.fmt_with_indent(f, indent_level),
         }
     }
 }
