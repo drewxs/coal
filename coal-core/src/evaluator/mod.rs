@@ -10,7 +10,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
     Builtin, Expr, Func, Ident, IfExpr, Infix, List, Literal, Map, Param, Parser, Prefix, Span,
-    Stmt, Struct, Type,
+    Stmt, Struct, StructDecl, Type,
 };
 
 pub use builtins::Def;
@@ -78,6 +78,7 @@ impl Evaluator<'_> {
             Stmt::Assign(lhs, rhs) => self.eval_assign_stmt(lhs, rhs, None),
             Stmt::OpAssign(op, lhs, rhs) => self.eval_assign_stmt(lhs, rhs, Some(op)),
             Stmt::Return(expr) => self.eval_return_stmt(expr),
+            Stmt::StructDecl(s, _) => self.eval_struct_decl(s),
             Stmt::Expr(expr) => self.eval_expr(expr),
             _ => None,
         }
@@ -270,6 +271,15 @@ impl Evaluator<'_> {
         })
     }
 
+    fn eval_struct_decl(&mut self, s: &StructDecl) -> Option<Object> {
+        let obj = Object::from(s);
+        self.env
+            .borrow_mut()
+            .set_in_store(s.name.to_owned(), obj.clone());
+
+        Some(obj)
+    }
+
     fn eval_expr(&mut self, expr: &Expr) -> Option<Object> {
         match expr {
             Expr::Ident(Ident(name), _, _) => self
@@ -310,7 +320,7 @@ impl Evaluator<'_> {
             Expr::Closure {
                 args, ret_t, body, ..
             } => self.eval_closure_expr(args, ret_t, body),
-            Expr::Struct(s, _) => self.eval_struct_expr(s),
+            Expr::Struct(s, span) => self.eval_struct_expr(s, span),
             Expr::Call {
                 name,
                 args,
@@ -636,20 +646,47 @@ impl Evaluator<'_> {
         })
     }
 
-    fn eval_struct_expr(&mut self, s: &Struct) -> Option<Object> {
-        let mut state = vec![];
-        for (k, v) in &s.state {
-            let v = self.eval_expr(v)?;
-            if let Object::Error { .. } = v {
-                return Some(v);
-            }
-            state.push((k.clone(), v));
-        }
+    fn eval_struct_expr(&mut self, s: &Struct, span: &Span) -> Option<Object> {
+        let decl = self.env.borrow().get(&s.name);
+        let mut obj_attrs = vec![];
 
-        Some(Object::Struct {
-            name: s.name.clone(),
-            state,
-        })
+        match decl {
+            Some(Object::StructDecl(decl)) => {
+                for (k, v) in &s.state {
+                    let v = self.eval_expr(v)?;
+                    if let Object::Error { .. } = v {
+                        return Some(v);
+                    }
+                    obj_attrs.push((k.clone(), v));
+                }
+                for (param, default_val) in &decl.attrs {
+                    if obj_attrs.iter().any(|(k, _)| k == &param.name) {
+                        continue;
+                    }
+                    if let Some(v) = default_val {
+                        let v = self.eval_expr(v)?;
+                        if let Object::Error { .. } = v {
+                            return Some(v);
+                        }
+                        obj_attrs.push((param.name.clone(), v));
+                    }
+                }
+
+                let obj = Object::Struct {
+                    name: s.name.clone(),
+                    attrs: obj_attrs,
+                };
+                self.env
+                    .borrow_mut()
+                    .set_in_store(s.name.clone(), obj.clone());
+
+                Some(obj)
+            }
+            _ => Some(Object::Error(RuntimeError::new(
+                RuntimeErrorKind::IdentifierNotFound(s.name.to_owned()),
+                *span,
+            ))),
+        }
     }
 
     fn eval_call_expr(&mut self, func: &Expr, args: &[Expr], span: &Span) -> Option<Object> {

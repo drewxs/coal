@@ -7,7 +7,8 @@ use std::{
 };
 
 use crate::{
-    indent, Expr, Literal, Param, ParserError, Span, Stmt, Type, F32, F64, I128, I32, I64, U32, U64,
+    indent, Expr, Literal, Param, ParserError, Span, Stmt, StructDecl, Type, F32, F64, I128, I32,
+    I64, U32, U64,
 };
 
 use super::{Builtin, RuntimeError, RuntimeErrorKind};
@@ -43,9 +44,10 @@ pub enum Object {
         body: Vec<Stmt>,
         ret_t: Type,
     },
+    StructDecl(StructDecl),
     Struct {
         name: String,
-        state: Vec<(String, Object)>,
+        attrs: Vec<(String, Object)>,
     },
     Builtin(Builtin),
     Return(Box<Object>),
@@ -459,6 +461,12 @@ impl From<&Expr> for Object {
     }
 }
 
+impl From<&StructDecl> for Object {
+    fn from(sd: &StructDecl) -> Self {
+        Object::StructDecl(sd.clone())
+    }
+}
+
 impl From<&ParserError> for Object {
     fn from(value: &ParserError) -> Self {
         Object::Error(RuntimeError {
@@ -504,9 +512,20 @@ impl Hash for Object {
                 args.len().hash(state);
                 args.hash(state);
             }
+            Object::StructDecl(StructDecl { name, attrs, funcs }) => {
+                name.hash(state);
+                attrs.len().hash(state);
+                for (p, _) in attrs {
+                    p.hash(state);
+                }
+                funcs.len().hash(state);
+                for f in funcs {
+                    f.hash(state);
+                }
+            }
             Object::Struct {
                 name,
-                state: struct_state,
+                attrs: struct_state,
             } => {
                 name.hash(state);
                 struct_state.len().hash(state);
@@ -702,10 +721,25 @@ impl fmt::Display for Object {
             },
             Object::Fn { .. } => write!(f, "<fn_{}>", self.calculate_hash()),
             Object::Closure { .. } => write!(f, "<closure_{}>", self.calculate_hash()),
-            Object::Struct { name, state } => {
-                writeln!(f, "{name} {{")?;
-                for (k, v) in state {
-                    writeln!(f, "{k}: {v},")?;
+            Object::StructDecl { .. } => write!(f, "<struct_{}>", self.calculate_hash()),
+            Object::Struct { name, attrs: state } => {
+                write!(f, "{name} {{")?;
+                match state.len() {
+                    0 => {}
+                    1 | 2 => {
+                        let v = state
+                            .iter()
+                            .map(|(k, v)| format!("{k}: {v}"))
+                            .collect::<Vec<String>>()
+                            .join(", ");
+                        write!(f, " {v} ")?;
+                    }
+                    _ => {
+                        writeln!(f)?;
+                        for (k, v) in state {
+                            writeln!(f, "{}{k}: {v},", base_indent)?;
+                        }
+                    }
                 }
                 write!(f, "}}")
             }
