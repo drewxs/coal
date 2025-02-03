@@ -419,8 +419,10 @@ impl Parser {
                 let default_val = match self.curr_tok.kind {
                     TokenKind::Assign => {
                         self.advance();
-                        self.parse_expr(Precedence::Lowest)
-                            .inspect(|_| self.advance())
+                        self.parse_expr(Precedence::Lowest).map(|e| {
+                            self.advance();
+                            e.cast(&t)
+                        })
                     }
                     _ => None,
                 };
@@ -463,7 +465,7 @@ impl Parser {
 
         let (_, end) = self.curr_tok.span;
 
-        Some(Stmt::Struct(s, (start, end)))
+        Some(Stmt::StructDecl(s, (start, end)))
     }
 
     fn parse_expr(&mut self, precedence: Precedence) -> Option<Expr> {
@@ -473,7 +475,7 @@ impl Parser {
             TokenKind::Ident(name) => {
                 let ident_t = self.symbol_table.borrow().get(name);
                 match ident_t {
-                    Some(Type::Struct(name, attrs)) => self.parse_struct_expr(&name, &attrs),
+                    Some(Type::StructDecl(name, attrs)) => self.parse_struct_expr(&name, &attrs),
                     t => Some(Expr::Ident(
                         Ident::from(name.as_str()),
                         t.unwrap_or_default(),
@@ -1170,8 +1172,7 @@ impl Parser {
                     self.expect_next(TokenKind::Colon)?;
                     self.advance();
 
-                    dbg!(&self.curr_tok.kind);
-                    let val = self.parse_expr(Precedence::Lowest)?;
+                    let val = self.parse_expr(Precedence::Lowest)?.cast(expected_t);
                     let val_t = Type::try_from(&val).ok()?;
                     if val_t != *expected_t {
                         self.errors.push(ParserError::new(

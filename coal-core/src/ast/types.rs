@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{Object, TokenKind};
 
-use super::{Expr, Func, Literal, Prefix, StructDecl};
+use super::{Expr, Func, Literal, Prefix, Struct, StructDecl};
 
 #[derive(Clone, Debug, Hash, PartialEq, Default)]
 pub enum Type {
@@ -14,6 +14,7 @@ pub enum Type {
     Fn(Vec<Type>, Box<Type>),
     Range,
     UserDefined(String, Box<Type>),
+    StructDecl(String, Vec<(String, Type)>),
     Struct(String, Vec<(String, Type)>),
     Nil,
     Any,
@@ -89,7 +90,11 @@ impl Type {
     pub fn is_composite(&self) -> bool {
         match self {
             Type::UserDefined(_, t) => t.is_composite(),
-            Type::List(_) | Type::Map(_) | Type::Fn(_, _) | Type::Struct(_, _) => true,
+            Type::List(_)
+            | Type::Map(_)
+            | Type::Fn(_, _)
+            | Type::StructDecl(_, _)
+            | Type::Struct(_, _) => true,
             _ => false,
         }
     }
@@ -275,6 +280,7 @@ impl TryFrom<&Expr> for Type {
                 args.iter().map(|arg| arg.t.to_owned()).collect(),
                 Box::new(ret_t.to_owned()),
             )),
+            Expr::Struct(s, _) => Ok(Type::from(s)),
             Expr::Call { ret_t, .. } => Ok(ret_t.to_owned()),
             Expr::MethodCall { ret_t, .. } => Ok(ret_t.to_owned()),
             _ => Err(Type::Unknown),
@@ -295,7 +301,22 @@ impl From<&StructDecl> for Type {
     fn from(s: &StructDecl) -> Self {
         let attrs = s.attrs.iter().map(|(p, _)| (p.name.clone(), p.t.clone()));
         let fns = s.funcs.iter().map(|f| (f.name.clone(), Type::from(f)));
-        Type::Struct(s.name.to_owned(), attrs.chain(fns).collect())
+        Type::StructDecl(s.name.to_owned(), attrs.chain(fns).collect())
+    }
+}
+
+impl From<&Struct> for Type {
+    fn from(s: &Struct) -> Self {
+        Type::Struct(
+            s.name.to_owned(),
+            s.state
+                .iter()
+                .map(|(k, v)| {
+                    let v_t = Type::try_from(v).unwrap_or_default();
+                    (k.clone(), v_t)
+                })
+                .collect(),
+        )
     }
 }
 
@@ -335,14 +356,11 @@ impl fmt::Display for Type {
                     .map(|arg| format!("{arg}"))
                     .collect::<Vec<String>>()
                     .join(", ");
-                if **ret_t == Type::Void {
-                    write!(f, "Fn({args_str})")
-                } else {
-                    write!(f, "Fn({args_str}) -> {ret_t}")
-                }
+                write!(f, "Fn({args_str}) -> {ret_t}")
             }
             Type::Range => write!(f, "range"),
             Type::UserDefined(name, _) => write!(f, "{name}"),
+            Type::StructDecl(name, _) => write!(f, "{name}"),
             Type::Struct(name, _) => write!(f, "{name}"),
             Type::Nil => write!(f, "nil"),
             Type::Any => write!(f, "any"),

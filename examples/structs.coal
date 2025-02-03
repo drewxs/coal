@@ -10,5 +10,11 @@ struct User {
 }
 
 fn main() {
+    let u: User = User {
+        id: 1,
+        email: "foo@bar.com",
+    };
+
+    println(u);
 }
 

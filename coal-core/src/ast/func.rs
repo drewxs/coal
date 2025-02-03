@@ -1,4 +1,7 @@
-use std::fmt;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+};
 
 use crate::{indent, Span};
 
@@ -39,6 +42,14 @@ impl Func {
             stmt.fmt_with_indent(f, indent_level + 1)?;
         }
         writeln!(f, "{}}}", base_indent)
+    }
+}
+
+impl Hash for Func {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.args.hash(state);
+        self.ret_t.hash(state);
     }
 }
 

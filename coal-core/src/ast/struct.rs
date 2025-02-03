@@ -23,11 +23,11 @@ impl Struct {
         let inner_indent = indent(indent_level + 1);
         let Struct { name, state } = self;
 
-        writeln!(f, "{}struct {name} {{", base_indent)?;
+        writeln!(f, "{name} {{")?;
         for (k, v) in state {
             writeln!(f, "{}{k}: {v},", inner_indent)?;
         }
-        writeln!(f, "{}}}", base_indent)
+        write!(f, "{}}}", base_indent)
     }
 }
 

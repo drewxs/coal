@@ -1450,7 +1450,7 @@ fn test_parse_struct_decls() {
     check(&[
         (
             r#"struct Foo {}"#,
-            Stmt::Struct(
+            Stmt::StructDecl(
                 StructDecl {
                     name: String::from("Foo"),
                     attrs: vec![],
@@ -1465,7 +1465,7 @@ fn test_parse_struct_decls() {
                 x: i32;
             }
             "#,
-            Stmt::Struct(
+            Stmt::StructDecl(
                 StructDecl {
                     name: String::from("Foo2"),
                     attrs: vec![(
@@ -1487,7 +1487,7 @@ fn test_parse_struct_decls() {
                 y: str;
             }
             "#,
-            Stmt::Struct(
+            Stmt::StructDecl(
                 StructDecl {
                     name: String::from("Foo3"),
                     attrs: vec![
@@ -1519,7 +1519,7 @@ fn test_parse_struct_decls() {
                 }
             }
             "#,
-            Stmt::Struct(
+            Stmt::StructDecl(
                 StructDecl {
                     name: String::from("Foo4"),
                     attrs: vec![],
@@ -1548,7 +1548,7 @@ fn test_parse_struct_decls() {
                 }
             }
             "#,
-            Stmt::Struct(
+            Stmt::StructDecl(
                 StructDecl {
                     name: String::from("Foo5"),
                     attrs: vec![

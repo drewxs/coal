@@ -14,7 +14,7 @@ pub enum Stmt {
     OpAssign(Infix, Expr, Expr),
     Return(Expr),
     Expr(Expr),
-    Struct(StructDecl, Span),
+    StructDecl(StructDecl, Span),
 }
 
 impl Stmt {
@@ -26,7 +26,7 @@ impl Stmt {
             Stmt::OpAssign(_, lhs, rhs) => (lhs.span().0, rhs.span().1),
             Stmt::Return(e) => e.span(),
             Stmt::Expr(e) => e.span(),
-            Stmt::Struct(_, span) => *span,
+            Stmt::StructDecl(_, span) => *span,
         }
     }
 
@@ -93,7 +93,7 @@ impl Stmt {
                 }
                 _ => expr.fmt_with_indent(f, indent_level),
             },
-            Stmt::Struct(s, _) => s.fmt_with_indent(f, indent_level),
+            Stmt::StructDecl(s, _) => s.fmt_with_indent(f, indent_level),
         }
     }
 }
