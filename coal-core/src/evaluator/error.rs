@@ -51,8 +51,8 @@ pub enum RuntimeErrorKind {
 impl fmt::Display for RuntimeErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            RuntimeErrorKind::Custom(s) => write!(f, "[custom] {s}"),
-            RuntimeErrorKind::ParserError(e) => write!(f, "[parse err] {e}"),
+            RuntimeErrorKind::Custom(s) => write!(f, "{s}"),
+            RuntimeErrorKind::ParserError(e) => write!(f, "[parse] {e}"),
             RuntimeErrorKind::Mismatch(t1, t2) => {
                 write!(f, "[eval] mismatch: expected={t1}, got={t2}")
             }
