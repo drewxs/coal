@@ -1,0 +1,67 @@
+{
+  "name": "coal",
+  "displayName": "Coal",
+  "description": "Coal language support",
+  "version": "0.0.1",
+  "categories": [
+    "Programming Languages"
+  ],
+  "publisher": "drewxs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/drewxs/coal.git"
+  },
+  "bugs": {
+    "url": "https://github.com/drewxs/coal/issues"
+  },
+  "main": "./dist/extension",
+  "engines": {
+    "vscode": "^1.97.0"
+  },
+  "scripts": {
+    "watch": "tsc --watch",
+    "build": "npm run clean && tsc",
+    "clean": "rm -rf dist *.vsix",
+    "package": "npm run build && vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "@types/vscode": "^1.97.0",
+    "@vscode/vsce": "^3.2.2"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "coal",
+        "aliases": [
+          "Coal",
+          "coal"
+        ],
+        "extensions": [
+          ".coal"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "coal",
+        "scopeName": "source.coal",
+        "path": "./syntaxes/coal.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "extension.coalfmt",
+        "title": "Format Coal File",
+        "category": "Formatting"
+      }
+    ],
+    "editor": {
+      "defaultFormatter": {
+        "coal": "coal.coalfmt"
+      }
+    }
+  }
+}

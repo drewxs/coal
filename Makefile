@@ -11,7 +11,7 @@ else
   extension :=
 endif
 
-.PHONY: help build clean run test install
+.PHONY: help build clean run test install vsc
 
 # all: Default target, build/install binary
 all: install
@@ -40,3 +40,7 @@ test:
 # install: Install the program
 install: 
 	@cargo install --path ./$(program)
+
+# install-vsc: Install the VSCode language extension
+vsc:
+	@(cd ./extensions/vscode-coal && make)

@@ -1,0 +1,394 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Coal",
+  "fileTypes": ["coal"],
+  "scopeName": "source.coal",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#keywords" },
+    { "include": "#strings" },
+    { "include": "#functions" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.coal",
+          "match": "(//).*$",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.comment.coal"
+            }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.coal",
+          "match": "\\b(break|continue|if|elif|else|for|while|return)\\b"
+        },
+        {
+          "name": "keyword.other.coal storage.type.coal",
+          "match": "\\b(let)\\b"
+        },
+        {
+          "name": "keyword.declaration.type.coal storage.type.coal",
+          "match": "\\b(type)\\b"
+        },
+        {
+          "name": "keyword.declaration.struct.coal storage.type.coal",
+          "match": "\\b(struct)\\b"
+        },
+        {
+          "name": "keyword.other.coal",
+          "match": "\\b(in)\\b"
+        },
+        {
+          "name": "keyword.other.fn.coal",
+          "match": "\\bfn\\b"
+        },
+        {
+          "name": "keyword.operator.logical.coal",
+          "match": "(\\^|\\||\\|\\||&&|<<|>>|!)(?!=)"
+        },
+        {
+          "name": "keyword.operator.assignment.coal",
+          "match": "(\\+=|-=|\\*=|/=|%=|\\^=|&=|\\|=|<<=|>>=)"
+        },
+        {
+          "name": "keyword.operator.assignment.equal.coal",
+          "match": "(?<![<>])=(?!=|>)"
+        },
+        {
+          "name": "keyword.operator.comparison.coal",
+          "match": "(=(=)?(?!>)|!=|<=|(?<!=)>=)"
+        },
+        {
+          "name": "keyword.operator.math.coal",
+          "match": "(([+%]|(\\*(?!\\w)))(?!=))|(-(?!>))|(/(?!/))"
+        },
+        {
+          "name": "keyword.operator.namespace.coal",
+          "match": "::"
+        },
+        {
+          "name": "keyword.operator.access.dot.coal",
+          "match": "\\.(?!\\.)"
+        },
+        {
+          "name": "keyword.operator.range.coal",
+          "match": "\\.{2}(=|\\.)?"
+        },
+        {
+          "name": "keyword.operator.key-value.coal",
+          "match": ":(?!:)"
+        },
+        {
+          "name": "keyword.operator.arrow.skinny.coal",
+          "match": "->|<-"
+        },
+        {
+          "name": "keyword.operator.question.coal",
+          "match": "\\?"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "match": "(?<![A-Za-z])(f32|f64|i128|i16|i32|i64|i8|isize|u128|u16|u32|u64|u8|usize)\\b",
+          "captures": {
+            "1": {
+              "name": "entity.name.type.numeric.coal"
+            }
+          }
+        },
+        {
+          "begin": "\\b(_?[A-Z][A-Za-z0-9_]*)(<)",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.name.type.coal"
+            },
+            "2": {
+              "name": "punctuation.brackets.angle.coal"
+            }
+          },
+          "end": ">",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.brackets.angle.coal"
+            }
+          },
+          "patterns": [
+            { "include": "#comments" },
+            { "include": "#keywords" },
+            { "include": "#types" },
+            { "include": "#variables" }
+          ]
+        },
+        {
+          "name": "entity.name.type.primitive.coal",
+          "match": "\\b(bool|char|str)\\b"
+        },
+        {
+          "name": "entity.name.type.composite.coal",
+          "match": "\\b(list|map|tuple)\\b"
+        },
+        {
+          "match": "\\b(struct)\\s+(_?[A-Z][A-Za-z0-9_]*)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.struct.coal storage.type.coal"
+            },
+            "2": {
+              "name": "entity.name.type.struct.coal"
+            }
+          }
+        },
+        {
+          "match": "\\b(enum)\\s+(_?[A-Z][A-Za-z0-9_]*)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.enum.coal storage.type.coal"
+            },
+            "2": {
+              "name": "entity.name.type.enum.coal"
+            }
+          }
+        },
+        {
+          "match": "\\b(type)\\s+(_?[A-Z][A-Za-z0-9_]*)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.type.coal storage.type.coal"
+            },
+            "2": {
+              "name": "entity.name.type.declaration.coal"
+            }
+          }
+        },
+        {
+          "name": "entity.name.type.coal",
+          "match": "\\b_?[A-Z][A-Za-z0-9_]*\\b(?!!)"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "meta.function.definition.coal",
+          "begin": "\\b(fn)\\s+((?:r#(?!self|super))?[A-Za-z0-9_]+)((\\()|(<))",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.other.fn.coal"
+            },
+            "2": {
+              "name": "entity.name.function.coal"
+            },
+            "4": {
+              "name": "punctuation.brackets.round.coal"
+            },
+            "5": {
+              "name": "punctuation.brackets.angle.coal"
+            }
+          },
+          "end": "(\\{)|(;)",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.brackets.curly.coal"
+            },
+            "2": {
+              "name": "punctuation.semi.coal"
+            }
+          },
+          "patterns": [
+            { "include": "#comments" },
+            { "include": "#keywords" },
+            { "include": "#constants" },
+            { "include": "#functions" },
+            { "include": "#punctuation" },
+            { "include": "#strings" },
+            { "include": "#types" },
+            { "include": "#variables" }
+          ]
+        },
+        {
+          "name": "meta.function.call.coal",
+          "begin": "((?:r#(?!self|super))?[A-Za-z0-9_]+)(\\()",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.name.function.coal"
+            },
+            "2": {
+              "name": "punctuation.brackets.round.coal"
+            }
+          },
+          "end": "\\)",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.brackets.round.coal"
+            }
+          },
+          "patterns": [
+            { "include": "#comments" },
+            { "include": "#keywords" },
+            { "include": "#functions" },
+            { "include": "#strings" },
+            { "include": "#types" },
+            { "include": "#variables" }
+          ]
+        },
+        {
+          "name": "meta.function.call.coal",
+          "begin": "((?:r#(?!self|super))?[A-Za-z0-9_]+)(?=::<.*>\\()",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.name.function.coal"
+            }
+          },
+          "end": "\\)",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.brackets.round.coal"
+            }
+          },
+          "patterns": [
+            { "include": "#comments" },
+            { "include": "#keywords" },
+            { "include": "#functions" },
+            { "include": "#strings" },
+            { "include": "#types" },
+            { "include": "#variables" }
+          ]
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.comma.coal",
+          "match": ","
+        },
+        {
+          "name": "punctuation.brackets.curly.coal",
+          "match": "[{}]"
+        },
+        {
+          "name": "punctuation.brackets.round.coal",
+          "match": "[()]"
+        },
+        {
+          "name": "punctuation.semi.coal",
+          "match": ";"
+        },
+        {
+          "name": "punctuation.brackets.square.coal",
+          "match": "[\\[\\]]"
+        },
+        {
+          "name": "punctuation.brackets.angle.coal",
+          "match": "(?<!=)[<>]"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.coal",
+          "begin": "(b?)(\")",
+          "beginCaptures": {
+            "1": {
+              "name": "string.quoted.byte.raw.coal"
+            },
+            "2": {
+              "name": "punctuation.definition.string.coal"
+            }
+          },
+          "end": "\"",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.coal"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#escapes"
+            },
+            {
+              "include": "#interpolations"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.double.coal",
+          "begin": "(b?r)(#*)(\")",
+          "beginCaptures": {
+            "1": {
+              "name": "string.quoted.byte.raw.coal"
+            },
+            "2": {
+              "name": "punctuation.definition.string.raw.coal"
+            },
+            "3": {
+              "name": "punctuation.definition.string.coal"
+            }
+          },
+          "end": "(\")(\\2)",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.definition.string.coal"
+            },
+            "2": {
+              "name": "punctuation.definition.string.raw.coal"
+            }
+          }
+        },
+        {
+          "name": "string.quoted.single.char.coal",
+          "begin": "(b)?(')",
+          "beginCaptures": {
+            "1": {
+              "name": "string.quoted.byte.raw.coal"
+            },
+            "2": {
+              "name": "punctuation.definition.char.coal"
+            }
+          },
+          "end": "'",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.char.coal"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#escapes"
+            }
+          ]
+        }
+      ]
+    },
+    "interpolations": {
+      "name": "meta.interpolation.coal",
+      "match": "({)[^\"{}]*(})",
+      "captures": {
+        "1": {
+          "name": "punctuation.definition.interpolation.coal"
+        },
+        "2": {
+          "name": "punctuation.definition.interpolation.coal"
+        }
+      }
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.coal",
+          "match": "\\b(?<!(?<!\\.)\\.)(?:r#(?!(self)))?[a-z0-9_]+\\b"
+        }
+      ]
+    }
+  }
+}

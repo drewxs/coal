@@ -109,7 +109,13 @@ Add the following to your conform config:
 
 ### VSCode
 
-¯\\\_(ツ)\_/¯
+Install the `Coal` language extension locally (requires [Node.js](https://nodejs.org/en/download)):
+
+```sh
+make vsc
+```
+
+A marketplace release will be available with v0.1.0.
 
 ## Development
 
