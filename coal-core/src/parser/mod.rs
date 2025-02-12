@@ -463,9 +463,7 @@ impl Parser {
             .borrow_mut()
             .set(ident.name(), Type::from(&s));
 
-        let (_, end) = self.curr_tok.span;
-
-        Some(Stmt::StructDecl(s, (start, end)))
+        Some(Stmt::StructDecl(s, (start, self.curr_tok.span.1)))
     }
 
     fn parse_expr(&mut self, precedence: Precedence) -> Option<Expr> {
@@ -517,6 +515,7 @@ impl Parser {
                 | Some(Expr::Index(_, _, _))
                 | Some(Expr::Call { .. })
                 | Some(Expr::MethodCall { .. })
+                | Some(Expr::AttrAccess { .. })
         ) {
             return lhs;
         }
@@ -548,7 +547,12 @@ impl Parser {
                     lhs = self.parse_index_expr(&lhs?);
                 }
                 TokenKind::Dot => {
-                    lhs = self.parse_method_call(lhs?);
+                    self.advance(); // lhs
+                    self.advance(); // '.'
+                    lhs = match &self.next_tok.kind {
+                        TokenKind::Lparen => self.parse_method_call(lhs?),
+                        _ => self.parse_attr_access(lhs?),
+                    }
                 }
                 TokenKind::Range => {
                     lhs = self.parse_range_expr(&lhs?);
@@ -573,10 +577,8 @@ impl Parser {
         let prefix = Prefix::try_from(&self.curr_tok.kind).ok()?;
         self.advance();
 
-        self.parse_expr(Precedence::Prefix).map(|expr| {
-            let (_, end) = expr.span();
-            Expr::Prefix(prefix, Box::new(expr.clone()), (start, end))
-        })
+        self.parse_expr(Precedence::Prefix)
+            .map(|expr| Expr::Prefix(prefix, Box::new(expr.clone()), (start, expr.span().1)))
     }
 
     fn parse_infix_expr(&mut self, lhs: &Expr) -> Option<Expr> {
@@ -587,15 +589,13 @@ impl Parser {
         self.advance();
 
         let rhs = self.parse_expr(prec)?;
-
-        let (start, _) = lhs.span();
-        let (_, end) = rhs.span();
+        let span = (lhs.span().0, rhs.span().1);
 
         Some(Expr::Infix(
             infix,
             Box::new(lhs.clone()),
             Box::new(rhs),
-            (start, end),
+            span,
         ))
     }
 
@@ -604,7 +604,6 @@ impl Parser {
         self.advance(); // ident
 
         let args = self.parse_expr_list(TokenKind::Rparen)?;
-        let (_, end) = self.curr_tok.span;
 
         let ret_t = self
             .symbol_table
@@ -616,7 +615,7 @@ impl Parser {
             name,
             args,
             ret_t,
-            span: (start, end),
+            span: (start, self.curr_tok.span.1),
         })
     }
 
@@ -663,12 +662,11 @@ impl Parser {
         }
 
         self.expect_next(TokenKind::Rbracket)?;
-        let (_, end) = self.curr_tok.span;
 
         Some(Expr::Index(
             Box::new(lhs.clone()),
             Box::new(idx),
-            (start, end),
+            (start, self.curr_tok.span.1),
         ))
     }
 
@@ -730,10 +728,9 @@ impl Parser {
             match Type::try_from(&expr) {
                 Ok(curr_t) => {
                     if curr_t != t {
-                        let (_, end) = self.curr_tok.span;
                         self.errors.push(ParserError::new(
                             ParserErrorKind::TypeMismatch(t, curr_t),
-                            (start, end),
+                            (start, self.curr_tok.span.1),
                         ));
                         self.advance_line();
                         return None;
@@ -742,10 +739,9 @@ impl Parser {
                     data.push(expr);
                 }
                 Err(e) => {
-                    let (_, end) = self.curr_tok.span;
                     self.errors.push(ParserError::new(
                         ParserErrorKind::TypeMismatch(t, e),
-                        (start, end),
+                        (start, self.curr_tok.span.1),
                     ));
                     return None;
                 }
@@ -837,18 +833,16 @@ impl Parser {
 
             let k = self.parse_expr(Precedence::Lowest)?;
             if !keys.insert(k.to_string()) {
-                let (_, end) = self.curr_tok.span;
                 self.warnings.push(ParserWarning::new(
                     ParserWarningKind::MapKeyRepeated(k.to_string()),
-                    (start, end),
+                    (start, self.curr_tok.span.1),
                 ));
             }
 
             if kt != Type::try_from(&k).unwrap_or_default() {
-                let (_, end) = self.curr_tok.span;
                 self.errors.push(ParserError::new(
                     ParserErrorKind::TypeMismatch(kt, Type::try_from(&k).unwrap_or_default()),
-                    (start, end),
+                    (start, self.curr_tok.span.1),
                 ));
                 self.advance_line();
                 return None;
@@ -859,10 +853,9 @@ impl Parser {
 
             let v = self.parse_expr(Precedence::Lowest)?;
             if vt != Type::try_from(&v).unwrap_or_default() {
-                let (_, end) = self.curr_tok.span;
                 self.errors.push(ParserError::new(
                     ParserErrorKind::TypeMismatch(vt, Type::try_from(&v).unwrap_or_default()),
-                    (start, end),
+                    (start, self.curr_tok.span.1),
                 ));
                 self.advance_line();
                 return None;
@@ -877,16 +870,14 @@ impl Parser {
     }
 
     fn parse_method_call(&mut self, lhs: Expr) -> Option<Expr> {
-        self.advance(); // lhs
-        self.advance();
-
         let (start, _) = lhs.span();
 
-        let method_name = if let TokenKind::Ident(name) = &self.curr_tok.kind {
-            name.clone()
-        } else {
-            self.syntax_error();
-            return None;
+        let method_name = match &self.curr_tok.kind {
+            TokenKind::Ident(name) => name.clone(),
+            _ => {
+                self.syntax_error();
+                return None;
+            }
         };
 
         let mut args = vec![];
@@ -906,29 +897,65 @@ impl Parser {
                 return None;
             }
 
-            let (_, end) = self.curr_tok.span;
-
             Some(Expr::MethodCall {
                 lhs: Box::new(lhs),
                 name: method_name,
                 args,
                 ret_t: method.ret_t,
-                span: (start, end),
+                span: (start, self.curr_tok.span.1),
             })
         } else {
             self.advance();
             self.advance();
             self.consume_next(TokenKind::Lparen);
 
-            let (_, end) = self.curr_tok.span;
-
             self.errors.push(ParserError::new(
                 ParserErrorKind::MethodNotFound(lhs_t, String::from(&method_name)),
-                (start, end),
+                (start, self.curr_tok.span.1),
             ));
 
             None
         }
+    }
+
+    fn parse_attr_access(&mut self, lhs: Expr) -> Option<Expr> {
+        if let Expr::Ident(s, Type::Struct(struct_name, _), _) = &lhs {
+            if let TokenKind::Ident(attr_name) = &self.curr_tok.kind {
+                if let Some(Type::StructDecl(_, attrs)) =
+                    self.symbol_table.borrow().get(struct_name)
+                {
+                    let t = match attrs
+                        .iter()
+                        .find(|(n, _, _)| n == attr_name)
+                        .map(|(_, t, _)| t.clone())
+                    {
+                        Some(t) => t,
+                        None => {
+                            self.errors.push(ParserError::new(
+                                ParserErrorKind::InvalidStructAttr(attr_name.to_owned()),
+                                self.curr_tok.span,
+                            ));
+                            return None;
+                        }
+                    };
+                    let span = (lhs.span().0, self.curr_tok.span.1);
+
+                    return Some(Expr::AttrAccess {
+                        lhs: Box::new(lhs),
+                        name: attr_name.to_owned(),
+                        t,
+                        span,
+                    });
+                } else {
+                    self.errors.push(ParserError::new(
+                        ParserErrorKind::NotFound(s.name()),
+                        lhs.span(),
+                    ));
+                }
+            }
+        }
+
+        None
     }
 
     fn parse_grouped_expr(&mut self) -> Option<Expr> {
@@ -987,14 +1014,12 @@ impl Parser {
             alt = Some(self.parse_block());
         }
 
-        let (_, end) = self.curr_tok.span;
-
         Some(Expr::If {
             cond: Box::new(cond),
             then,
             elifs,
             alt,
-            span: (start, end),
+            span: (start, self.curr_tok.span.1),
         })
     }
 
@@ -1007,12 +1032,11 @@ impl Parser {
         self.advance();
 
         let body = self.parse_block();
-        let (_, end) = self.curr_tok.span;
 
         Some(Expr::While {
             cond: Box::new(cond),
             body,
-            span: (start, end),
+            span: (start, self.curr_tok.span.1),
         })
     }
 
@@ -1022,12 +1046,11 @@ impl Parser {
         self.advance();
 
         let rhs = self.parse_expr(Precedence::Lowest)?;
-        let (_, end) = self.curr_tok.span;
 
         Some(Expr::Range(
             Box::new(lhs.clone()),
             Box::new(rhs),
-            (start, end),
+            (start, self.curr_tok.span.1),
         ))
     }
 
@@ -1051,13 +1074,11 @@ impl Parser {
         st.set(ident.name(), iter_t);
         let body = self.parse_block_in_scope(Rc::new(RefCell::new(st)));
 
-        let (_, end) = self.curr_tok.span;
-
         Some(Expr::Iter {
             ident,
             expr: Box::new(expr),
             body,
-            span: (start, end),
+            span: (start, self.curr_tok.span.1),
         })
     }
 
@@ -1089,14 +1110,13 @@ impl Parser {
         }
 
         let (body, ret_stmts) = self.parse_fn_block(Rc::new(RefCell::new(st)));
-        let (_, end) = self.curr_tok.span;
         self.check_unreachable(&body);
 
         let ret_t = if let Some(dt) = declared_ret_t {
             if ret_stmts.is_empty() {
                 self.errors.push(ParserError::new(
                     ParserErrorKind::TypeMismatch(dt.clone(), Type::Void),
-                    (start, end),
+                    (start, self.curr_tok.span.1),
                 ));
             }
 
@@ -1123,7 +1143,7 @@ impl Parser {
             args,
             ret_t,
             body,
-            span: (start, end),
+            span: (start, self.curr_tok.span.1),
         })
     }
 
@@ -1144,20 +1164,18 @@ impl Parser {
         }
 
         let (body, _) = self.parse_fn_block(Rc::new(RefCell::new(st)));
-        let (_, end) = self.curr_tok.span;
         self.check_unreachable(&body);
-
         let ret_t = Type::from(&body);
 
         Some(Expr::Closure {
             args,
             ret_t,
             body,
-            span: (start, end),
+            span: (start, self.curr_tok.span.1),
         })
     }
 
-    fn parse_struct_expr(&mut self, name: &str, attrs: &[(String, Type)]) -> Option<Expr> {
+    fn parse_struct_expr(&mut self, name: &str, attrs: &[(String, Type, bool)]) -> Option<Expr> {
         let (start, _) = self.curr_tok.span;
         self.advance();
         self.consume(TokenKind::Lbrace);
@@ -1166,8 +1184,8 @@ impl Parser {
         while !matches!(self.curr_tok.kind, TokenKind::Rbrace | TokenKind::EOF) {
             if let TokenKind::Ident(ident) = &self.curr_tok.kind {
                 let ident = ident.clone();
-                if let Some((_, expected_t)) =
-                    attrs.iter().find(|(attr_name, _)| *attr_name == ident)
+                if let Some((_, expected_t, _)) =
+                    attrs.iter().find(|(attr_name, _, _)| *attr_name == ident)
                 {
                     self.expect_next(TokenKind::Colon)?;
                     self.advance();
@@ -1194,14 +1212,21 @@ impl Parser {
             self.advance();
         }
 
-        let (_, end) = self.curr_tok.span;
+        for (attr, _, default_val) in attrs {
+            if !state.iter().any(|(name, _)| name == attr) && !default_val {
+                self.errors.push(ParserError::new(
+                    ParserErrorKind::AttrMissing(attr.to_owned()),
+                    (start, self.curr_tok.span.1),
+                ));
+            }
+        }
 
         Some(Expr::Struct(
             Struct {
                 name: name.to_owned(),
                 state,
             },
-            (start, end),
+            (start, self.curr_tok.span.1),
         ))
     }
 

@@ -86,7 +86,8 @@ impl Stmt {
                 | Expr::Prefix(_, _, _)
                 | Expr::Infix(_, _, _, _)
                 | Expr::Call { .. }
-                | Expr::MethodCall { .. } => {
+                | Expr::MethodCall { .. }
+                | Expr::AttrAccess { .. } => {
                     write!(f, "{base_indent}")?;
                     expr.fmt_with_indent(f, indent_level)?;
                     writeln!(f, ";")

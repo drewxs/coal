@@ -14,7 +14,7 @@ pub enum Type {
     Fn(Vec<Type>, Box<Type>),
     Range,
     UserDefined(String, Box<Type>),
-    StructDecl(String, Vec<(String, Type)>),
+    StructDecl(String, Vec<(String, Type, bool)>),
     Struct(String, Vec<(String, Type)>),
     Nil,
     Any,
@@ -307,6 +307,7 @@ impl TryFrom<&Expr> for Type {
             Expr::Struct(s, _) => Ok(Type::from(s)),
             Expr::Call { ret_t, .. } => Ok(ret_t.to_owned()),
             Expr::MethodCall { ret_t, .. } => Ok(ret_t.to_owned()),
+            Expr::AttrAccess { t, .. } => Ok(t.to_owned()),
             _ => Err(Type::Unknown),
         }
     }
@@ -323,8 +324,14 @@ impl From<&Func> for Type {
 
 impl From<&StructDecl> for Type {
     fn from(s: &StructDecl) -> Self {
-        let attrs = s.attrs.iter().map(|(p, _)| (p.name.clone(), p.t.clone()));
-        let fns = s.funcs.iter().map(|f| (f.name.clone(), Type::from(f)));
+        let attrs = s
+            .attrs
+            .iter()
+            .map(|(p, v)| (p.name.clone(), p.t.clone(), v.is_some()));
+        let fns = s
+            .funcs
+            .iter()
+            .map(|f| (f.name.clone(), Type::from(f), false));
         Type::StructDecl(s.name.to_owned(), attrs.chain(fns).collect())
     }
 }

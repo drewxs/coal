@@ -6,92 +6,92 @@ use crate::{Expr, Ident, Infix, Param, Stmt, Type, F64, I32, U64};
 
 use super::{Evaluator, Object, FALSE, TRUE};
 
+fn check(tests: &[(&str, Object)]) {
+    for (expr, expected) in tests {
+        match Evaluator::default().eval(expr) {
+            Ok(actual) => {
+                if *expected != actual {
+                    panic!(
+                        "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
+                        expr, expected, actual
+                    );
+                }
+            }
+            Err(e) => {
+                panic!("input:\n{}\nexpected:\n{}\nerror:\n{:?}", expr, expected, e);
+            }
+        }
+    }
+}
+
+fn check_invalid(tests: &[&str]) {
+    for input in tests {
+        assert_matches!(Evaluator::default().eval(input), Err(_));
+    }
+}
+
 #[test]
 fn test_eval_literal() {
-    let mut evaluator = Evaluator::default();
-
-    let tests = vec![
-        ("5", Ok(Object::I32(5))),
-        ("3.14", Ok(Object::F64(3.14))),
-        ("true", Ok(TRUE)),
-        (r#""foo""#, Ok(Object::Str(String::from("foo")))),
-    ];
-
-    for (expr, expected) in tests {
-        assert_eq!(expected, evaluator.eval(expr));
-    }
+    check(&[
+        ("5", Object::I32(5)),
+        ("3.14", Object::F64(3.14)),
+        ("true", TRUE),
+        (r#""foo""#, Object::Str(String::from("foo"))),
+    ]);
 }
 
 #[test]
 fn test_eval_str_interpolation() {
-    let mut evaluator = Evaluator::default();
-
-    let tests = vec![
+    check(&[
         (
             r#""not {!false} or {!!false}""#,
-            Ok(Object::Str(String::from("not true or false"))),
+            Object::Str(String::from("not true or false")),
         ),
         (
             r#""(1 + \"{-false})""#,
-            Ok(Object::Str(String::from(r#"(1 + "0)"#))),
+            Object::Str(String::from(r#"(1 + "0)"#)),
         ),
-        (r#"let s = "asdf"; s.len()"#, Ok(Object::U64(4))),
-        (r#""{1 + 9}".len()"#, Ok(Object::U64(2))),
-    ];
-
-    for (expr, expected) in tests {
-        assert_eq!(expected, evaluator.eval(expr));
-    }
+        (r#"let s = "asdf"; s.len()"#, Object::U64(4)),
+        (r#""{1 + 9}".len()"#, Object::U64(2)),
+    ]);
 }
 
 #[test]
 fn test_eval_prefix() {
-    let mut evaluator = Evaluator::default();
-
-    let tests = vec![
-        ("-5", Ok(Object::I32(-5))),
-        ("-10", Ok(Object::I32(-10))),
-        ("!true", Ok(FALSE)),
-        ("!!true", Ok(TRUE)),
-        ("!false", Ok(TRUE)),
-        ("!!false", Ok(FALSE)),
-        ("!5", Ok(FALSE)),
-        ("!!5", Ok(TRUE)),
-    ];
-
-    for (expr, expected) in tests {
-        assert_eq!(expected, evaluator.eval(expr));
-    }
+    check(&[
+        ("-5", Object::I32(-5)),
+        ("-10", Object::I32(-10)),
+        ("!true", FALSE),
+        ("!!true", TRUE),
+        ("!false", TRUE),
+        ("!!false", FALSE),
+        ("!5", FALSE),
+        ("!!5", TRUE),
+    ]);
 }
 
 #[test]
 fn test_eval_infix() {
-    let mut evaluator = Evaluator::default();
-
-    let tests = vec![
-        ("(7 + 2 * 3 / 2) % 3", Ok(Object::I32(1))),
-        ("1 + 2 * 3 + 4 / 5", Ok(Object::I32(7))),
-        ("(1 + 2 * 3 + 4 / 5) * 2 + -10", Ok(Object::I32(4))),
-        ("true == true", Ok(TRUE)),
-        ("false == false", Ok(TRUE)),
-        ("true == false", Ok(FALSE)),
-        ("true != false", Ok(TRUE)),
-        ("(1 < 2) == true", Ok(TRUE)),
-        ("(1 > 2) != false", Ok(FALSE)),
-        (r#""foo" + "bar""#, Ok(Object::Str(String::from("foobar")))),
-        (r#""foo" == "foo""#, Ok(TRUE)),
-        (r#""a" * 3"#, Ok(Object::Str(String::from("aaa")))),
-        (r#""a" < "b""#, Ok(TRUE)),
-    ];
-
-    for (expr, expected) in tests {
-        assert_eq!(expected, evaluator.eval(expr));
-    }
+    check(&[
+        ("(7 + 2 * 3 / 2) % 3", Object::I32(1)),
+        ("1 + 2 * 3 + 4 / 5", Object::I32(7)),
+        ("(1 + 2 * 3 + 4 / 5) * 2 + -10", Object::I32(4)),
+        ("true == true", TRUE),
+        ("false == false", TRUE),
+        ("true == false", FALSE),
+        ("true != false", TRUE),
+        ("(1 < 2) == true", TRUE),
+        ("(1 > 2) != false", FALSE),
+        (r#""foo" + "bar""#, Object::Str(String::from("foobar"))),
+        (r#""foo" == "foo""#, TRUE),
+        (r#""a" * 3"#, Object::Str(String::from("aaa"))),
+        (r#""a" < "b""#, TRUE),
+    ]);
 }
 
 #[test]
 fn test_eval_infix_invalid() {
-    let tests = vec![
+    check_invalid(&[
         r#""a" - "b""#,
         r#""a" / 3.14"#,
         r#"10 + "x""#,
@@ -103,24 +103,19 @@ fn test_eval_infix_invalid() {
         r#""x" - 10"#,
         r#""x" / 10"#,
         r#""x" % 10"#,
-    ];
-    for input in tests {
-        assert_matches!(Evaluator::default().eval(input), Err(_));
-    }
+    ]);
 }
 
 #[test]
 fn test_eval_if() {
-    let mut evaluator = Evaluator::default();
-
-    let tests = vec![
-        ("if true { 10 }", Ok(Object::I32(10))),
-        ("if false { 10 }", Ok(Object::Void)),
-        ("if 1 { 10 }", Ok(Object::I32(10))),
-        ("if 1 < 2 { 10 }", Ok(Object::I32(10))),
-        ("if 1 > 2 { 10 }", Ok(Object::Void)),
-        ("if 1 > 2 { 10 } else { 20 }", Ok(Object::I32(20))),
-        ("if 1 < 2 { 10 } else { 20 }", Ok(Object::I32(10))),
+    check(&[
+        ("if true { 10 }", Object::I32(10)),
+        ("if false { 10 }", Object::Void),
+        ("if 1 { 10 }", Object::I32(10)),
+        ("if 1 < 2 { 10 }", Object::I32(10)),
+        ("if 1 > 2 { 10 }", Object::Void),
+        ("if 1 > 2 { 10 } else { 20 }", Object::I32(20)),
+        ("if 1 < 2 { 10 } else { 20 }", Object::I32(10)),
         (
             r#"if 1 < 2 {
                 let x = 999;
@@ -128,7 +123,7 @@ fn test_eval_if() {
             } else {
                 return 20;
             }"#,
-            Ok(Object::I32(10)),
+            Object::I32(10),
         ),
         (
             r#"if 1 > 2 {
@@ -137,20 +132,14 @@ fn test_eval_if() {
                 return 2;
                 return 3;
             }"#,
-            Ok(Object::I32(2)),
+            Object::I32(2),
         ),
-    ];
-
-    for (expr, expected) in tests {
-        assert_eq!(expected, evaluator.eval(expr));
-    }
+    ]);
 }
 
 #[test]
 fn test_eval_nested_if() {
-    let mut evaluator = Evaluator::default();
-
-    let tests = vec![
+    check(&[
         (
             r#"if true {
                 if true {
@@ -160,7 +149,7 @@ fn test_eval_nested_if() {
             } else {
                 return 3;
             }"#,
-            Ok(Object::I32(1)),
+            Object::I32(1),
         ),
         (
             r#"if true {
@@ -171,13 +160,9 @@ fn test_eval_nested_if() {
             } else {
                 return 3;
             }"#,
-            Ok(Object::I32(2)),
+            Object::I32(2),
         ),
-    ];
-
-    for (expr, expected) in tests {
-        assert_eq!(expected, evaluator.eval(expr));
-    }
+    ]);
 }
 
 #[test]
@@ -219,64 +204,72 @@ fn test_eval_while_scope() {
 
 #[test]
 fn test_eval_let() {
-    let tests = vec![
-        ("let x = 7; x;", Ok(Object::I32(7))),
-        ("let x = 2 * 3; x;", Ok(Object::I32(6))),
-        ("let x = 7; let y = 10; x;", Ok(Object::I32(7))),
-        ("let x = 7; let y = 10; y;", Ok(Object::I32(10))),
+    check(&[
+        ("let x = 7; x;", Object::I32(7)),
+        ("let x = 2 * 3; x;", Object::I32(6)),
+        ("let x = 7; let y = 10; x;", Object::I32(7)),
+        ("let x = 7; let y = 10; y;", Object::I32(10)),
         (
             "let x = 7; let y = 10; let z: i32 = x + y + 3; z;",
-            Ok(Object::I32(20)),
+            Object::I32(20),
         ),
-    ];
-
-    for (expr, expected) in tests {
-        let actual = Evaluator::default().eval(expr);
-        if expected != actual {
-            panic!(
-                "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
-                expr, expected, actual
-            );
-        }
-    }
+    ]);
 }
 
 #[test]
 fn test_eval_let_scope() {
-    let input = "let x = 1; if true { x = x + 1; }; x;";
-    assert_matches!(Evaluator::default().eval(input), Ok(Object::I32(2)));
-
-    let input = "let x = 1; fn foo() { x = x + 1; }; foo(); x;";
-    assert_matches!(Evaluator::default().eval(input), Ok(Object::I32(2)));
+    check(&[
+        (
+            r#"
+            let x = 1;
+            if true {
+                x = x + 1;
+            };
+            x;
+            "#,
+            Object::I32(2),
+        ),
+        (
+            r#"
+            let x = 1;
+            fn foo() {
+                x = x + 1;
+            };
+            foo();
+            x;
+            "#,
+            Object::I32(2),
+        ),
+    ]);
 }
 
 #[test]
 fn test_eval_assign() {
-    let tests = vec![
-        ("let x = 1; x = 2; x;", Ok(Object::I32(2))),
-        ("let x = 1; x = x + x + x; x;", Ok(Object::I32(3))),
-        ("let x = 1; x += 1; x;", Ok(Object::I32(2))),
-        ("let x = 4; x -= 1; x;", Ok(Object::I32(3))),
-        ("let x = 2; x *= 3; x;", Ok(Object::I32(6))),
-        ("let x = 8; x /= 2; x;", Ok(Object::I32(4))),
-        ("let x = 10; x %= 3; x;", Ok(Object::I32(1))),
+    check(&[
+        ("let x = 1; x = 2; x;", Object::I32(2)),
+        ("let x = 1; x = x + x + x; x;", Object::I32(3)),
+        ("let x = 1; x += 1; x;", Object::I32(2)),
+        ("let x = 4; x -= 1; x;", Object::I32(3)),
+        ("let x = 2; x *= 3; x;", Object::I32(6)),
+        ("let x = 8; x /= 2; x;", Object::I32(4)),
+        ("let x = 10; x %= 3; x;", Object::I32(1)),
         (
             "let x = [1, 2]; x[0] = 3; x;",
-            Ok(Object::List {
+            Object::List {
                 data: vec![Object::I32(3), Object::I32(2)],
                 t: I32,
-            }),
+            },
         ),
         (
             "let x = [1, 2]; x[0] += 6 / 2; x;",
-            Ok(Object::List {
+            Object::List {
                 data: vec![Object::I32(4), Object::I32(2)],
                 t: I32,
-            }),
+            },
         ),
         (
             "let x = [[1, 2], [3, 4]]; x[0][1] = 6; x;",
-            Ok(Object::List {
+            Object::List {
                 data: vec![
                     Object::List {
                         data: vec![Object::I32(1), Object::I32(6)],
@@ -288,11 +281,11 @@ fn test_eval_assign() {
                     },
                 ],
                 t: Type::List(Box::new(I32)),
-            }),
+            },
         ),
         (
             "let x = [[1, 2], [3, 4]]; x[0][1] += 3 * 2; x;",
-            Ok(Object::List {
+            Object::List {
                 data: vec![
                     Object::List {
                         data: vec![Object::I32(1), Object::I32(8)],
@@ -304,11 +297,11 @@ fn test_eval_assign() {
                     },
                 ],
                 t: Type::List(Box::new(I32)),
-            }),
+            },
         ),
         (
             "let x = [[[1], [2]], [[3], [4]]]; x[0][1][0] = 6; x;",
-            Ok(Object::List {
+            Object::List {
                 data: vec![
                     Object::List {
                         data: vec![
@@ -338,13 +331,9 @@ fn test_eval_assign() {
                     },
                 ],
                 t: Type::List(Box::new(Type::List(Box::new(I32)))),
-            }),
+            },
         ),
-    ];
-
-    for (expr, expected) in tests {
-        assert_eq!(expected, Evaluator::default().eval(expr));
-    }
+    ]);
 }
 
 #[test]
@@ -366,9 +355,7 @@ fn test_eval_assign_invalid() {
 
 #[test]
 fn test_eval_function() {
-    let mut evaluator = Evaluator::default();
-
-    let tests = vec![(
+    check(&[(
         r#"fn add(x: i32, y: i32) -> i32 {
             if x > y {
                 return x - y;
@@ -376,7 +363,7 @@ fn test_eval_function() {
                 return x + y;
             }
         }"#,
-        Ok(Object::Fn {
+        Object::Fn {
             name: String::from("add"),
             args: vec![Param::new("x", I32), Param::new("y", I32)],
             body: vec![Stmt::Expr(Expr::If {
@@ -402,50 +389,34 @@ fn test_eval_function() {
                 span: ((2, 1), (6, 1)),
             })],
             ret_t: I32,
-        }),
-    )];
-
-    for (expr, expected) in tests {
-        assert_eq!(expected, evaluator.eval(expr));
-    }
+        },
+    )]);
 }
 
 #[test]
 fn test_eval_builtins() {
-    let mut evaluator = Evaluator::default();
-
-    let tests = vec![
-        (r#"print("asdf")"#, Ok(Object::Void)),
-        (r#"println("asdf")"#, Ok(Object::Void)),
-        (r#"dbg("asdf")"#, Ok(Object::Void)),
-    ];
-
-    for (expr, expected) in tests {
-        assert_eq!(expected, evaluator.eval(expr));
-    }
+    check(&[
+        (r#"print("asdf")"#, Object::Void),
+        (r#"println("asdf")"#, Object::Void),
+        (r#"dbg("asdf")"#, Object::Void),
+    ]);
 }
 
 #[test]
 fn test_eval_builtins_invalid() {
-    let mut evaluator = Evaluator::default();
-
-    let tests = vec![
+    check_invalid(&[
         r#"print()"#,
         r#"print(x, y)"#,
         r#"println()"#,
         r#"println(x, y, z)"#,
         r#"dbg()"#,
         r#"dbg(1, 2, 3)"#,
-    ];
-
-    for input in tests {
-        assert_matches!(evaluator.eval(input), Err(_));
-    }
+    ]);
 }
 
 #[test]
 fn test_eval_lists() {
-    let tests = vec![
+    check(&[
         (
             "[]",
             Object::List {
@@ -539,28 +510,17 @@ fn test_eval_lists() {
                 t: I32,
             },
         ),
-    ];
+    ]);
+}
 
-    for (expr, expected) in tests {
-        match Evaluator::default().eval(expr) {
-            Ok(actual) => {
-                if expected != actual {
-                    panic!(
-                        "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
-                        expr, expected, actual
-                    );
-                }
-            }
-            Err(e) => {
-                panic!("input:\n{}\nexpected:\n{}\nerror:\n{:?}", expr, expected, e);
-            }
-        }
-    }
+#[test]
+fn test_eval_lists_invalid() {
+    check_invalid(&["[f()]", "[print()]"]);
 }
 
 #[test]
 fn test_eval_maps() {
-    let tests = vec![
+    check(&[
         (
             "{}",
             Object::Map {
@@ -617,40 +577,12 @@ fn test_eval_maps() {
                 t: (Type::Str, I32),
             },
         ),
-    ];
-
-    for (expr, expected) in tests {
-        match Evaluator::default().eval(expr) {
-            Ok(actual) => {
-                if expected != actual {
-                    panic!(
-                        "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
-                        expr, expected, actual
-                    );
-                }
-            }
-            Err(e) => {
-                panic!("input:\n{}\nexpected:\n{}\nerror:\n{:?}", expr, expected, e);
-            }
-        }
-    }
-}
-
-#[test]
-fn test_eval_lists_invalid() {
-    let tests = vec!["[f()]", "[print()]"];
-
-    for input in tests {
-        let actual = Evaluator::default().eval(input);
-        if !matches!(actual, Err(_)) {
-            panic!("input:\n{}\nexpected error, actual:\n{:?}", input, actual);
-        }
-    }
+    ]);
 }
 
 #[test]
 fn test_eval_iter() {
-    let tests = vec![
+    check(&[
         (
             r#"
             let x = 0;
@@ -692,24 +624,62 @@ fn test_eval_iter() {
             "#,
             Object::I32(6),
         ),
-    ];
+    ]);
+}
 
-    for (expr, expected) in tests {
-        let mut evaluator = Evaluator::default();
-        if let Ok(actual) = evaluator.eval(expr) {
-            if expected != actual {
-                panic!(
-                    "input:\n{}\nexpected:\n{:?}\nactual:\n{:?}",
-                    expr, expected, actual
-                );
+#[test]
+fn test_eval_structs() {
+    check(&[
+        (
+            r#"
+            struct Foo {
+                x: i32;
             }
-        } else {
-            panic!(
-                "failed to evaluate input:\n{}\nerrors:\n{:?}",
-                expr, evaluator.parser.errors
-            );
-        }
-    }
+            let foo = Foo { x: 1 };
+            foo.x
+            "#,
+            Object::I32(1),
+        ),
+        (
+            r#"
+            struct Foo {
+                x: i32;
+                y: str = "bar";
+            }
+            let foo = Foo { x: 1 };
+            foo.y
+            "#,
+            Object::Str(String::from("bar")),
+        ),
+    ]);
+}
+
+#[test]
+fn test_eval_structs_invalid() {
+    check_invalid(&[
+        r#"
+            struct Foo {
+                x: i32;
+                y: str;
+            }
+            Foo { x: 1 }
+        "#,
+        r#"
+            struct Foo {
+                x: i32;
+                y: str;
+            }
+            Foo { x: 1, y: 2 }
+        "#,
+        r#"
+            struct Foo {
+                x: i32;
+                y: str = "bar";
+            }
+            let foo = Foo { x: 1 };
+            foo.z
+        "#,
+    ]);
 }
 
 #[bench]

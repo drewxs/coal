@@ -16,6 +16,7 @@ use crate::{
 pub use builtins::Def;
 pub use env::Env;
 pub use error::{RuntimeError, RuntimeErrorKind};
+use object::StructObj;
 pub use object::{Object, FALSE, TRUE};
 
 #[derive(Clone, Debug)]
@@ -341,6 +342,7 @@ impl Evaluator<'_> {
                 span,
                 ..
             } => self.eval_method_call(lhs, name, args, span),
+            Expr::AttrAccess { lhs, name, .. } => self.eval_attr_access(lhs, name),
         }
     }
 
@@ -672,10 +674,10 @@ impl Evaluator<'_> {
                     }
                 }
 
-                let obj = Object::Struct {
+                let obj = Object::Struct(StructObj {
                     name: s.name.clone(),
                     attrs: obj_attrs,
-                };
+                });
                 self.env
                     .borrow_mut()
                     .set_in_store(s.name.clone(), obj.clone());
@@ -882,6 +884,14 @@ impl Evaluator<'_> {
         }
 
         self.eval_expr(lhs)?.call(name, &args, span)
+    }
+
+    fn eval_attr_access(&mut self, lhs: &Expr, name: &str) -> Option<Object> {
+        if let Object::Struct(s) = &self.eval_expr(lhs)? {
+            s.get(name).cloned()
+        } else {
+            None
+        }
     }
 }
 

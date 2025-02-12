@@ -1,3 +1,5 @@
+mod r#struct;
+
 use std::{
     cmp::Ordering,
     collections::HashMap,
@@ -5,6 +7,8 @@ use std::{
     hash::{DefaultHasher, Hash, Hasher},
     ops::{Add, Div, Mul, Rem, Sub},
 };
+
+pub use r#struct::StructObj;
 
 use crate::{
     indent, Expr, Literal, Param, ParserError, Span, Stmt, StructDecl, Type, F32, F64, I128, I32,
@@ -45,10 +49,7 @@ pub enum Object {
         ret_t: Type,
     },
     StructDecl(StructDecl),
-    Struct {
-        name: String,
-        attrs: Vec<(String, Object)>,
-    },
+    Struct(StructObj),
     Builtin(Builtin),
     Return(Box<Object>),
     Type(Type),
@@ -523,13 +524,10 @@ impl Hash for Object {
                     f.hash(state);
                 }
             }
-            Object::Struct {
-                name,
-                attrs: struct_state,
-            } => {
+            Object::Struct(StructObj { name, attrs }) => {
                 name.hash(state);
-                struct_state.len().hash(state);
-                for (k, v) in struct_state {
+                attrs.len().hash(state);
+                for (k, v) in attrs {
                     k.hash(state);
                     v.hash(state);
                 }
@@ -722,12 +720,12 @@ impl fmt::Display for Object {
             Object::Fn { .. } => write!(f, "<fn_{}>", self.calculate_hash()),
             Object::Closure { .. } => write!(f, "<closure_{}>", self.calculate_hash()),
             Object::StructDecl { .. } => write!(f, "<struct_{}>", self.calculate_hash()),
-            Object::Struct { name, attrs: state } => {
+            Object::Struct(StructObj { name, attrs }) => {
                 write!(f, "{name} {{")?;
-                match state.len() {
+                match attrs.len() {
                     0 => {}
                     1 | 2 => {
-                        let v = state
+                        let v = attrs
                             .iter()
                             .map(|(k, v)| format!("{k}: {v}"))
                             .collect::<Vec<String>>()
@@ -736,7 +734,7 @@ impl fmt::Display for Object {
                     }
                     _ => {
                         writeln!(f)?;
-                        for (k, v) in state {
+                        for (k, v) in attrs {
                             writeln!(f, "{}{k}: {v},", base_indent)?;
                         }
                     }

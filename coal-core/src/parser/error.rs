@@ -35,6 +35,7 @@ pub enum ParserErrorKind {
     MissingElseClause,
     UnhashableMapKey(Type),
     InvalidStructAttr(String),
+    AttrMissing(String),
 }
 
 impl fmt::Display for ParserErrorKind {
@@ -78,6 +79,9 @@ impl fmt::Display for ParserErrorKind {
             }
             ParserErrorKind::InvalidStructAttr(name) => {
                 write!(f, "invalid struct attribute: `{name}`")
+            }
+            ParserErrorKind::AttrMissing(name) => {
+                write!(f, "missing required attribute: `{name}`")
             }
         }
     }

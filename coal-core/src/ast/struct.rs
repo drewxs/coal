@@ -18,6 +18,13 @@ impl Struct {
         }
     }
 
+    pub fn get(&self, key: &str) -> Option<&Expr> {
+        self.state
+            .iter()
+            .find(|(attr, _)| attr == key)
+            .map(|(_, v)| v)
+    }
+
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
         let base_indent = indent(indent_level);
         let inner_indent = indent(indent_level + 1);

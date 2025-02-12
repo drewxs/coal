@@ -1650,3 +1650,48 @@ fn test_parse_struct_exprs() {
         ),
     ]);
 }
+
+#[test]
+fn test_parse_struct_attrs() {
+    check(&[
+        (
+            r#"
+            struct Foo {
+                x: i32;
+            }
+            let foo = Foo { x: 1 };
+            foo.x
+            "#,
+            Stmt::Expr(Expr::AttrAccess {
+                lhs: Box::new(Expr::Ident(
+                    Ident::from("foo"),
+                    Type::Struct(String::from("Foo"), vec![(String::from("x"), I32)]),
+                    ((5, 1), (5, 3)),
+                )),
+                name: String::from("x"),
+                t: I32,
+                span: ((5, 1), (5, 5)),
+            }),
+        ),
+        (
+            r#"
+            struct Foo {
+                x: i32;
+                y: str = "bar";
+            }
+            let foo = Foo { x: 1 };
+            foo.y
+            "#,
+            Stmt::Expr(Expr::AttrAccess {
+                lhs: Box::new(Expr::Ident(
+                    Ident::from("foo"),
+                    Type::Struct(String::from("Foo"), vec![(String::from("x"), I32)]),
+                    ((6, 1), (6, 3)),
+                )),
+                name: String::from("y"),
+                t: Type::Str,
+                span: ((6, 1), (6, 5)),
+            }),
+        ),
+    ]);
+}

@@ -51,6 +51,12 @@ pub enum Expr {
         ret_t: Type,
         span: Span,
     },
+    AttrAccess {
+        lhs: Box<Expr>,
+        name: String,
+        t: Type,
+        span: Span,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -76,6 +82,7 @@ impl Expr {
             Expr::Struct(_, span) => *span,
             Expr::Call { span, .. } => *span,
             Expr::MethodCall { span, .. } => *span,
+            Expr::AttrAccess { span, .. } => *span,
         }
     }
 
@@ -306,6 +313,9 @@ impl Expr {
                     }
                 }
                 write!(f, ")")
+            }
+            Expr::AttrAccess { lhs, name, .. } => {
+                write!(f, "{lhs}.{name}")
             }
         }
     }

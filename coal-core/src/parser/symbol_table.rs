@@ -37,7 +37,7 @@ impl SymbolTable {
     }
 
     pub fn get_ret_t(&self, key: &str) -> Option<Type> {
-        self.get(&format!("__{}__", key))
+        self.get(&format!("__{key}__"))
     }
 
     pub fn set(&mut self, key: String, value: Type) {
@@ -45,7 +45,7 @@ impl SymbolTable {
     }
 
     pub fn set_ret_t(&mut self, key: String, value: Type) {
-        self.set(format!("__{}__", key), value);
+        self.set(format!("__{key}__"), value);
     }
 }
 
