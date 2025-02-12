@@ -1108,7 +1108,7 @@ impl Parser {
 
             dt
         } else {
-            self.infer_ret_t(&body)
+            Type::from(&body)
         };
 
         self.symbol_table
@@ -1147,7 +1147,7 @@ impl Parser {
         let (_, end) = self.curr_tok.span;
         self.check_unreachable(&body);
 
-        let ret_t = self.infer_ret_t(&body);
+        let ret_t = Type::from(&body);
 
         Some(Expr::Closure {
             args,
@@ -1311,28 +1311,6 @@ impl Parser {
                 }
             }
         }
-    }
-
-    fn infer_ret_t(&mut self, body: &[Stmt]) -> Type {
-        let mut ret_t = Type::Void;
-
-        for stmt in body {
-            match stmt {
-                Stmt::Return(expr) => {
-                    if let Ok(t) = Type::try_from(expr) {
-                        ret_t = t;
-                    }
-                }
-                Stmt::Expr(expr) if matches!(expr, Expr::If { .. }) => {
-                    if let Ok(t) = Type::try_from(expr) {
-                        ret_t = t;
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        ret_t
     }
 }
 

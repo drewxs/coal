@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{Object, TokenKind};
 
-use super::{Expr, Func, Literal, Prefix, Struct, StructDecl};
+use super::{Expr, Func, Literal, Prefix, Stmt, Struct, StructDecl};
 
 #[derive(Clone, Debug, Hash, PartialEq, Default)]
 pub enum Type {
@@ -219,6 +219,30 @@ impl From<&Literal> for Type {
             Literal::Map(m) => Type::Map(Box::new(m.t.to_owned())),
             Literal::Nil => Type::Nil,
         }
+    }
+}
+
+impl From<&Vec<Stmt>> for Type {
+    fn from(stmts: &Vec<Stmt>) -> Self {
+        let mut ret_t = Type::Void;
+
+        for stmt in stmts {
+            match stmt {
+                Stmt::Return(expr) => {
+                    if let Ok(t) = Type::try_from(expr) {
+                        ret_t = t;
+                    }
+                }
+                Stmt::Expr(expr) if matches!(expr, Expr::If { .. }) => {
+                    if let Ok(t) = Type::try_from(expr) {
+                        ret_t = t;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        ret_t
     }
 }
 
