@@ -121,15 +121,19 @@ impl Type {
             Type::List(t) => self.list_sig(method, t),
             Type::Map(t) => self.map_sig(method, t),
             Type::Struct(_, attrs) => self.struct_sig(method, attrs),
+            _ => self.global_sig(method),
+        }
+    }
+
+    fn global_sig(&self, method: &str) -> Option<MethodSignature> {
+        match method {
+            "to_s" => Some(MethodSignature::new(&[], Type::Str)),
             _ => None,
         }
     }
 
     fn num_sig(&self, method: &str) -> Option<MethodSignature> {
-        match method {
-            "to_s" => Some(MethodSignature::new(&[], Type::Str)),
-            _ => None,
-        }
+        self.global_sig(method)
     }
 
     fn str_sig(&self, method: &str) -> Option<MethodSignature> {

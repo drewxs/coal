@@ -71,17 +71,20 @@ impl Object {
             return Some(e);
         }
 
+        if name == "to_s" {
+            return Some(Object::Str(self.to_string()));
+        }
+
         match self {
-            Object::U32(_)
-            | Object::U64(_)
-            | Object::I32(_)
-            | Object::I64(_)
-            | Object::I128(_)
-            | Object::F32(_)
-            | Object::F64(_) => match name {
-                "to_s" => Some(Object::Str(self.to_string())),
-                _ => None,
-            },
+            // Object::U32(_)
+            // | Object::U64(_)
+            // | Object::I32(_)
+            // | Object::I64(_)
+            // | Object::I128(_)
+            // | Object::F32(_)
+            // | Object::F64(_) => match name {
+            //     _ => None,
+            // },
             Object::Str(s) => match name {
                 "len" => Some(Object::U64(s.len() as u64)),
                 "split" => {
