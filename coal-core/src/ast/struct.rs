@@ -77,9 +77,11 @@ impl StructDecl {
         if !attrs.is_empty() && !funcs.is_empty() {
             writeln!(f)?;
         }
-        for func in funcs {
+        for (i, func) in funcs.iter().enumerate() {
             func.fmt_with_indent(f, indent_level + 1)?;
-            writeln!(f)?
+            if i < funcs.len() - 1 {
+                writeln!(f)?;
+            }
         }
         writeln!(f, "{}}}", base_indent)
     }
