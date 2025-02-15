@@ -20,7 +20,7 @@ pub fn eval_with(evaluator: &mut Evaluator, input: &str, print: bool) {
                 println!("{}", clean_input(line));
                 println!(
                     "\x1b[31m{}\x1b[0m",
-                    " ".repeat(c1 - 1) + &"^".repeat(c2 - c1 + 1),
+                    " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
                 );
                 println!("{e}");
             } else {
@@ -28,7 +28,7 @@ pub fn eval_with(evaluator: &mut Evaluator, input: &str, print: bool) {
                 println!("{}", clean_input(input));
                 println!(
                     "\x1b[31m{}\x1b[0m",
-                    " ".repeat(c1 - 1) + &"^".repeat(c2 - c1 + 1),
+                    " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
                 );
                 println!("{}\n", e.kind);
             }

@@ -18,7 +18,7 @@ pub fn lint(input: &str) {
             println!("{}", clean_input(line));
             println!(
                 "\x1b[31m{}\x1b[0m",
-                " ".repeat(c1 - 1) + &"^".repeat(c2 - c1 + 1),
+                " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
             );
             println!("\x1b[31merror\x1b[0m: {}", e);
         } else {
@@ -26,7 +26,7 @@ pub fn lint(input: &str) {
             println!("{}", clean_input(input));
             println!(
                 "\x1b[31m{}\x1b[0m",
-                " ".repeat(c1 - 1) + &"^".repeat(c2 - c1 + 1),
+                " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
             );
             println!("\x1b[31merror\x1b[0m: {}", e.kind);
         }
@@ -41,7 +41,7 @@ pub fn lint(input: &str) {
             println!("{}", clean_input(line));
             println!(
                 "\x1b[33m{}\x1b[0m",
-                " ".repeat(c1 - 1) + &"^".repeat(c2 - c1 + 1),
+                " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
             );
             println!("\x1b[33mwarning\x1b[0m: {}", w);
         } else {
@@ -49,7 +49,7 @@ pub fn lint(input: &str) {
             println!("{}", clean_input(input));
             println!(
                 "\x1b[33m{}\x1b[0m",
-                " ".repeat(c1 - 1) + &"^".repeat(c2 - c1 + 1),
+                " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
             );
             println!("\x1b[33mwarning\x1b[0m: {}", w.kind);
         }
