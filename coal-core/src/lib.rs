@@ -1,5 +1,6 @@
 #![feature(test)]
 #![feature(assert_matches)]
+#![feature(let_chains)]
 
 extern crate test;
 

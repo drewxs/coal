@@ -298,28 +298,25 @@ impl Parser {
                 }
             }
             _ => {
-                if let Ok(inf_t) = inf_t {
-                    if inf_t.is_defined() {
-                        if let Some(dt) = &declared_t {
-                            let decl_tx = dt.extract();
-                            let inf_tx = inf_t.extract();
+                if let Some(inf_t) = inf_t
+                    && inf_t.is_defined()
+                {
+                    if let Some(dt) = &declared_t {
+                        let decl_tx = dt.extract();
+                        let inf_tx = inf_t.extract();
 
-                            if !decl_tx.is_numeric() || !inf_tx.is_numeric() {
-                                if inf_tx.is_composite() {
-                                    declared_t = Some(dt.clone());
-                                } else {
-                                    expr = expr.cast(dt);
-                                    declared_t = Some(inf_tx.clone());
-                                }
-                            } else if decl_tx.is_numeric()
-                                && inf_tx.is_numeric()
-                                && decl_tx != inf_tx
-                            {
-                                expr = expr.cast(decl_tx);
+                        if !decl_tx.is_numeric() || !inf_tx.is_numeric() {
+                            if inf_tx.is_composite() {
+                                declared_t = Some(dt.clone());
+                            } else {
+                                expr = expr.cast(dt);
+                                declared_t = Some(inf_tx.clone());
                             }
-                        } else {
-                            declared_t = Some(inf_t);
+                        } else if decl_tx.is_numeric() && inf_tx.is_numeric() && decl_tx != inf_tx {
+                            expr = expr.cast(decl_tx);
                         }
+                    } else {
+                        declared_t = Some(inf_t);
                     }
                 }
             }
