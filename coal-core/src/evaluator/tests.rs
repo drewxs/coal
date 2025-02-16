@@ -1,7 +1,5 @@
 use std::{assert_matches::assert_matches, collections::HashMap};
 
-use test::Bencher;
-
 use crate::{Expr, Ident, Infix, Param, Stmt, Type, F64, I32, U64};
 
 use super::{Evaluator, Object, FALSE, TRUE};
@@ -680,14 +678,4 @@ fn test_eval_structs_invalid() {
             foo.z
         "#,
     ]);
-}
-
-#[bench]
-fn bench_eval_math(b: &mut Bencher) {
-    let mut evaluator = Evaluator::default();
-
-    let test =
-        "(((9876 * 5432) / 123 + (8765 % 34) * (4321 / 2)) * 1987) % 567 + (3456 * 7890) / 234";
-
-    b.iter(|| evaluator.eval(test))
 }
