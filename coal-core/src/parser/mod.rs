@@ -298,7 +298,7 @@ impl Parser {
                 }
             }
             _ => {
-                if let Some(inf_t) = inf_t
+                if let Ok(inf_t) = inf_t
                     && inf_t.is_defined()
                 {
                     if let Some(dt) = &declared_t {
@@ -447,7 +447,8 @@ impl Parser {
         let mut funcs = vec![];
         while !matches!(self.curr_tok.kind, TokenKind::Rbrace | TokenKind::EOF) {
             funcs.push(self.parse_fn()?);
-            self.advance();
+            self.consume(TokenKind::Rbrace);
+            self.consume_newlines();
         }
 
         let s = StructDecl {
@@ -470,7 +471,7 @@ impl Parser {
             TokenKind::Ident(name) => {
                 let ident_t = self.symbol_table.borrow().get(name);
                 match ident_t {
-                    Some(Type::StructDecl(name, attrs)) => self.parse_struct_expr(&name, &attrs),
+                    Some(Type::StructDecl(name, attrs, _)) => self.parse_struct_expr(&name, &attrs),
                     t => Some(Expr::Ident(
                         Ident::from(name.as_str()),
                         t.unwrap_or_default(),
@@ -883,7 +884,12 @@ impl Parser {
             args = self.parse_expr_list(TokenKind::Rparen)?;
         }
 
-        let lhs_t = Type::try_from(&lhs).unwrap_or_default();
+        let mut lhs_t = Type::try_from(&lhs).unwrap_or_default();
+        if let Type::Struct(name, _) = &lhs_t {
+            if let Some(t) = self.symbol_table.borrow().get(name) {
+                lhs_t = t.clone();
+            }
+        }
 
         if let Some(method) = lhs_t.sig(&method_name) {
             if args.len() != method.args_t.len() {
@@ -918,7 +924,7 @@ impl Parser {
     fn parse_attr_access(&mut self, lhs: Expr) -> Option<Expr> {
         if let Expr::Ident(s, Type::Struct(struct_name, _), _) = &lhs {
             if let TokenKind::Ident(attr_name) = &self.curr_tok.kind {
-                if let Some(Type::StructDecl(_, attrs)) =
+                if let Some(Type::StructDecl(_, attrs, _)) =
                     self.symbol_table.borrow().get(struct_name)
                 {
                     let t = match attrs

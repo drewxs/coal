@@ -122,14 +122,12 @@ impl Evaluator<'_> {
     }
 
     fn eval_let_stmt(&mut self, ident: &Ident, expr: &Expr) -> Option<Object> {
-        let Ident(name) = ident;
-
         let val = self.eval_expr(expr)?;
         if let Object::Error { .. } = val {
             return Some(val);
         }
 
-        self.env.borrow_mut().set_in_scope(name.to_owned(), val);
+        self.env.borrow_mut().set_in_scope(ident.name(), val);
 
         None
     }
@@ -162,7 +160,7 @@ impl Evaluator<'_> {
             Some(value) => value,
             None => {
                 return Some(Object::Error(RuntimeError::new(
-                    RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
+                    RuntimeErrorKind::IdentifierNotFound(name),
                     lhs.span(),
                 )))
             }
@@ -217,8 +215,8 @@ impl Evaluator<'_> {
                             }
 
                             self.env
-                                .borrow_mut()
-                                .set_in_scope(name.to_owned(), Object::List { data, t });
+                                .borrow()
+                                .set_in_scope(name, Object::List { data, t });
 
                             return None;
                         }
@@ -243,8 +241,8 @@ impl Evaluator<'_> {
                     if let Some(i) = self.eval_expr(idx) {
                         data.insert(i, val);
                         self.env
-                            .borrow_mut()
-                            .set_in_scope(name.to_owned(), Object::Map { data, t });
+                            .borrow()
+                            .set_in_scope(name, Object::Map { data, t });
                     } else {
                         return None;
                     }
@@ -256,9 +254,7 @@ impl Evaluator<'_> {
                     None => val,
                 };
 
-                self.env
-                    .borrow_mut()
-                    .set_in_scope(name.to_owned(), updated_val);
+                self.env.borrow().set_in_scope(name, updated_val);
             }
         }
 
@@ -629,7 +625,7 @@ impl Evaluator<'_> {
             ret_t: ret_t.to_owned(),
         };
         self.env
-            .borrow_mut()
+            .borrow()
             .set_in_scope(name.to_owned(), func.to_owned());
 
         Some(func)
@@ -650,7 +646,8 @@ impl Evaluator<'_> {
 
     fn eval_struct_expr(&mut self, s: &Struct, span: &Span) -> Option<Object> {
         let decl = self.env.borrow().get(&s.name);
-        let mut obj_attrs = vec![];
+        let mut attrs = vec![];
+        let mut funcs = vec![];
 
         match decl {
             Some(Object::StructDecl(decl)) => {
@@ -659,10 +656,11 @@ impl Evaluator<'_> {
                     if let Object::Error { .. } = v {
                         return Some(v);
                     }
-                    obj_attrs.push((k.clone(), v));
+                    attrs.push((k.clone(), v));
                 }
+
                 for (param, default_val) in &decl.attrs {
-                    if obj_attrs.iter().any(|(k, _)| k == &param.name) {
+                    if attrs.iter().any(|(k, _)| k == &param.name) {
                         continue;
                     }
                     if let Some(v) = default_val {
@@ -670,13 +668,18 @@ impl Evaluator<'_> {
                         if let Object::Error { .. } = v {
                             return Some(v);
                         }
-                        obj_attrs.push((param.name.clone(), v));
+                        attrs.push((param.name.clone(), v));
                     }
+                }
+
+                for f in &decl.funcs {
+                    funcs.push((f.name.clone(), Object::from(f)));
                 }
 
                 let obj = Object::Struct(StructObj {
                     name: s.name.clone(),
-                    attrs: obj_attrs,
+                    attrs,
+                    funcs,
                 });
                 self.env
                     .borrow_mut()
@@ -696,10 +699,10 @@ impl Evaluator<'_> {
             args.iter().filter_map(|arg| self.eval_expr(arg)).collect();
         let resolved_fn = self.eval_expr(func)?;
 
-        if let Object::Fn { name, .. } = &resolved_fn {
-            if name == "main" {
-                return None;
-            }
+        if let Object::Fn { name, .. } = &resolved_fn
+            && name == "main"
+        {
+            return None;
         }
 
         self.eval_call_obj(&resolved_fn, &resolved_args, span)
@@ -717,12 +720,12 @@ impl Evaluator<'_> {
                 )));
             }
 
-            let mut enclosed_env = Env::from(Rc::clone(&self.env));
-            for (var, value) in args.iter().zip(argsc.iter()) {
-                if Type::from(value) == var.t {
-                    enclosed_env.set_in_store(var.name.to_owned(), value.to_owned());
-                } else if let Some(casted) = value.cast(&var.t) {
-                    enclosed_env.set_in_store(var.name.to_owned(), casted);
+            let enclosed_env = Env::from(Rc::clone(&self.env));
+            for (param, value) in args.iter().zip(argsc.iter()) {
+                if Type::from(value) == param.t {
+                    enclosed_env.set_in_store(param.name.clone(), value.to_owned());
+                } else if let Some(casted) = value.cast(&param.t) {
+                    enclosed_env.set_in_store(param.name.clone(), casted);
                 } else {
                     let expected_t = self.vars_str(args);
                     let resolved_t = self.objects_str(argsc);
@@ -768,13 +771,13 @@ impl Evaluator<'_> {
                 )));
             }
 
-            let mut enclosed_env = Env::from(Rc::clone(&self.env));
+            let enclosed_env = Env::from(Rc::clone(&self.env));
             for (var, value) in fn_args.iter().zip(resolved_args.iter()) {
                 let t = Type::from(value);
                 if matches!(var.t, Type::Any) || matches!(t, Type::Any) || t == var.t {
-                    enclosed_env.set_in_store(var.name.to_owned(), value.to_owned());
+                    enclosed_env.set_in_store(var.name.clone(), value.to_owned());
                 } else if let Some(casted) = value.cast(&var.t) {
-                    enclosed_env.set_in_store(var.name.to_owned(), casted);
+                    enclosed_env.set_in_store(var.name.clone(), casted);
                 } else {
                     let expected_t = self.vars_str(&fn_args);
                     let resolved_t = self.objects_str(&resolved_args);
@@ -822,7 +825,7 @@ impl Evaluator<'_> {
         args: &[Expr],
         span: &Span,
     ) -> Option<Object> {
-        let var = lhs.to_string();
+        let mut var = lhs.to_string();
         let args = args
             .iter()
             .map(|expr| {
@@ -834,56 +837,95 @@ impl Evaluator<'_> {
             })
             .collect::<Vec<Object>>();
 
-        {
-            let env = Rc::clone(&self.env);
-            let mut env_ref = env.borrow_mut();
-
-            if let Some(obj) = env_ref.store.get_mut(&var) {
-                match obj {
-                    Object::List { .. } => match name {
-                        "map" => {
-                            if !matches!(args[0], Object::Closure { .. }) {
-                                return Some(Object::Error(RuntimeError::new(
-                                    RuntimeErrorKind::InvalidArguments(
-                                        String::from("function"),
-                                        args.iter()
-                                            .map(|arg| Type::from(arg).to_string())
-                                            .collect::<Vec<_>>()
-                                            .join(", "),
-                                    ),
-                                    *span,
-                                )));
-                            }
-
-                            let mut new_data = vec![];
-
-                            if let Object::List { data, .. } = obj {
-                                for item in data {
-                                    let new_item =
-                                        self.eval_call_obj(&args[0], &[item.clone()], span)?;
-                                    new_data.push(new_item);
-                                }
-                            }
-
-                            return Some(Object::List {
-                                data: new_data,
-                                t: Type::List(Box::new(Type::Unknown)),
-                            });
-                        }
-                        _ => return obj.call(name, &args, span),
-                    },
-                    _ => return obj.call(name, &args, span),
-                }
-            }
-
-            if let Some(outer_rc) = &env_ref.outer {
-                if let Some(obj) = outer_rc.borrow_mut().store.get_mut(&var) {
-                    return obj.call(name, &args, span);
-                }
-            }
+        if let Expr::Ident(_, Type::Struct(name, _), _) = &lhs {
+            var = name.to_owned();
         }
 
-        self.eval_expr(lhs)?.call(name, &args, span)
+        let mut obj = self.env.borrow().get(&var);
+        match obj {
+            Some(Object::List { ref data, .. }) => match name {
+                "map" => {
+                    if !args[0].is_fn() {
+                        return Some(Object::Error(RuntimeError::new(
+                            RuntimeErrorKind::InvalidArguments(
+                                String::from("function"),
+                                args[0].to_string(),
+                            ),
+                            *span,
+                        )));
+                    }
+
+                    Some(Object::List {
+                        data: data
+                            .iter()
+                            .filter_map(|item| self.eval_call_obj(&args[0], &[item.clone()], span))
+                            .collect(),
+                        t: Type::List(Box::new(Type::Unknown)),
+                    })
+                }
+                _ => {
+                    let res = obj.as_mut().unwrap().call(name, &args, span);
+                    self.env.borrow().set_in_scope(var, obj.unwrap());
+                    res
+                }
+            },
+            Some(Object::Struct(s)) => self.eval_struct_method_call(&s, name, &args, span),
+            Some(mut obj) => {
+                let res = obj.call(name, &args, span);
+                self.env.borrow_mut().set_in_scope(var, obj);
+                res
+            }
+            None => self.eval_expr(lhs)?.call(name, &args, span),
+        }
+    }
+
+    fn eval_struct_method_call(
+        &mut self,
+        s: &StructObj,
+        name: &str,
+        argsc: &[Object],
+        span: &Span,
+    ) -> Option<Object> {
+        if let Some((_, Object::Fn { args, body, .. })) = s.funcs.iter().find(|(n, _)| n == name) {
+            let expected_arity = args.len();
+            let actual_arity = argsc.len();
+
+            if expected_arity != actual_arity {
+                return Some(Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::InvalidArgumentsLength(expected_arity, actual_arity),
+                    *span,
+                )));
+            }
+
+            let enclosed_env = Env::from(Rc::clone(&self.env));
+            for (param, value) in args.iter().zip(argsc.iter()) {
+                if Type::from(value) == param.t {
+                    enclosed_env.set_in_store(param.name.clone(), value.to_owned());
+                } else if let Some(casted) = value.cast(&param.t) {
+                    enclosed_env.set_in_store(param.name.clone(), casted);
+                } else {
+                    let expected_t = self.vars_str(args);
+                    let resolved_t = self.objects_str(argsc);
+
+                    return Some(Object::Error(RuntimeError::new(
+                        RuntimeErrorKind::InvalidArguments(expected_t, resolved_t),
+                        *span,
+                    )));
+                }
+            }
+
+            let mut res = self.eval_stmts_in_scope(body, Rc::new(RefCell::new(enclosed_env)));
+            if let Some(Object::Return(val)) = res {
+                res = Some(*val);
+            }
+
+            res
+        } else {
+            Some(Object::Error(RuntimeError::new(
+                RuntimeErrorKind::MethodNotFound(name.to_owned()),
+                *span,
+            )))
+        }
     }
 
     fn eval_attr_access(&mut self, lhs: &Expr, name: &str) -> Option<Object> {

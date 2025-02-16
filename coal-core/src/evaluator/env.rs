@@ -8,41 +8,43 @@ use super::Object;
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Env {
-    pub store: HashMap<String, Object>,
+    pub store: RefCell<HashMap<String, Object>>,
     pub outer: Option<Rc<RefCell<Env>>>,
 }
 
 impl Env {
     pub fn new(store: HashMap<String, Object>, outer: Rc<RefCell<Env>>) -> Self {
         Env {
-            store,
+            store: RefCell::new(store),
             outer: Some(outer),
         }
     }
 
     pub fn has(&self, key: &str) -> bool {
-        self.store.contains_key(key)
-            || self
-                .outer
-                .as_ref()
-                .and_then(|outer| outer.borrow().get(key))
-                .is_some()
+        if self.store.borrow().contains_key(key) {
+            return true;
+        }
+        if let Some(outer) = &self.outer {
+            return outer.borrow().has(key);
+        }
+        false
     }
 
     pub fn get(&self, key: &str) -> Option<Object> {
-        self.store.get(key).cloned().or_else(|| {
-            self.outer
-                .as_ref()
-                .and_then(|outer| outer.borrow().get(key))
-        })
+        if let Some(val) = self.store.borrow().get(key).cloned() {
+            return Some(val);
+        }
+        self.outer
+            .as_ref()
+            .and_then(|outer| outer.borrow().get(key))
     }
 
-    pub fn set_in_store(&mut self, key: String, value: Object) {
-        self.store.insert(key, value);
+    pub fn set_in_store(&self, key: String, value: Object) {
+        self.store.borrow_mut().insert(key, value);
     }
 
-    pub fn set_in_scope(&mut self, key: String, value: Object) {
-        match self.store.entry(key.clone()) {
+    pub fn set_in_scope(&self, key: String, value: Object) {
+        match self.store.borrow_mut().entry(key.clone()) {
             Entry::Occupied(mut entry) => {
                 entry.insert(value);
             }
@@ -62,7 +64,7 @@ impl Env {
 impl From<Rc<RefCell<Env>>> for Env {
     fn from(outer: Rc<RefCell<Env>>) -> Self {
         Self {
-            store: HashMap::new(),
+            store: RefCell::new(HashMap::new()),
             outer: Some(outer),
         }
     }

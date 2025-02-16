@@ -649,6 +649,33 @@ fn test_eval_structs() {
             "#,
             Object::Str(String::from("bar")),
         ),
+        (
+            r#"
+            struct Foo {
+                fn hello() -> str {
+                    return "hello";
+                }
+            }
+            let foo = Foo {};
+            return foo.hello();
+            "#,
+            Object::Str(String::from("hello")),
+        ),
+        (
+            r#"
+            struct Foo {
+                fn hello() -> str {
+                    return "hello";
+                }
+                fn world() -> str {
+                    return "world";
+                }
+            }
+            let foo = Foo {};
+            return foo.hello() + " " + foo.world();
+            "#,
+            Object::Str(String::from("hello world")),
+        ),
     ]);
 }
 

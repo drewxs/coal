@@ -11,8 +11,8 @@ use std::{
 pub use r#struct::StructObj;
 
 use crate::{
-    indent, Expr, Literal, Param, ParserError, Span, Stmt, StructDecl, Type, F32, F64, I128, I32,
-    I64, U32, U64,
+    indent, Expr, Func, Literal, Param, ParserError, Span, Stmt, StructDecl, Type, F32, F64, I128,
+    I32, I64, U32, U64,
 };
 
 use super::{Builtin, RuntimeError, RuntimeErrorKind};
@@ -64,6 +64,10 @@ pub const FALSE: Object = Object::Bool(false);
 impl Object {
     pub fn is_truthy(&self) -> bool {
         !matches!(self, Object::Bool(false) | Object::Nil)
+    }
+
+    pub fn is_fn(&self) -> bool {
+        matches!(self, Object::Fn { .. } | Object::Closure { .. })
     }
 
     pub fn call(&mut self, name: &str, args: &[Object], span: &Span) -> Option<Object> {
@@ -465,6 +469,17 @@ impl From<&Expr> for Object {
     }
 }
 
+impl From<&Func> for Object {
+    fn from(value: &Func) -> Self {
+        Object::Fn {
+            name: value.name.clone(),
+            args: value.args.clone(),
+            body: value.body.clone(),
+            ret_t: value.ret_t.clone(),
+        }
+    }
+}
+
 impl From<&StructDecl> for Object {
     fn from(sd: &StructDecl) -> Self {
         Object::StructDecl(sd.clone())
@@ -527,10 +542,10 @@ impl Hash for Object {
                     f.hash(state);
                 }
             }
-            Object::Struct(StructObj { name, attrs }) => {
+            Object::Struct(StructObj { name, attrs, funcs }) => {
                 name.hash(state);
                 attrs.len().hash(state);
-                for (k, v) in attrs {
+                for (k, v) in attrs.iter().chain(funcs.iter()) {
                     k.hash(state);
                     v.hash(state);
                 }
@@ -723,7 +738,7 @@ impl fmt::Display for Object {
             Object::Fn { .. } => write!(f, "<fn_{}>", self.calculate_hash()),
             Object::Closure { .. } => write!(f, "<closure_{}>", self.calculate_hash()),
             Object::StructDecl { .. } => write!(f, "<struct_{}>", self.calculate_hash()),
-            Object::Struct(StructObj { name, attrs }) => {
+            Object::Struct(StructObj { name, attrs, .. }) => {
                 write!(f, "{name} {{")?;
                 match attrs.len() {
                     0 => {}

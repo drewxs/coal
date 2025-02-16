@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{Object, TokenKind};
+use crate::{object::StructObj, Object, TokenKind};
 
 use super::{Expr, Func, Literal, Prefix, Stmt, Struct, StructDecl};
 
@@ -14,7 +14,7 @@ pub enum Type {
     Fn(Vec<Type>, Box<Type>),
     Range,
     UserDefined(String, Box<Type>),
-    StructDecl(String, Vec<(String, Type, bool)>),
+    StructDecl(String, Vec<(String, Type, bool)>, Vec<(String, Type)>),
     Struct(String, Vec<(String, Type)>),
     Nil,
     Any,
@@ -93,7 +93,7 @@ impl Type {
             Type::List(_)
             | Type::Map(_)
             | Type::Fn(_, _)
-            | Type::StructDecl(_, _)
+            | Type::StructDecl(_, _, _)
             | Type::Struct(_, _) => true,
             _ => false,
         }
@@ -104,6 +104,15 @@ impl Type {
             Type::List(_) | Type::Map(_) => true,
             Type::UserDefined(_, t) => t.is_indexable(),
             _ => false,
+        }
+    }
+
+    pub fn name(&self) -> String {
+        match self {
+            Type::UserDefined(name, _) => name.to_owned(),
+            Type::StructDecl(name, _, _) => name.to_owned(),
+            Type::Struct(name, _) => name.to_owned(),
+            _ => self.to_string(),
         }
     }
 
@@ -121,6 +130,7 @@ impl Type {
             Type::List(t) => self.list_sig(method, t),
             Type::Map(t) => self.map_sig(method, t),
             Type::Struct(_, attrs) => self.struct_sig(method, attrs),
+            Type::StructDecl(_, _, funcs) => self.struct_sig(method, funcs),
             _ => self.global_sig(method),
         }
     }
@@ -172,8 +182,8 @@ impl Type {
     }
 
     fn struct_sig(&self, method: &str, attrs: &Vec<(String, Type)>) -> Option<MethodSignature> {
-        for (attr_name, t) in attrs {
-            if attr_name == method {
+        for (name, t) in attrs {
+            if name == method {
                 if let Type::Fn(arg, ret) = t {
                     return Some(MethodSignature::new(arg, *ret.clone()));
                 }
@@ -200,6 +210,14 @@ impl From<&Object> for Type {
             Object::Fn { args, ret_t, .. } | Object::Closure { args, ret_t, .. } => Type::Fn(
                 args.iter().map(|arg| arg.t.to_owned()).collect(),
                 Box::new(ret_t.to_owned()),
+            ),
+            Object::Struct(StructObj { name, attrs, funcs }) => Type::Struct(
+                name.to_owned(),
+                attrs
+                    .iter()
+                    .chain(funcs.iter())
+                    .map(|(k, v)| (k.to_owned(), Type::from(v)))
+                    .collect(),
             ),
             Object::Nil => Type::Nil,
             _ => Type::Void,
@@ -331,12 +349,14 @@ impl From<&StructDecl> for Type {
         let attrs = s
             .attrs
             .iter()
-            .map(|(p, v)| (p.name.clone(), p.t.clone(), v.is_some()));
+            .map(|(p, v)| (p.name.clone(), p.t.clone(), v.is_some()))
+            .collect();
         let fns = s
             .funcs
             .iter()
-            .map(|f| (f.name.clone(), Type::from(f), false));
-        Type::StructDecl(s.name.to_owned(), attrs.chain(fns).collect())
+            .map(|f| (f.name.clone(), Type::from(f)))
+            .collect();
+        Type::StructDecl(s.name.to_owned(), attrs, fns)
     }
 }
 
@@ -395,7 +415,7 @@ impl fmt::Display for Type {
             }
             Type::Range => write!(f, "range"),
             Type::UserDefined(name, _) => write!(f, "{name}"),
-            Type::StructDecl(name, _) => write!(f, "{name}"),
+            Type::StructDecl(name, _, _) => write!(f, "{name}"),
             Type::Struct(name, _) => write!(f, "{name}"),
             Type::Nil => write!(f, "nil"),
             Type::Any => write!(f, "any"),

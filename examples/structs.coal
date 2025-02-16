@@ -3,10 +3,14 @@ struct User {
     email: str;
     enabled: bool = true;
 
-    fn new(id: u64, email: str) {
-        println("hello, world!");
+    fn hello() {
+        println("Hello, World!");
     }
 
+    fn greet(name: str) {
+        print("Hello, ");
+        println(name);
+    }
 }
 
 fn main() {
@@ -16,5 +20,8 @@ fn main() {
     };
 
     println(u);
+
+    u.hello();
+    u.greet("bar");
 }
 

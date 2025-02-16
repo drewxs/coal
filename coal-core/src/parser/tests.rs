@@ -1695,3 +1695,54 @@ fn test_parse_struct_attrs() {
         ),
     ]);
 }
+
+#[test]
+fn test_parse_struct_methods() {
+    check(&[
+        (
+            r#"
+            struct Foo {
+                fn hello() {
+                    println("hello");
+                }
+            }
+            let foo = Foo {};
+            foo.hello();
+            "#,
+            Stmt::Expr(Expr::MethodCall {
+                lhs: Box::new(Expr::Ident(
+                    Ident::from("foo"),
+                    Type::Struct(String::from("Foo"), vec![]),
+                    ((7, 1), (7, 3)),
+                )),
+                name: String::from("hello"),
+                args: vec![],
+                ret_t: Type::Void,
+                span: ((7, 1), (7, 11)),
+            }),
+        ),
+        (
+            r#"
+            struct Foo {
+                x: i32 = 0;
+                fn hello() {
+                    println("hello");
+                }
+            }
+            let foo = Foo {};
+            foo.hello();
+            "#,
+            Stmt::Expr(Expr::MethodCall {
+                lhs: Box::new(Expr::Ident(
+                    Ident::from("foo"),
+                    Type::Struct(String::from("Foo"), vec![]),
+                    ((8, 1), (8, 3)),
+                )),
+                name: String::from("hello"),
+                args: vec![],
+                ret_t: Type::Void,
+                span: ((8, 1), (8, 11)),
+            }),
+        ),
+    ]);
+}
