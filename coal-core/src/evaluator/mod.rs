@@ -73,6 +73,38 @@ impl Evaluator<'_> {
         Ok(res)
     }
 
+    pub fn eval_scoped(&mut self, input: &str) -> Result<Object, Vec<RuntimeError>> {
+        self.parser = self
+            .parser
+            .new_with(input, Rc::clone(&self.parser.symbol_table));
+        let stmts = self.parser.parse();
+
+        if !self.parser.errors.is_empty() {
+            return Err(self.parser.errors.iter().map(RuntimeError::from).collect());
+        }
+
+        let mut res = None;
+        let mut errors = vec![];
+
+        for stmt in &stmts {
+            if stmt == &Stmt::Void {
+                continue;
+            }
+
+            match self.eval_stmt(stmt) {
+                Some(Object::Return(val)) => return Ok(*val),
+                Some(Object::Error(e)) => errors.push(e),
+                obj => res = obj,
+            }
+        }
+
+        if !errors.is_empty() {
+            return Err(errors);
+        }
+
+        Ok(res.unwrap_or(Object::Void))
+    }
+
     fn eval_stmt(&mut self, stmt: &Stmt) -> Option<Object> {
         match stmt {
             Stmt::Let(ident, _, expr) => self.eval_let_stmt(ident, expr),
@@ -284,7 +316,7 @@ impl Evaluator<'_> {
                 .get(name.as_str())
                 .map(|b| Object::Builtin(b.clone()))
                 .or_else(|| {
-                    self.env.borrow_mut().get(name).or_else(|| {
+                    self.env.borrow().get(name).or_else(|| {
                         Some(Object::Error(RuntimeError::new(
                             RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
                             expr.span(),
@@ -371,7 +403,7 @@ impl Evaluator<'_> {
                 in_expr = true;
                 expr.clear();
             } else if c == '}' && in_expr {
-                match self.eval(&expr) {
+                match self.eval_scoped(&expr) {
                     Ok(Object::Error(e)) => {
                         let ((l1, c1), (l2, c2)) = e.span;
                         let ((_, offset), (_, _)) = *span;
