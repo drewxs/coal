@@ -2,7 +2,7 @@
 
 A simple type-safe programming language.
 
-Examples [here](/docs/examples.md).
+Examples [here](/examples).
 
 > [!IMPORTANT]
 > WIP; No 0.1.0 release yet, check back later!
