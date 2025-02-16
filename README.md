@@ -48,6 +48,8 @@ Run `coal --help` for more information.
 
 ### Neovim
 
+Example configuration using lazy.nvim: [init.lua](/configs/nvim/init.lua)
+
 #### Filetype detection
 
 Add anywhere that's loaded by `init.lua`:

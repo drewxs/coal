@@ -23,6 +23,7 @@ require("lazy").setup({
   spec = {
     { "nvim-lua/plenary.nvim" },
     { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
+    { "stevearc/conform.nvim" },
   },
   checker = { enabled = true },
 })
@@ -33,3 +34,20 @@ require("nvim-treesitter.configs").setup({
   ensure_installed = { "rust" },
 })
 vim.treesitter.language.register("rust", "coal")
+
+require("conform").setup({
+  formatters = {
+    coal_fmt = {
+      command = "coal",
+      args = { "fmt" },
+      stdin = true,
+    },
+  },
+  formatters_by_ft = {
+    coal = { "coal_fmt" },
+  },
+  format_on_save = {
+    timeout_ms = 500,
+    lsp_fallback = true,
+  },
+})
