@@ -39,11 +39,11 @@ impl Env {
             .and_then(|outer| outer.borrow().get(key))
     }
 
-    pub fn set_in_store(&self, key: String, value: Object) {
+    pub fn set_local(&self, key: String, value: Object) {
         self.store.borrow_mut().insert(key, value);
     }
 
-    pub fn set_in_scope(&self, key: String, value: Object) {
+    pub fn set(&self, key: String, value: Object) {
         match self.store.borrow_mut().entry(key.clone()) {
             Entry::Occupied(mut entry) => {
                 entry.insert(value);
@@ -51,7 +51,7 @@ impl Env {
             Entry::Vacant(vacant_entry) => {
                 if let Some(outer_env) = &self.outer {
                     if outer_env.borrow().has(&key) {
-                        outer_env.borrow_mut().set_in_scope(key, value);
+                        outer_env.borrow().set(key, value);
                         return;
                     }
                 }
