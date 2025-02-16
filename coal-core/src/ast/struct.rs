@@ -30,6 +30,10 @@ impl Struct {
         let inner_indent = indent(indent_level + 1);
         let Struct { name, state } = self;
 
+        if state.is_empty() {
+            return write!(f, "{name} {{}}");
+        }
+
         writeln!(f, "{name} {{")?;
         for (k, v) in state {
             writeln!(f, "{}{k}: {v},", inner_indent)?;
@@ -64,6 +68,10 @@ impl StructDecl {
         let base_indent = indent(indent_level);
 
         let StructDecl { name, attrs, funcs } = self;
+
+        if attrs.is_empty() {
+            return writeln!(f, "{}struct {name} {{}}", base_indent);
+        }
 
         writeln!(f, "{}struct {name} {{", base_indent)?;
         for (attr, default) in attrs {
