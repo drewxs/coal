@@ -13,11 +13,18 @@ pub struct Env {
 }
 
 impl Env {
-    pub fn new(store: HashMap<String, Object>, outer: Rc<RefCell<Env>>) -> Self {
+    pub fn new(store: HashMap<String, Object>, outer: Rc<RefCell<Env>>) -> Env {
         Env {
             store: RefCell::new(store),
             outer: Some(outer),
         }
+    }
+
+    pub fn new_enclosed(outer: Rc<RefCell<Env>>) -> Rc<RefCell<Env>> {
+        Rc::new(RefCell::new(Env {
+            store: RefCell::new(HashMap::new()),
+            outer: Some(outer),
+        }))
     }
 
     pub fn has(&self, key: &str) -> bool {

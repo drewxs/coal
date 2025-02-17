@@ -134,9 +134,9 @@ impl Evaluator<'_> {
         None
     }
 
-    fn eval_stmts_in_scope(&mut self, stmts: &[Stmt], env: Rc<RefCell<Env>>) -> Option<Object> {
+    fn eval_stmts_in_scope(&mut self, stmts: &[Stmt], env: Env) -> Option<Object> {
         let curr_env = Rc::clone(&self.env);
-        self.env = env;
+        self.env = Rc::new(RefCell::new(env));
         let res = self.eval_stmts(stmts);
         self.env = curr_env;
 
@@ -145,7 +145,7 @@ impl Evaluator<'_> {
 
     fn eval_block(&mut self, stmts: &[Stmt]) -> Option<Object> {
         let curr_env = Rc::clone(&self.env);
-        self.env = Rc::new(RefCell::new(Env::from(Rc::clone(&self.env))));
+        self.env = Env::new_enclosed(Rc::clone(&self.env));
         let res = self.eval_stmts(stmts);
         self.env = curr_env;
 
@@ -602,10 +602,12 @@ impl Evaluator<'_> {
     }
 
     fn eval_iter_expr(&mut self, ident: &Ident, expr: &Expr, body: &[Stmt]) -> Option<Object> {
-        let curr_env = Rc::clone(&self.env);
-        self.env = Rc::new(RefCell::new(Env::from(Rc::clone(&self.env))));
+        let iterable = self.eval_expr(expr)?;
 
-        match self.eval_expr(expr)? {
+        let curr_env = Rc::clone(&self.env);
+        self.env = Env::new_enclosed(Rc::clone(&curr_env));
+
+        match iterable {
             Object::Range(start, end) => {
                 for i in start..end {
                     self.env
@@ -742,6 +744,7 @@ impl Evaluator<'_> {
             }
 
             let enclosed_env = Env::from(Rc::clone(&self.env));
+
             for (param, value) in args.iter().zip(argsc.iter()) {
                 if Type::from(value) == param.t {
                     enclosed_env.set_local(param.name.clone(), value.to_owned());
@@ -758,7 +761,7 @@ impl Evaluator<'_> {
                 }
             }
 
-            let mut res = self.eval_stmts_in_scope(body, Rc::new(RefCell::new(enclosed_env)));
+            let mut res = self.eval_stmts_in_scope(body, enclosed_env);
             if let Some(Object::Return(val)) = res {
                 res = Some(*val);
             }
@@ -792,14 +795,12 @@ impl Evaluator<'_> {
                 )));
             }
 
-            let enclosed_env = Env::from(Rc::clone(&self.env));
             for (var, value) in fn_args.iter().zip(resolved_args.iter()) {
                 let t = Type::from(value);
-                if matches!(var.t, Type::Any) || matches!(t, Type::Any) || t == var.t {
-                    enclosed_env.set_local(var.name.clone(), value.to_owned());
-                } else if let Some(casted) = value.cast(&var.t) {
-                    enclosed_env.set_local(var.name.clone(), casted);
-                } else {
+                if var.t != Type::Any
+                    && t != Type::Any
+                    && (t != var.t || value.cast(&var.t).is_none())
+                {
                     let expected_t = self.vars_str(&fn_args);
                     let resolved_t = self.objects_str(&resolved_args);
 
@@ -919,6 +920,7 @@ impl Evaluator<'_> {
             }
 
             let enclosed_env = Env::from(Rc::clone(&self.env));
+
             for (param, value) in args.iter().zip(argsc.iter()) {
                 if Type::from(value) == param.t {
                     enclosed_env.set_local(param.name.clone(), value.to_owned());
@@ -935,7 +937,7 @@ impl Evaluator<'_> {
                 }
             }
 
-            let mut res = self.eval_stmts_in_scope(body, Rc::new(RefCell::new(enclosed_env)));
+            let mut res = self.eval_stmts_in_scope(body, enclosed_env);
             if let Some(Object::Return(val)) = res {
                 res = Some(*val);
             }
