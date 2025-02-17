@@ -141,6 +141,20 @@ impl Parser {
         }
     }
 
+    fn expect(&mut self, token: TokenKind) -> Option<()> {
+        if self.curr_tok.kind == token {
+            self.advance();
+            return Some(());
+        }
+
+        self.errors.push(ParserError::new(
+            ParserErrorKind::UnexpectedToken(self.curr_tok.kind.clone(), token),
+            self.curr_tok.span,
+        ));
+
+        None
+    }
+
     fn expect_next(&mut self, token: TokenKind) -> Option<()> {
         if self.next_tok.kind == token {
             self.advance();
@@ -1115,7 +1129,9 @@ impl Parser {
 
     fn parse_fn(&mut self) -> Option<Func> {
         let (start, _) = self.curr_tok.span;
-        self.advance(); // 'fn'
+{
+        self.expect(TokenKind::Fn);
+        self.advance();
 
         let ident = Ident::try_from(&self.curr_tok.kind).ok()?;
         self.expect_next(TokenKind::Lparen)?;
