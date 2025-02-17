@@ -1,14 +1,15 @@
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
+
 use regex::Regex;
 
-lazy_static! {
-    static ref RE_SPACES: Regex = Regex::new(r"[ \t]{2,}").unwrap();
-    static ref RE_NEWLINES: Regex = Regex::new(r"\n{3,}").unwrap();
-    static ref RE_NEWLINE_SPACES: Regex = Regex::new(r"\n\ +").unwrap();
-    static ref RE_STRINGS: Regex = Regex::new(r#""[^"]*""#).unwrap();
-    static ref RE_NEWLINES_AFTER_BRACE: Regex = Regex::new(r"\{\n{2,}").unwrap();
-    static ref RE_NEWLINES_BEFORE_BRACE: Regex = Regex::new(r"\n{2,}\}").unwrap();
-}
+static RE_SPACES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[ \t]{2,}").unwrap());
+static RE_NEWLINES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\n{3,}").unwrap());
+static RE_NEWLINE_SPACES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\n\ +").unwrap());
+static RE_STRINGS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#""[^"]*""#).unwrap());
+static RE_NEWLINES_AFTER_BRACE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{\n{2,}").unwrap());
+static RE_NEWLINES_BEFORE_BRACE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\n{2,}\}").unwrap());
 
 pub fn clean_input(input: &str) -> String {
     let mut strings: Vec<String> = Vec::new();
