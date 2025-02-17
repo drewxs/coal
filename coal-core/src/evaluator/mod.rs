@@ -118,9 +118,7 @@ impl Evaluator<'_> {
     }
 
     fn eval_stmts(&mut self, stmts: &[Stmt]) -> Option<Object> {
-        let mut res = None;
-
-        for stmt in stmts {
+        for (i, stmt) in stmts.iter().enumerate() {
             if stmt == &Stmt::Void {
                 continue;
             }
@@ -128,11 +126,12 @@ impl Evaluator<'_> {
             match self.eval_stmt(stmt) {
                 Some(Object::Return(val)) => return Some(Object::Return(val)),
                 Some(Object::Error(e)) => return Some(Object::Error(e)),
-                obj => res = obj,
+                obj if i == stmts.len() - 1 => return obj,
+                _ => {}
             }
         }
 
-        res
+        None
     }
 
     fn eval_stmts_in_scope(&mut self, stmts: &[Stmt], env: Rc<RefCell<Env>>) -> Option<Object> {
