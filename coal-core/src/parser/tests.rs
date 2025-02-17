@@ -1746,3 +1746,28 @@ fn test_parse_struct_methods() {
         ),
     ]);
 }
+
+#[test]
+fn test_parse_invalid_structs() {
+    check_invalid(&[
+        r#"
+        struct Foo {
+            x: i32 = 0;
+            x: i32 = 0;
+        }
+        "#,
+        r#"
+        struct Foo {
+            x: i32 = 0;
+            fn x() {}
+        }
+        "#,
+        r#"
+        struct Foo {
+            x: i32 = 0;
+            fn foo() {}
+            fn foo() {}
+        }
+        "#,
+    ]);
+}

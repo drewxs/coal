@@ -400,12 +400,19 @@ impl Parser {
         self.advance();
         self.consume(TokenKind::Lbrace);
 
-        let mut attrs = vec![];
+        let mut attrs: Vec<(Param, Option<Expr>)> = vec![];
         while !matches!(
             self.curr_tok.kind,
             TokenKind::Rbrace | TokenKind::Fn | TokenKind::EOF
         ) {
             if let TokenKind::Ident(name) = &self.curr_tok.kind {
+                if attrs.iter().any(|(param, _)| param.name == *name) {
+                    self.errors.push(ParserError::new(
+                        ParserErrorKind::DuplicateAttr(name.to_owned()),
+                        self.curr_tok.span,
+                    ));
+                }
+
                 let name = name.clone();
                 self.advance();
                 self.consume(TokenKind::Colon);
@@ -444,9 +451,25 @@ impl Parser {
             }
         }
 
-        let mut funcs = vec![];
+        let mut funcs: Vec<Func> = vec![];
         while !matches!(self.curr_tok.kind, TokenKind::Rbrace | TokenKind::EOF) {
-            funcs.push(self.parse_fn()?);
+            let func = self.parse_fn()?;
+            if attrs.iter().any(|(param, _)| param.name == func.name) {
+                self.errors.push(ParserError::new(
+                    ParserErrorKind::DuplicateAttr(func.name.to_owned()),
+                    func.span,
+                ));
+            }
+
+            if funcs.iter().any(|f| f.name == func.name) {
+                self.errors.push(ParserError::new(
+                    ParserErrorKind::DuplicateFunc(func.name.to_owned()),
+                    func.span,
+                ));
+            }
+
+            funcs.push(func);
+
             self.consume(TokenKind::Rbrace);
             self.consume_newlines();
         }

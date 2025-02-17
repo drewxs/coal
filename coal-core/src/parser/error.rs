@@ -36,6 +36,8 @@ pub enum ParserErrorKind {
     UnhashableMapKey(Type),
     InvalidStructAttr(String),
     AttrMissing(String),
+    DuplicateAttr(String),
+    DuplicateFunc(String),
 }
 
 impl fmt::Display for ParserErrorKind {
@@ -82,6 +84,12 @@ impl fmt::Display for ParserErrorKind {
             }
             ParserErrorKind::AttrMissing(name) => {
                 write!(f, "missing required attribute: `{name}`")
+            }
+            ParserErrorKind::DuplicateAttr(name) => {
+                write!(f, "attribute already defined: `{name}`")
+            }
+            ParserErrorKind::DuplicateFunc(name) => {
+                write!(f, "function already defined: `{name}`")
             }
         }
     }
