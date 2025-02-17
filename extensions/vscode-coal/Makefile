@@ -5,9 +5,7 @@ version := $(shell node scripts/version.js)
 all: install
 
 install:
-	@npm run package
-	@code --install-extension coal-$(version).vsix
-	@rm coal-$(version).vsix
+	@./scripts/install.sh
 
 version:
 	@echo $(version)
