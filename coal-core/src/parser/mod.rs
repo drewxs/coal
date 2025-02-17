@@ -2,6 +2,7 @@
 mod tests;
 
 mod error;
+mod function_context;
 mod precedence;
 mod symbol_table;
 mod warning;
@@ -14,6 +15,7 @@ use crate::{
 };
 
 pub use error::{ParserError, ParserErrorKind};
+pub use function_context::FunctionContext;
 pub use precedence::Precedence;
 pub use symbol_table::SymbolTable;
 pub use warning::{ParserWarning, ParserWarningKind};
@@ -414,13 +416,17 @@ impl Parser {
         self.advance();
         self.consume(TokenKind::Lbrace);
 
-        let mut attrs: Vec<(Param, Option<Expr>)> = vec![];
+        let mut s = StructDecl {
+            name: ident.name(),
+            attrs: vec![],
+            funcs: vec![],
+        };
         while !matches!(
             self.curr_tok.kind,
             TokenKind::Rbrace | TokenKind::Fn | TokenKind::EOF
         ) {
             if let TokenKind::Ident(name) = &self.curr_tok.kind {
-                if attrs.iter().any(|(param, _)| param.name == *name) {
+                if s.attrs.iter().any(|(param, _)| param.name == *name) {
                     self.errors.push(ParserError::new(
                         ParserErrorKind::DuplicateAttr(name.to_owned()),
                         self.curr_tok.span,
@@ -455,7 +461,7 @@ impl Parser {
                     }
                 }
 
-                attrs.push((Param { name, t }, default_val));
+                s.attrs.push((Param { name, t }, default_val));
                 self.consume(TokenKind::Semicolon);
                 self.consume_newlines();
             } else {
@@ -465,34 +471,27 @@ impl Parser {
             }
         }
 
-        let mut funcs: Vec<Func> = vec![];
         while !matches!(self.curr_tok.kind, TokenKind::Rbrace | TokenKind::EOF) {
-            let func = self.parse_fn()?;
-            if attrs.iter().any(|(param, _)| param.name == func.name) {
+            let func = self.parse_fn(FunctionContext::Struct(&s))?;
+            if s.attrs.iter().any(|(param, _)| param.name == func.name) {
                 self.errors.push(ParserError::new(
                     ParserErrorKind::DuplicateAttr(func.name.to_owned()),
                     func.span,
                 ));
             }
 
-            if funcs.iter().any(|f| f.name == func.name) {
+            if s.funcs.iter().any(|f| f.name == func.name) {
                 self.errors.push(ParserError::new(
                     ParserErrorKind::DuplicateFunc(func.name.to_owned()),
                     func.span,
                 ));
             }
 
-            funcs.push(func);
+            s.funcs.push(func);
 
             self.consume(TokenKind::Rbrace);
             self.consume_newlines();
         }
-
-        let s = StructDecl {
-            name: ident.name(),
-            attrs,
-            funcs,
-        };
 
         self.symbol_table
             .borrow_mut()
@@ -1123,11 +1122,11 @@ impl Parser {
     }
 
     fn parse_fn_expr(&mut self) -> Option<Expr> {
-        let func = self.parse_fn()?;
+        let func = self.parse_fn(FunctionContext::Standard)?;
         Some(Expr::Fn(func))
     }
 
-    fn parse_fn(&mut self) -> Option<Func> {
+    fn parse_fn(&mut self, ctx: FunctionContext) -> Option<Func> {
         let (start, _) = self.curr_tok.span;
 
         self.expect(TokenKind::Fn);
@@ -1136,7 +1135,7 @@ impl Parser {
         self.expect_next(TokenKind::Lparen)?;
         self.advance();
 
-        let args = self.parse_decl_args()?;
+        let args = self.parse_decl_args(ctx)?;
         let args_t = args.iter().map(|arg| arg.t.clone()).collect();
         let declared_ret_t = self.parse_ret_type();
         self.advance();
@@ -1192,7 +1191,7 @@ impl Parser {
         let (start, _) = self.curr_tok.span;
         self.advance(); // '|'
 
-        let args = self.parse_decl_args()?;
+        let args = self.parse_decl_args(FunctionContext::Standard)?;
         self.consume(TokenKind::Pipe);
         self.consume(TokenKind::Lbrace);
 
@@ -1271,10 +1270,29 @@ impl Parser {
         ))
     }
 
-    fn parse_decl_args(&mut self) -> Option<Vec<Param>> {
+    fn parse_decl_args(&mut self, ctx: FunctionContext) -> Option<Vec<Param>> {
         let mut args = vec![];
 
         while let TokenKind::Ident(name) = self.curr_tok.kind.clone() {
+            if name == "self" {
+                if !args.is_empty() || ctx == FunctionContext::Standard {
+                    self.errors.push(ParserError::new(
+                        ParserErrorKind::InvalidSelfPlacement,
+                        self.curr_tok.span,
+                    ))
+                }
+                match ctx {
+                    FunctionContext::Struct(s) => args.push(Param {
+                        name: "self".into(),
+                        t: s.into(),
+                    }),
+                    FunctionContext::Standard => unreachable!(),
+                }
+                self.consume_next(TokenKind::Comma);
+                self.advance();
+                continue;
+            }
+
             self.expect_next(TokenKind::Colon)?;
             self.advance();
 

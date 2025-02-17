@@ -28,6 +28,7 @@ pub enum ParserErrorKind {
     DuplicateFunc(String),
     InvalidArgumentsLength(usize, usize),
     InvalidIndex(Type, Type),
+    InvalidSelfPlacement,
     InvalidStructAttr(String),
     MethodNotFound(Type, String),
     MissingElseClause,
@@ -60,6 +61,12 @@ impl fmt::Display for ParserErrorKind {
             }
             ParserErrorKind::InvalidIndex(t, idx_t) => {
                 write!(f, "the type `{t}` cannot be indexed by `{idx_t}`")
+            }
+            ParserErrorKind::InvalidSelfPlacement => {
+                write!(
+                    f,
+                    "`self` is reserved for the first argument in a method argument list"
+                )
             }
             ParserErrorKind::InvalidStructAttr(name) => {
                 write!(f, "invalid struct attribute: `{name}`")

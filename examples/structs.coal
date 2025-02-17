@@ -12,6 +12,10 @@ struct User {
     fn greet(name: str) {
         println("Hello, {name}");
     }
+
+    fn show_email(self) {
+        println("{self.email}");
+    }
 }
 
 fn main() {
