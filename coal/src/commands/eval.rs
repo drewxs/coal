@@ -1,3 +1,5 @@
+use terminal_size::{terminal_size, Width};
+
 use coal_core::{clean_input, Evaluator, Object};
 
 pub fn eval(input: &str) {
@@ -13,10 +15,11 @@ pub fn eval_with(evaluator: &mut Evaluator, input: &str, print: bool) {
         }
         Err(errs) => errs.iter().for_each(|e| {
             let ((l1, c1), (_, c2)) = e.span;
+            let term_w = terminal_size().map(|(w, _)| w).unwrap_or(Width(80)).0 as usize;
 
             if input.lines().count() > 1 {
                 let line = input.lines().nth(l1 - 1).unwrap();
-                println!("\x1b[31m{}\x1b[0m", "-".repeat(75));
+                println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
                 println!("{}", clean_input(line));
                 println!(
                     "\x1b[31m{}\x1b[0m",
@@ -24,7 +27,7 @@ pub fn eval_with(evaluator: &mut Evaluator, input: &str, print: bool) {
                 );
                 println!("{e}");
             } else {
-                println!("\x1b[31m{}\x1b[0m", "-".repeat(75));
+                println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
                 println!("{}", clean_input(input));
                 println!(
                     "\x1b[31m{}\x1b[0m",

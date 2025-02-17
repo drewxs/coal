@@ -1,3 +1,5 @@
+use terminal_size::{terminal_size, Width};
+
 use coal_core::{clean_input, Parser};
 
 pub fn lint(input: &str) {
@@ -9,12 +11,14 @@ pub fn lint(input: &str) {
         return;
     }
 
+    let term_w = terminal_size().map(|(w, _)| w).unwrap_or(Width(80)).0 as usize;
+
     for e in parser.errors {
         let ((l1, c1), (_, c2)) = e.span;
 
         if input.lines().count() > 1 {
             let line = input.lines().nth(l1 - 1).unwrap();
-            println!("\x1b[31m{}\x1b[0m", "-".repeat(75));
+            println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
             println!("{}", clean_input(line));
             println!(
                 "\x1b[31m{}\x1b[0m",
@@ -22,7 +26,7 @@ pub fn lint(input: &str) {
             );
             println!("\x1b[31merror\x1b[0m: {}", e);
         } else {
-            println!("\x1b[31m{}\x1b[0m", "-".repeat(75));
+            println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
             println!("{}", clean_input(input));
             println!(
                 "\x1b[31m{}\x1b[0m",
@@ -37,7 +41,7 @@ pub fn lint(input: &str) {
 
         if input.lines().count() > 1 {
             let line = input.lines().nth(l1 - 1).unwrap();
-            println!("\x1b[33m{}\x1b[0m", "-".repeat(75));
+            println!("\x1b[33m{}\x1b[0m", "-".repeat(term_w));
             println!("{}", clean_input(line));
             println!(
                 "\x1b[33m{}\x1b[0m",
@@ -45,7 +49,7 @@ pub fn lint(input: &str) {
             );
             println!("\x1b[33mwarning\x1b[0m: {}", w);
         } else {
-            println!("\x1b[33m{}\x1b[0m", "-".repeat(75));
+            println!("\x1b[33m{}\x1b[0m", "-".repeat(term_w));
             println!("{}", clean_input(input));
             println!(
                 "\x1b[33m{}\x1b[0m",
