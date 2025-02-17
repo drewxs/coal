@@ -1129,9 +1129,8 @@ impl Parser {
 
     fn parse_fn(&mut self) -> Option<Func> {
         let (start, _) = self.curr_tok.span;
-{
+
         self.expect(TokenKind::Fn);
-        self.advance();
 
         let ident = Ident::try_from(&self.curr_tok.kind).ok()?;
         self.expect_next(TokenKind::Lparen)?;
