@@ -346,10 +346,10 @@ impl Parser {
             Type::Unknown
         });
 
-        self.symbol_table.borrow_mut().set(ident.name(), t.clone());
+        self.symbol_table.borrow().set(ident.name(), t.clone());
         if let Type::Fn(_, ret_t) = &t {
             self.symbol_table
-                .borrow_mut()
+                .borrow()
                 .set_ret_t(ident.name(), *ret_t.clone());
         }
 
@@ -421,6 +421,7 @@ impl Parser {
             attrs: vec![],
             funcs: vec![],
         };
+
         while !matches!(
             self.curr_tok.kind,
             TokenKind::Rbrace | TokenKind::Fn | TokenKind::EOF
@@ -473,6 +474,7 @@ impl Parser {
 
         while !matches!(self.curr_tok.kind, TokenKind::Rbrace | TokenKind::EOF) {
             let func = self.parse_fn(FunctionContext::Struct(&s))?;
+
             if s.attrs.iter().any(|(param, _)| param.name == func.name) {
                 self.errors.push(ParserError::new(
                     ParserErrorKind::DuplicateAttr(func.name.to_owned()),
@@ -493,9 +495,7 @@ impl Parser {
             self.consume_newlines();
         }
 
-        self.symbol_table
-            .borrow_mut()
-            .set(ident.name(), Type::from(&s));
+        self.symbol_table.borrow().set(ident.name(), Type::from(&s));
 
         Some(Stmt::StructDecl(s, (start, self.curr_tok.span.1)))
     }
@@ -1109,7 +1109,7 @@ impl Parser {
             .map(|t| t.extract().to_owned())
             .unwrap_or_default();
 
-        let mut st = SymbolTable::from(Rc::clone(&self.symbol_table));
+        let st = SymbolTable::from(Rc::clone(&self.symbol_table));
         st.set(ident.name(), iter_t);
         let body = self.parse_block_in_scope(Rc::new(RefCell::new(st)));
 
@@ -1141,7 +1141,7 @@ impl Parser {
         self.advance();
         self.consume(TokenKind::Lbrace);
 
-        let mut st = SymbolTable::from(Rc::clone(&self.symbol_table));
+        let st = SymbolTable::from(Rc::clone(&self.symbol_table));
         for arg in args.iter() {
             st.set(arg.name.clone(), arg.t.clone());
             if let Type::Fn(_, t) = &arg.t {
@@ -1172,10 +1172,10 @@ impl Parser {
         };
 
         self.symbol_table
-            .borrow_mut()
+            .borrow()
             .set_ret_t(ident.name(), ret_t.clone());
         self.symbol_table
-            .borrow_mut()
+            .borrow()
             .set(ident.name(), Type::Fn(args_t, Box::new(ret_t.clone())));
 
         Some(Func {
@@ -1195,7 +1195,7 @@ impl Parser {
         self.consume(TokenKind::Pipe);
         self.consume(TokenKind::Lbrace);
 
-        let mut st = SymbolTable::from(Rc::clone(&self.symbol_table));
+        let st = SymbolTable::from(Rc::clone(&self.symbol_table));
         for arg in args.iter() {
             st.set(arg.name.clone(), arg.t.clone());
             if let Type::Fn(_, t) = &arg.t {

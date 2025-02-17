@@ -6,7 +6,7 @@ use crate::{builtins, Type};
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTable {
     pub scope: String,
-    pub store: HashMap<String, Type>,
+    pub store: RefCell<HashMap<String, Type>>,
     pub outer: Option<Rc<RefCell<SymbolTable>>>,
 }
 
@@ -14,13 +14,13 @@ impl SymbolTable {
     pub fn new(store: HashMap<String, Type>, outer: Rc<RefCell<SymbolTable>>) -> Self {
         SymbolTable {
             scope: String::from("global"),
-            store,
+            store: RefCell::new(store),
             outer: Some(outer),
         }
     }
 
     pub fn has(&self, key: &str) -> bool {
-        self.store.contains_key(key)
+        self.store.borrow().contains_key(key)
             || self
                 .outer
                 .as_ref()
@@ -29,7 +29,7 @@ impl SymbolTable {
     }
 
     pub fn get(&self, key: &str) -> Option<Type> {
-        self.store.get(key).cloned().or_else(|| {
+        self.store.borrow().get(key).cloned().or_else(|| {
             self.outer
                 .as_ref()
                 .and_then(|outer| outer.borrow().get(key))
@@ -40,11 +40,11 @@ impl SymbolTable {
         self.get(&format!("__{key}__"))
     }
 
-    pub fn set(&mut self, key: String, value: Type) {
-        self.store.insert(key, value);
+    pub fn set(&self, key: String, value: Type) {
+        self.store.borrow_mut().insert(key, value);
     }
 
-    pub fn set_ret_t(&mut self, key: String, value: Type) {
+    pub fn set_ret_t(&self, key: String, value: Type) {
         self.set(format!("__{key}__"), value);
     }
 }
@@ -53,7 +53,7 @@ impl Default for SymbolTable {
     fn default() -> Self {
         SymbolTable {
             scope: String::from("global"),
-            store: builtins::types(),
+            store: RefCell::new(builtins::types()),
             outer: None,
         }
     }
@@ -64,7 +64,7 @@ impl From<Rc<RefCell<SymbolTable>>> for SymbolTable {
         let SymbolTable { scope, .. } = outer.borrow().clone();
         Self {
             scope,
-            store: builtins::types(),
+            store: RefCell::new(builtins::types()),
             outer: Some(outer),
         }
     }
