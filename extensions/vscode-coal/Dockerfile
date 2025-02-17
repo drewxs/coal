@@ -5,5 +5,3 @@ COPY . .
 
 RUN npm install
 RUN npm run package
-
-CMD ["ls", "/output"]
