@@ -1,7 +1,10 @@
 .vscode/**
 .vscode-test/**
-output
+output/**
+scripts/**
+src/**
 .gitignore
 .dockerignore
 Dockerfile
 Makefile
+tsconfig.json
