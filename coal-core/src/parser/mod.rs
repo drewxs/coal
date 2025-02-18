@@ -671,26 +671,17 @@ impl Parser {
         let idx_t = Type::try_from(&idx).ok()?;
 
         match lhs_t {
-            Type::List(_) => {
-                if !idx_t.is_int() {
-                    self.errors.push(ParserError::new(
-                        ParserErrorKind::InvalidIndex(lhs_t, idx_t),
-                        idx.span(),
-                    ));
-                }
+            Type::List(_) if !idx_t.is_int() => {
+                self.errors.push(ParserError::new(
+                    ParserErrorKind::InvalidIndex(lhs_t, idx_t),
+                    idx.span(),
+                ));
             }
-            Type::Map(_) => {
-                if !idx_t.is_hashable() {
-                    self.errors.push(ParserError::new(
-                        ParserErrorKind::InvalidIndex(lhs_t, idx_t),
-                        idx.span(),
-                    ));
-                } else if lhs_t.extract() != &idx_t {
-                    self.errors.push(ParserError::new(
-                        ParserErrorKind::InvalidIndex(lhs_t.clone(), idx_t),
-                        idx.span(),
-                    ));
-                }
+            Type::Map(ref t) if !idx_t.is_hashable() || t.0 != idx_t => {
+                self.errors.push(ParserError::new(
+                    ParserErrorKind::InvalidIndex(lhs_t, idx_t),
+                    idx.span(),
+                ));
             }
             _ => {}
         }
