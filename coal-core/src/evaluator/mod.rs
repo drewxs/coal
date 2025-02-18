@@ -165,10 +165,10 @@ impl Evaluator<'_> {
 
     fn eval_assign_stmt(&mut self, lhs: &Expr, rhs: &Expr, op: Option<&Infix>) -> Option<Object> {
         // Create list of indices for nested indexing
-        let (name, indices) = match lhs {
-            Expr::Ident(ident, _, _) => (ident.name(), vec![]),
+        let (name, indices, attrs) = match lhs {
+            Expr::Ident(ident, _, _) => (ident.name(), vec![], vec![]),
             Expr::Index(expr, idx, _) => {
-                let mut indices = Vec::new();
+                let mut indices = vec![];
                 indices.push(*idx.clone());
 
                 let mut curr_expr = expr.clone();
@@ -178,7 +178,23 @@ impl Evaluator<'_> {
                 }
 
                 if let Expr::Ident(ident, _, _) = curr_expr.as_ref() {
-                    (ident.name(), indices.into_iter().rev().collect())
+                    (ident.name(), indices.into_iter().rev().collect(), vec![])
+                } else {
+                    unreachable!()
+                }
+            }
+            Expr::AttrAccess { lhs, name, .. } => {
+                let mut attrs = vec![];
+                attrs.push(name.clone());
+
+                let mut curr_expr = lhs.clone();
+                while let Expr::AttrAccess { lhs, name, .. } = curr_expr.as_ref() {
+                    attrs.push(name.clone());
+                    curr_expr = lhs.clone();
+                }
+
+                if let Expr::Ident(ident, _, _) = curr_expr.as_ref() {
+                    (ident.name(), vec![], attrs)
                 } else {
                     unreachable!()
                 }
@@ -211,14 +227,13 @@ impl Evaluator<'_> {
             }
         }
 
-        if let Object::Fn { .. } = curr {
-            return Some(Object::Error(RuntimeError::new(
-                RuntimeErrorKind::ReassignmentToFunction,
-                rhs.span(),
-            )));
-        }
-
         match curr {
+            Object::Fn { .. } => {
+                return Some(Object::Error(RuntimeError::new(
+                    RuntimeErrorKind::ReassignmentToFunction,
+                    rhs.span(),
+                )));
+            }
             Object::List { mut data, t } => {
                 let mut target = &mut data;
 
@@ -273,6 +288,46 @@ impl Evaluator<'_> {
                     } else {
                         return None;
                     }
+                }
+            }
+            Object::Struct(mut s) => {
+                let mut target = s.attrs.clone();
+
+                // Nested attr access (e.g. foo.bar.baz)
+                for (i, attr) in attrs.iter().enumerate() {
+                    if let Some(idx) = target.iter().position(|(k, _)| k == attr) {
+                        // Final attr, assign value
+                        if i == attrs.len() - 1 {
+                            if let Some(op) = op {
+                                target[idx].1 = self.eval_infix_objects(
+                                    op,
+                                    target[idx].1.clone(),
+                                    val,
+                                    &lhs.span(),
+                                )?;
+                            } else {
+                                s.set(attr, val.clone());
+                            }
+
+                            self.env
+                                .borrow()
+                                .set(name.clone(), Object::Struct(s.clone()));
+
+                            return None;
+                        }
+
+                        if let Some(pos) = target.iter().position(|(k, _)| k == attr) {
+                            if let Object::Struct(s) = &target[pos].1 {
+                                // Drill down into the nested struct
+                                target = s.attrs.clone();
+                                continue;
+                            }
+                        }
+
+                        return None;
+                    }
+
+                    return None;
                 }
             }
             _ => {

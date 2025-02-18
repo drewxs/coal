@@ -23,4 +23,15 @@ impl StructObj {
             .find(|(attr, _)| attr == key)
             .map(|(_, v)| v)
     }
+
+    pub fn set(&mut self, key: &str, val: Object) {
+        if let Some((_, v)) = self
+            .attrs
+            .iter_mut()
+            .chain(self.funcs.iter_mut())
+            .find(|(attr, _)| attr == key)
+        {
+            *v = val;
+        }
+    }
 }

@@ -949,20 +949,16 @@ impl Parser {
     }
 
     fn parse_attr_access(&mut self, lhs: Expr) -> Option<Expr> {
-        if let Expr::Ident(s, Type::Struct(struct_name, _), _) = &lhs {
-            if let TokenKind::Ident(attr_name) = &self.curr_tok.kind {
-                if let Some(Type::StructDecl(_, attrs, _)) =
-                    self.symbol_table.borrow().get(struct_name)
-                {
-                    let t = match attrs
-                        .iter()
-                        .find(|(n, _, _)| n == attr_name)
-                        .map(|(_, t, _)| t.clone())
-                    {
-                        Some(t) => t,
+        let attr = self.curr_tok.kind.to_string();
+
+        match &lhs {
+            Expr::Ident(s, Type::Struct(sname, _), _) => {
+                if let Some(Type::StructDecl(_, attrs, _)) = self.symbol_table.borrow().get(sname) {
+                    let t = match attrs.iter().find(|(n, _, _)| *n == attr) {
+                        Some((_, t, _)) => t.clone(),
                         None => {
                             self.errors.push(ParserError::new(
-                                ParserErrorKind::InvalidStructAttr(attr_name.to_owned()),
+                                ParserErrorKind::InvalidStructAttr(attr.to_owned()),
                                 self.curr_tok.span,
                             ));
                             return None;
@@ -972,7 +968,7 @@ impl Parser {
 
                     return Some(Expr::AttrAccess {
                         lhs: Box::new(lhs),
-                        name: attr_name.to_owned(),
+                        name: attr,
                         t,
                         span,
                     });
@@ -983,6 +979,33 @@ impl Parser {
                     ));
                 }
             }
+            Expr::AttrAccess { .. } => {
+                if let Type::Struct(sname, _) = Type::try_from(&lhs).unwrap_or_default() {
+                    if let Some(Type::StructDecl(_, attrs, _)) =
+                        self.symbol_table.borrow().get(&sname)
+                    {
+                        let t = match attrs.iter().find(|(n, _, _)| *n == attr) {
+                            Some((_, t, _)) => t.clone(),
+                            None => {
+                                self.errors.push(ParserError::new(
+                                    ParserErrorKind::InvalidStructAttr(attr.to_owned()),
+                                    self.curr_tok.span,
+                                ));
+                                return None;
+                            }
+                        };
+                        let span = (lhs.span().0, self.curr_tok.span.1);
+
+                        return Some(Expr::AttrAccess {
+                            lhs: Box::new(lhs),
+                            name: attr,
+                            t,
+                            span,
+                        });
+                    }
+                }
+            }
+            _ => {}
         }
 
         None
