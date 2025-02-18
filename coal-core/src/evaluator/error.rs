@@ -1,5 +1,7 @@
 use std::fmt;
 
+use thiserror::Error;
+
 use crate::{Infix, ParserError, Span, Type};
 
 #[derive(Clone, Debug, Hash, PartialEq)]
@@ -30,65 +32,47 @@ impl fmt::Display for RuntimeError {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Error, Clone, Debug, Hash, PartialEq)]
 pub enum RuntimeErrorKind {
+    #[error("{0}")]
     Custom(String),
-    ParserError(String),
-    Mismatch(String, Type),
-    TypeMismatch(Type, Type),
-    IdentifierNotFound(String),
-    IdentifierExists(String),
-    MethodNotFound(String),
-    BadOperandTypeForUnary(char, Type),
-    UnsupportedOperation(Infix, Type, Type),
-    ReassignmentToFunction,
-    InvalidArguments(String, String),
-    InvalidArgumentsLength(usize, usize),
-    IndexOutOfBounds(usize, usize),
-    FailedToEvaluate,
-}
 
-impl fmt::Display for RuntimeErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            RuntimeErrorKind::Custom(s) => write!(f, "{s}"),
-            RuntimeErrorKind::ParserError(e) => write!(f, "[parse] {e}"),
-            RuntimeErrorKind::Mismatch(t1, t2) => {
-                write!(f, "[eval] mismatch: expected={t1}, got={t2}")
-            }
-            RuntimeErrorKind::TypeMismatch(t1, t2) => {
-                write!(f, "[eval] type mismatch: expected={t1}, got={t2}")
-            }
-            RuntimeErrorKind::IdentifierNotFound(name) => {
-                write!(f, "[eval] identifier not found: {name}")
-            }
-            RuntimeErrorKind::IdentifierExists(name) => {
-                write!(f, "[eval] identifier already exists: {name}")
-            }
-            RuntimeErrorKind::MethodNotFound(name) => {
-                write!(f, "[eval] method not found: {name}")
-            }
-            RuntimeErrorKind::BadOperandTypeForUnary(op, t) => {
-                write!(f, "[eval] bad operand type for unary {op}: {t}")
-            }
-            RuntimeErrorKind::UnsupportedOperation(op, t1, t2) => {
-                write!(f, "[eval] unsupported operation: {t1} {op} {t2}")
-            }
-            RuntimeErrorKind::ReassignmentToFunction => {
-                write!(f, "[eval] cannot assign to function")
-            }
-            RuntimeErrorKind::InvalidArguments(n1, n2) => {
-                write!(f, "[eval] invalid args: expected={n1}, got={n2}")
-            }
-            RuntimeErrorKind::InvalidArgumentsLength(n1, n2) => {
-                write!(f, "[eval] invalid # args: expected={n1}, got={n2}",)
-            }
-            RuntimeErrorKind::IndexOutOfBounds(i, len) => {
-                write!(f, "[eval] index out of bounds. len={len}, index={i}")
-            }
-            RuntimeErrorKind::FailedToEvaluate => {
-                write!(f, "[eval] failed to evaluate expression")
-            }
-        }
-    }
+    #[error("[parse] {0}")]
+    ParserError(String),
+
+    #[error("[runtime] bad operand type for unary {0}: {1}")]
+    BadOperandTypeForUnary(char, Type),
+
+    #[error("[runtime] failed to evaluate expression")]
+    FailedToEvaluate,
+
+    #[error("[runtime] identifier already exists: {0}")]
+    IdentifierExists(String),
+
+    #[error("[runtime] identifier not found: {0}")]
+    IdentifierNotFound(String),
+
+    #[error("[runtime] index out of bounds. len={0}, index={1}")]
+    IndexOutOfBounds(usize, usize),
+
+    #[error("[runtime] invalid args: expected={0}, got={1}")]
+    InvalidArguments(String, String),
+
+    #[error("[runtime] invalid # args: expected={0}, got={1}")]
+    InvalidArgumentsLength(usize, usize),
+
+    #[error("[runtime] method not found: {0}")]
+    MethodNotFound(String),
+
+    #[error("[runtime] mismatch: expected={0}, got={1}")]
+    Mismatch(String, Type),
+
+    #[error("[runtime] reassignment to function")]
+    ReassignmentToFunction,
+
+    #[error("[runtime] type mismatch: expected={0}, got={1}")]
+    TypeMismatch(Type, Type),
+
+    #[error("[runtime] unsupported operation: {0} {1} {2}")]
+    UnsupportedOperation(Infix, Type, Type),
 }

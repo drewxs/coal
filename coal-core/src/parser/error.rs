@@ -1,5 +1,7 @@
 use std::fmt;
 
+use thiserror::Error;
+
 use crate::{Span, TokenKind, Type};
 
 #[derive(Clone, Debug)]
@@ -21,83 +23,53 @@ impl fmt::Display for ParserError {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Error, Clone, Debug)]
 pub enum ParserErrorKind {
+    #[error("missing required attribute: `{0}`")]
     AttrMissing(String),
-    DuplicateAttr(String),
-    DuplicateFunc(String),
-    InvalidArgumentsLength(usize, usize),
-    InvalidIndex(Type, Type),
-    InvalidSelfPlacement,
-    InvalidStructAttr(String),
-    MethodNotFound(Type, String),
-    MissingElseClause,
-    NotFound(String),
-    NonIndexableType(Type),
-    SyntaxError(TokenKind),
-    TypeAnnotationsNeeded,
-    TypeMismatch(Type, Type),
-    UnexpectedToken(TokenKind, TokenKind),
-    UnhashableMapKey(Type),
-}
 
-impl fmt::Display for ParserErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ParserErrorKind::AttrMissing(name) => {
-                write!(f, "missing required attribute: `{name}`")
-            }
-            ParserErrorKind::DuplicateAttr(name) => {
-                write!(f, "attribute already defined: `{name}`")
-            }
-            ParserErrorKind::DuplicateFunc(name) => {
-                write!(f, "function already defined: `{name}`")
-            }
-            ParserErrorKind::InvalidArgumentsLength(n1, n2) => {
-                write!(
-                    f,
-                    "invalid number of arguments. expected: `{n1}`, got: `{n2}`"
-                )
-            }
-            ParserErrorKind::InvalidIndex(t, idx_t) => {
-                write!(f, "the type `{t}` cannot be indexed by `{idx_t}`")
-            }
-            ParserErrorKind::InvalidSelfPlacement => {
-                write!(
-                    f,
-                    "`self` is reserved for the first argument in a method argument list"
-                )
-            }
-            ParserErrorKind::InvalidStructAttr(name) => {
-                write!(f, "invalid struct attribute: `{name}`")
-            }
-            ParserErrorKind::MethodNotFound(t, name) => {
-                write!(f, "method not found: `{t}.{name}()`")
-            }
-            ParserErrorKind::MissingElseClause => {
-                write!(f, "`if` may be missing an `else` clause")
-            }
-            ParserErrorKind::NonIndexableType(t) => {
-                write!(f, "type `{t}` is not indexable")
-            }
-            ParserErrorKind::NotFound(name) => {
-                write!(f, "not found: `{name}`")
-            }
-            ParserErrorKind::SyntaxError(token) => {
-                write!(f, "syntax error: `{token}`")
-            }
-            ParserErrorKind::TypeAnnotationsNeeded => {
-                write!(f, "type annotations needed")
-            }
-            ParserErrorKind::TypeMismatch(t1, t2) => {
-                write!(f, "type mismatch. expected: `{t1}`, got: `{t2}`")
-            }
-            ParserErrorKind::UnexpectedToken(t1, t2) => {
-                write!(f, "unexpected token: `{t1}`, expected: `{t2}`")
-            }
-            ParserErrorKind::UnhashableMapKey(t) => {
-                write!(f, "map key not hashable: type `{t}`")
-            }
-        }
-    }
+    #[error("attribute already defined: `{0}`")]
+    DuplicateAttr(String),
+
+    #[error("function already defined: `{0}`")]
+    DuplicateFunc(String),
+
+    #[error("invalid number of arguments. expected: `{0}`, got: `{1}`")]
+    InvalidArgumentsLength(usize, usize),
+
+    #[error("the type `{0}` cannot be indexed by `{1}`")]
+    InvalidIndex(Type, Type),
+
+    #[error("`self` is reserved for the first argument in a method argument list")]
+    InvalidSelfPlacement,
+
+    #[error("invalid struct attribute: `{0}`")]
+    InvalidStructAttr(String),
+
+    #[error("method not found: `{0}.{1}()`")]
+    MethodNotFound(Type, String),
+
+    #[error("`if` may be missing an `else` clause")]
+    MissingElseClause,
+
+    #[error("not found: `{0}`")]
+    NotFound(String),
+
+    #[error("type `{0}` is not indexable")]
+    NonIndexableType(Type),
+
+    #[error("syntax error: `{0}`")]
+    SyntaxError(TokenKind),
+
+    #[error("type annotations needed")]
+    TypeAnnotationsNeeded,
+
+    #[error("type mismatch. expected: `{0}`, got: `{1}`")]
+    TypeMismatch(Type, Type),
+
+    #[error("unexpected token: `{0}`, expected: `{1}`")]
+    UnexpectedToken(TokenKind, TokenKind),
+
+    #[error("map key not hashable: type `{0}`")]
+    UnhashableMapKey(Type),
 }
