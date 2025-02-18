@@ -693,7 +693,7 @@ impl fmt::Display for Object {
             Object::I128(i) => write!(f, "{i}"),
             Object::F32(x) => write!(f, "{x:?}"),
             Object::F64(x) => write!(f, "{x:?}"),
-            Object::Str(s) => write!(f, "{s}"),
+            Object::Str(s) => write!(f, "\"{s}\""),
             Object::Bool(b) => write!(f, "{b}"),
             Object::Range(start, end) => write!(f, "({start}..{end})"),
             Object::List { data, .. } => match data.len() {
