@@ -1318,7 +1318,10 @@ impl Parser {
                 "Fn" => self.parse_fn_type(),
                 "list" => self.parse_list_type(),
                 "map" => self.parse_map_type(),
-                _ => Type::try_from(&self.curr_tok.kind).ok(),
+                _ => match self.symbol_table.borrow().get(s) {
+                    Some(t) if matches!(t, Type::StructDecl(_, _, _)) => t.into_struct_t(),
+                    _ => Type::try_from(&self.curr_tok.kind).ok(),
+                },
             },
             _ => None,
         }

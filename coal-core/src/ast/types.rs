@@ -123,6 +123,21 @@ impl Type {
         }
     }
 
+    pub fn into_struct_t(self) -> Option<Type> {
+        if let Type::StructDecl(name, attrs, fns) = self {
+            Some(Type::Struct(
+                name.to_owned(),
+                attrs
+                    .iter()
+                    .map(|(s, t, _)| (s.clone(), t.clone()))
+                    .chain(fns)
+                    .collect(),
+            ))
+        } else {
+            None
+        }
+    }
+
     pub fn sig(&self, method: &str) -> Option<MethodSignature> {
         match self {
             Type::Num(_) => self.num_sig(method),
