@@ -36,7 +36,9 @@ impl Struct {
 
         writeln!(f, "{name} {{")?;
         for (k, v) in state {
-            writeln!(f, "{}{k}: {v},", inner_indent)?;
+            write!(f, "{}{k}: ", inner_indent)?;
+            v.fmt_with_indent(f, indent_level + 1)?;
+            writeln!(f, ",")?;
         }
         write!(f, "{}}}", base_indent)
     }
