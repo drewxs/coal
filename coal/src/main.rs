@@ -34,8 +34,14 @@ fn main() {
                     coal::eval(&input);
                 }
             }
-            Command::Lint { input } => {
-                coal::lint(&input);
+            Command::Lint { input, path } => {
+                if let Some(path) = path {
+                    coal::lint_path(&path);
+                } else if let Some(input) = input {
+                    coal::lint(&input);
+                } else {
+                    coal::lint_stdin();
+                }
             }
             Command::Fmt {
                 input,

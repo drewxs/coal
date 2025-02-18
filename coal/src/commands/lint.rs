@@ -1,6 +1,13 @@
+use std::{
+    fs,
+    io::{self, IsTerminal, Read},
+};
+
 use terminal_size::{terminal_size, Width};
 
 use coal_core::{clean_input, Parser};
+
+use crate::path::program_files;
 
 pub fn lint(input: &str) {
     let mut parser = Parser::from(input);
@@ -58,4 +65,26 @@ pub fn lint(input: &str) {
             println!("\x1b[33mwarning\x1b[0m: {}", w.kind);
         }
     }
+}
+
+pub fn lint_path(path: &str) {
+    for entry in program_files(path) {
+        let path = entry.path().to_str().expect("invalid utf-8");
+        let input = fs::read_to_string(path).unwrap_or(String::from("failed to read file"));
+        lint(&input);
+    }
+}
+
+pub fn lint_stdin() {
+    let mut input = io::stdin();
+    if input.is_terminal() {
+        return;
+    }
+
+    let mut buf = String::new();
+    let _ = input
+        .read_to_string(&mut buf)
+        .map_err(|_| String::from("Failed to read from stdin"));
+
+    lint(&buf);
 }

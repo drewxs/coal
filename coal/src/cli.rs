@@ -44,7 +44,12 @@ pub enum Command {
 
     #[command(about = "Check for parsing errors")]
     #[command(short_flag = 'l')]
-    Lint { input: String },
+    Lint {
+        input: Option<String>,
+
+        #[arg(short = 'p', long, help = "Lint a given path")]
+        path: Option<String>,
+    },
 
     #[command(about = "Format files")]
     #[command(long_about = "Format all files in the current project or from a given path")]
