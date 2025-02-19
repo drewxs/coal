@@ -19,7 +19,7 @@ pub enum Command {
 
     #[command(about = "Compile and run programs")]
     #[command(long_about = "Compile and run the current project or a given program")]
-    #[command(short_flag = 'r')]
+    #[command(visible_alias = "r")]
     Run {
         path: Option<String>,
 
@@ -31,7 +31,7 @@ pub enum Command {
     },
 
     #[command(about = "Evaluate scripts")]
-    #[command(short_flag = 'e')]
+    #[command(visible_alias = "e")]
     Eval {
         input: String,
 
@@ -43,7 +43,6 @@ pub enum Command {
     },
 
     #[command(about = "Check for parsing errors")]
-    #[command(short_flag = 'l')]
     Lint {
         input: Option<String>,
 
@@ -53,7 +52,6 @@ pub enum Command {
 
     #[command(about = "Format files")]
     #[command(long_about = "Format all files in the current project or from a given path")]
-    #[command(short_flag = 'f')]
     Fmt {
         input: Option<String>,
 
