@@ -631,7 +631,7 @@ fn test_eval_structs() {
         (
             r#"
             struct Foo {
-                x: i32;
+                x: i32,
             }
             let foo = Foo { x: 1 };
             foo.x
@@ -641,8 +641,8 @@ fn test_eval_structs() {
         (
             r#"
             struct Foo {
-                x: i32;
-                y: str = "bar";
+                x: i32,
+                y: str = "bar",
             }
             let foo = Foo { x: 1 };
             foo.y
@@ -679,10 +679,10 @@ fn test_eval_structs() {
         (
             r#"
             struct Cat {
-                name: str;
+                name: str,
             }
             struct Person {
-                cat: Cat;
+                cat: Cat,
             }
             let p = Person { cat: Cat { name: "Ciel" } };
             p.cat.name = "Alice";
@@ -698,34 +698,36 @@ fn test_eval_structs_invalid() {
     check_invalid(&[
         r#"
             struct Foo {
-                x: i32;
-                y: str;
+                x: i32,
+                y: str,
             }
             Foo { x: 1 }
         "#,
         r#"
             struct Foo {
-                x: i32;
-                y: str;
+                x: i32,
+                y: str,
             }
             Foo { x: 1, y: 2 }
         "#,
         r#"
             struct Foo {
-                x: i32;
-                y: str = "bar";
+                x: i32,
+                y: str = "bar",
             }
             let foo = Foo { x: 1 };
             foo.z
         "#,
         r#"
         struct Cat {
-            name: str;
+            name: str,
         }
         struct Person {
-            cat: Cat;
+            cat: Cat,
         }
-        let p = Person { cat: Cat { name: "Ciel" } };
+        let p = Person {
+            cat: Cat { name: "Ciel" },
+        };
         p.cat.name = 0;
         "#,
     ]);

@@ -1462,7 +1462,7 @@ fn test_parse_struct_decls() {
         (
             r#"
             struct Foo2 {
-                x: i32;
+                x: i32,
             }
             "#,
             Stmt::StructDecl(
@@ -1483,8 +1483,8 @@ fn test_parse_struct_decls() {
         (
             r#"
             struct Foo3 {
-                x: i32 = 0;
-                y: str;
+                x: i32 = 0,
+                y: str,
             }
             "#,
             Stmt::StructDecl(
@@ -1540,8 +1540,8 @@ fn test_parse_struct_decls() {
         (
             r#"
             struct Foo5 {
-                x: i32 = 0;
-                y: str = "foo";
+                x: i32 = 0,
+                y: str = "foo",
 
                 fn f() -> str {
                     return "foo";
@@ -1593,7 +1593,7 @@ fn test_parse_struct_exprs() {
         (
             r#"
             struct Foo {
-                x: i32;
+                x: i32,
             }
             Foo { x: 1 }
             "#,
@@ -1611,7 +1611,7 @@ fn test_parse_struct_exprs() {
         (
             r#"
             struct Foo2 {
-                x: i32 = 0;
+                x: i32 = 0,
             }
             Foo2 { x: 1 }
             "#,
@@ -1629,23 +1629,20 @@ fn test_parse_struct_exprs() {
         (
             r#"
             struct Foo3 {
-                x: i32 = 0;
-                y: str;
+                x: i32 = 0,
+                y: str,
             }
-
-            Foo3 {
-                y: "foo",
-            }
+            Foo3 { y: "foo" }
             "#,
             Stmt::Expr(Expr::Struct(
                 Struct {
                     name: String::from("Foo3"),
                     state: vec![(
                         String::from("y"),
-                        Expr::Literal(Literal::Str(String::from("foo")), ((7, 4), (7, 8))),
+                        Expr::Literal(Literal::Str(String::from("foo")), ((5, 11), (5, 15))),
                     )],
                 },
-                ((6, 1), (8, 1)),
+                ((5, 1), (5, 17)),
             )),
         ),
     ]);
@@ -1657,7 +1654,7 @@ fn test_parse_struct_attrs() {
         (
             r#"
             struct Foo {
-                x: i32;
+                x: i32,
             }
             let foo = Foo { x: 1 };
             foo.x
@@ -1676,8 +1673,8 @@ fn test_parse_struct_attrs() {
         (
             r#"
             struct Foo {
-                x: i32;
-                y: str = "bar";
+                x: i32,
+                y: str = "bar",
             }
             let foo = Foo { x: 1 };
             foo.y
@@ -1724,7 +1721,7 @@ fn test_parse_struct_methods() {
         (
             r#"
             struct Foo {
-                x: i32 = 0;
+                x: i32 = 0,
                 fn hello() {
                     println("hello");
                 }
@@ -1752,19 +1749,19 @@ fn test_parse_invalid_structs() {
     check_invalid(&[
         r#"
         struct Foo {
-            x: i32 = 0;
-            x: i32 = 0;
+            x: i32 = 0,
+            x: i32 = 0,
         }
         "#,
         r#"
         struct Foo {
-            x: i32 = 0;
+            x: i32 = 0,
             fn x() {}
         }
         "#,
         r#"
         struct Foo {
-            x: i32 = 0;
+            x: i32 = 0,
             fn foo() {}
             fn foo() {}
         }

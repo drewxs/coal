@@ -463,7 +463,9 @@ impl Parser {
                 }
 
                 s.attrs.push((Param { name, t }, default_val));
-                self.consume(TokenKind::Semicolon);
+                if matches!(self.curr_tok.kind, TokenKind::Comma | TokenKind::Semicolon) {
+                    self.advance();
+                }
                 self.consume_newlines();
             } else {
                 self.syntax_error();

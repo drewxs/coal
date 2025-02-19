@@ -82,7 +82,7 @@ impl StructDecl {
                 write!(f, " = ")?;
                 val.fmt_with_indent(f, 0)?;
             }
-            writeln!(f, ";")?;
+            writeln!(f, ",")?;
         }
         if !attrs.is_empty() && !funcs.is_empty() {
             writeln!(f)?;

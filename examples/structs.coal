@@ -1,13 +1,13 @@
 struct Foo {}
 
-struct User {
-    id: u64;
-    email: str;
-    enabled: bool = true;
+struct Contact {
+    email: str,
+}
 
-    fn hello() {
-        println("Hello, World!");
-    }
+struct User {
+    id: u64,
+    contact: Contact,
+    enabled: bool = true,
 
     fn greet(name: str) {
         println("Hello, {name}");
@@ -22,13 +22,16 @@ fn main() {
     let foo: Foo = Foo {};
     let user: User = User {
         id: 1,
-        email: "foo@bar.com",
+        contact: Contact {
+            email: "foo@bar.com",
+        },
     };
+
+    user.contact.email = "baz@foobar.com";
 
     println(foo);
     println(user);
 
-    user.hello();
     user.greet("bar");
 }
 
