@@ -29,7 +29,11 @@ impl Hash for Param {
 
 impl Param {
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
-        write!(f, "{}{}: {}", indent(indent_level), self.name, self.t)
+        if self.name == "self" {
+            write!(f, "{}self", indent(indent_level))
+        } else {
+            write!(f, "{}{}: {}", indent(indent_level), self.name, self.t)
+        }
     }
 }
 
