@@ -8,11 +8,11 @@ pub struct StructObj {
 }
 
 impl StructObj {
-    pub fn new(name: &str, attrs: &[(String, Object)]) -> Self {
+    pub fn new(name: &str, attrs: &[(String, Object)], funcs: &[(String, Object)]) -> Self {
         StructObj {
             name: name.to_owned(),
             attrs: attrs.to_owned(),
-            funcs: attrs.to_owned(),
+            funcs: funcs.to_owned(),
         }
     }
 
