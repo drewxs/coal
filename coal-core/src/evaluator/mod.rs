@@ -194,7 +194,7 @@ impl Evaluator<'_> {
                 }
 
                 if let Expr::Ident(ident, _, _) = curr_expr.as_ref() {
-                    (ident.name(), vec![], attrs)
+                    (ident.name(), vec![], attrs.into_iter().rev().collect())
                 } else {
                     unreachable!()
                 }
@@ -291,44 +291,8 @@ impl Evaluator<'_> {
                 }
             }
             Object::Struct(mut s) => {
-                let mut target = s.attrs.clone();
-
-                // Nested attr access (e.g. foo.bar.baz)
-                for (i, attr) in attrs.iter().enumerate() {
-                    if let Some(idx) = target.iter().position(|(k, _)| k == attr) {
-                        // Final attr, assign value
-                        if i == attrs.len() - 1 {
-                            if let Some(op) = op {
-                                target[idx].1 = self.eval_infix_objects(
-                                    op,
-                                    target[idx].1.clone(),
-                                    val,
-                                    &lhs.span(),
-                                )?;
-                            } else {
-                                s.set(attr, val.clone());
-                            }
-
-                            self.env
-                                .borrow()
-                                .set(name.clone(), Object::Struct(s.clone()));
-
-                            return None;
-                        }
-
-                        if let Some(pos) = target.iter().position(|(k, _)| k == attr) {
-                            if let Object::Struct(s) = &target[pos].1 {
-                                // Drill down into the nested struct
-                                target = s.attrs.clone();
-                                continue;
-                            }
-                        }
-
-                        return None;
-                    }
-
-                    return None;
-                }
+                s.set(&attrs, val);
+                self.env.borrow_mut().set(name, Object::Struct(s));
             }
             _ => {
                 let updated_val = match op {

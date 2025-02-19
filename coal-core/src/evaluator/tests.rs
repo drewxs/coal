@@ -676,6 +676,20 @@ fn test_eval_structs() {
             "#,
             Object::Str(String::from("hello world")),
         ),
+        (
+            r#"
+            struct Cat {
+                name: str;
+            }
+            struct Person {
+                cat: Cat;
+            }
+            let p = Person { cat: Cat { name: "Ciel" } };
+            p.cat.name = "Alice";
+            return p.cat.name;
+            "#,
+            Object::Str(String::from("Alice")),
+        ),
     ]);
 }
 
@@ -703,6 +717,16 @@ fn test_eval_structs_invalid() {
             }
             let foo = Foo { x: 1 };
             foo.z
+        "#,
+        r#"
+        struct Cat {
+            name: str;
+        }
+        struct Person {
+            cat: Cat;
+        }
+        let p = Person { cat: Cat { name: "Ciel" } };
+        p.cat.name = 0;
         "#,
     ]);
 }

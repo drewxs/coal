@@ -24,14 +24,39 @@ impl StructObj {
             .map(|(_, v)| v)
     }
 
-    pub fn set(&mut self, key: &str, val: Object) {
-        if let Some((_, v)) = self
-            .attrs
-            .iter_mut()
-            .chain(self.funcs.iter_mut())
-            .find(|(attr, _)| attr == key)
-        {
-            *v = val;
+    pub fn set(&mut self, keys: &[String], val: Object) {
+        match keys.len() {
+            0 => {}
+            1 => {
+                if let Some((_, v)) = self
+                    .attrs
+                    .iter_mut()
+                    .chain(self.funcs.iter_mut())
+                    .find(|(attr, _)| attr == keys.first().unwrap())
+                {
+                    *v = val;
+                }
+            }
+            _ => {
+                let mut curr = self;
+                for key in keys.iter().take(keys.len() - 1) {
+                    if let Some((_, Object::Struct(ref mut next_struct))) =
+                        curr.attrs.iter_mut().find(|(k, _)| k == key)
+                    {
+                        curr = next_struct;
+                    } else {
+                        return;
+                    }
+                }
+
+                if let Some((_, obj)) = curr
+                    .attrs
+                    .iter_mut()
+                    .find(|(k, _)| k == keys.last().unwrap())
+                {
+                    *obj = val;
+                }
+            }
         }
     }
 }
