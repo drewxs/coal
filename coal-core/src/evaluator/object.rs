@@ -241,19 +241,6 @@ impl Object {
         format!("0x{:x?}", hash)
     }
 
-    pub fn int_div(self, rhs: Self) -> Option<Object> {
-        match Object::promote(&self, &rhs) {
-            (Object::U32(lhs), Object::U32(rhs)) => Some(Object::U32(lhs / rhs)),
-            (Object::U64(lhs), Object::U64(rhs)) => Some(Object::U64(lhs / rhs)),
-            (Object::I32(lhs), Object::I32(rhs)) => Some(Object::I32(lhs / rhs)),
-            (Object::I64(lhs), Object::I64(rhs)) => Some(Object::I64(lhs / rhs)),
-            (Object::I128(lhs), Object::I128(rhs)) => Some(Object::I128(lhs / rhs)),
-            (Object::F32(lhs), Object::F32(rhs)) => Some(Object::F32((lhs / rhs).floor())),
-            (Object::F64(lhs), Object::F64(rhs)) => Some(Object::F64((lhs / rhs).floor())),
-            _ => None,
-        }
-    }
-
     pub fn cast(&self, to: &Type) -> Option<Object> {
         match (self, to) {
             // u32
