@@ -61,7 +61,11 @@ impl Stmt {
             Stmt::Newline => writeln!(f),
             Stmt::Comment(comment) => write!(f, "{}{comment}", base_indent),
             Stmt::Let(ident, t, expr) => {
-                write!(f, "{}let {ident}: {t} = ", base_indent)?;
+                if let Expr::Struct(_, _) = expr {
+                    write!(f, "{}let {ident} = ", base_indent)?;
+                } else {
+                    write!(f, "{}let {ident}: {t} = ", base_indent)?;
+                }
                 expr.fmt_with_indent(f, indent_level)?;
                 writeln!(f, ";")
             }
