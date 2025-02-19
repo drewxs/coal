@@ -30,17 +30,24 @@ impl Struct {
         let inner_indent = indent(indent_level + 1);
         let Struct { name, state } = self;
 
-        if state.is_empty() {
-            return write!(f, "{name} {{}}");
+        match state.len() {
+            0 => {
+                write!(f, "{name} {{}}")
+            }
+            1 if !state[0].1.is_fn() => {
+                let (k, v) = &state[0];
+                write!(f, "{name} {{ {k}: {v} }}")
+            }
+            _ => {
+                writeln!(f, "{name} {{")?;
+                for (k, v) in state {
+                    write!(f, "{}{k}: ", inner_indent)?;
+                    v.fmt_with_indent(f, indent_level + 1)?;
+                    writeln!(f, ",")?;
+                }
+                write!(f, "{}}}", base_indent)
+            }
         }
-
-        writeln!(f, "{name} {{")?;
-        for (k, v) in state {
-            write!(f, "{}{k}: ", inner_indent)?;
-            v.fmt_with_indent(f, indent_level + 1)?;
-            writeln!(f, ",")?;
-        }
-        write!(f, "{}}}", base_indent)
     }
 }
 

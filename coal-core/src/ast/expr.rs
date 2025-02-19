@@ -98,6 +98,10 @@ impl Expr {
         }
     }
 
+    pub fn is_fn(&self) -> bool {
+        matches!(self, Expr::Fn(_) | Expr::Closure { .. })
+    }
+
     pub fn ret_t(&self, expected: &Type, last: bool) -> Result<Type, ParserError> {
         match self {
             Expr::If {
