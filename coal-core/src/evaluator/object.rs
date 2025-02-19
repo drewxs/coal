@@ -417,6 +417,13 @@ impl Object {
             _ => (lhs.clone(), rhs.clone()),
         }
     }
+
+    pub fn to_string_raw(&self) -> String {
+        match self {
+            Object::Str(s) => s.to_owned(),
+            _ => self.to_string(),
+        }
+    }
 }
 
 impl Eq for Object {}

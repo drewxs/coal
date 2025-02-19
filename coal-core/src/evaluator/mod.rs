@@ -425,7 +425,7 @@ impl Evaluator<'_> {
                         )));
                     }
                     Ok(obj) => {
-                        res.push_str(&obj.to_string());
+                        res.push_str(&obj.to_string_raw());
                     }
                     _ => {}
                 }
