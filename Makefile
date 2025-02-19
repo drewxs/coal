@@ -11,7 +11,7 @@ else
   extension :=
 endif
 
-.PHONY: help build clean run test install vsc
+.PHONY: help build clean run test docs install vsc
 
 # all: Default target, build/install binary
 all: install
@@ -36,6 +36,10 @@ run:
 # test: Run tests
 test:
 	@cargo test
+
+# docs: Generate docs
+docs:
+	@cargo doc --no-deps --document-private-items --open
 
 # install: Install the program
 install: 
