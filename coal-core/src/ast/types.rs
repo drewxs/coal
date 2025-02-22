@@ -138,6 +138,22 @@ impl Type {
         }
     }
 
+    pub fn partial_eq(&self, other: &Type) -> bool {
+        if let (Type::Struct(a_name, a_attrs), Type::Struct(b_name, b_attrs)) = (self, other) {
+            if a_name != b_name {
+                return false;
+            }
+            for (_, attr_t) in a_attrs {
+                if !matches!(attr_t, Type::Fn(_, _)) && a_name != b_name && a_attrs != b_attrs {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        self == other
+    }
+
     pub fn sig(&self, method: &str) -> Option<MethodSignature> {
         match self {
             Type::Num(_) => self.num_sig(method),
@@ -350,6 +366,22 @@ impl TryFrom<&Expr> for Type {
     }
 }
 
+fn infer_infix_type(lhs: &Expr, rhs: &Expr) -> Result<Type, Type> {
+    let lhs_t = Type::try_from(lhs)?;
+    let rhs_t = Type::try_from(rhs)?;
+
+    if let Type::Num(lhs_num) = &lhs_t {
+        if let Type::Num(rhs_num) = &rhs_t {
+            if lhs_t == I32 && rhs_t == U64 || lhs_t == U64 && rhs_t == I32 {
+                return Ok(I64);
+            }
+            return Ok(Type::Num(lhs_num.max(rhs_num).clone()));
+        }
+    }
+
+    Err(Type::Unknown)
+}
+
 impl From<&Func> for Type {
     fn from(f: &Func) -> Self {
         Type::Fn(
@@ -388,22 +420,6 @@ impl From<&Struct> for Type {
                 .collect(),
         )
     }
-}
-
-fn infer_infix_type(lhs: &Expr, rhs: &Expr) -> Result<Type, Type> {
-    let lhs_t = Type::try_from(lhs)?;
-    let rhs_t = Type::try_from(rhs)?;
-
-    if let Type::Num(lhs_num) = &lhs_t {
-        if let Type::Num(rhs_num) = &rhs_t {
-            if lhs_t == I32 && rhs_t == U64 || lhs_t == U64 && rhs_t == I32 {
-                return Ok(I64);
-            }
-            return Ok(Type::Num(lhs_num.max(rhs_num).clone()));
-        }
-    }
-
-    Err(Type::Unknown)
 }
 
 impl fmt::Display for Type {

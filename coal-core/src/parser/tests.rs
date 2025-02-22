@@ -1741,6 +1741,58 @@ fn test_parse_struct_methods() {
                 span: ((8, 1), (8, 11)),
             }),
         ),
+        (
+            r#"
+            struct Foo {
+                x: i32,
+                fn hello(name: str) {
+                    println("hello {name}");
+                }
+            }
+            let foo = Foo { x: 1 };
+            foo.hello("world");
+            "#,
+            Stmt::Expr(Expr::MethodCall {
+                lhs: Box::new(Expr::Ident(
+                    Ident::from("foo"),
+                    Type::Struct(String::from("Foo"), vec![(String::from("x"), I32)]),
+                    ((8, 1), (8, 3)),
+                )),
+                name: String::from("hello"),
+                args: vec![Expr::Literal(
+                    Literal::Str(String::from("world")),
+                    ((8, 11), (8, 17)),
+                )],
+                ret_t: Type::Void,
+                span: ((8, 1), (8, 18)),
+            }),
+        ),
+        (
+            r#"
+            struct Foo {
+                x: i32 = 0,
+                fn hello(name: str) {
+                    println("hello {name}");
+                }
+            }
+            let foo = Foo {};
+            foo.hello("world");
+            "#,
+            Stmt::Expr(Expr::MethodCall {
+                lhs: Box::new(Expr::Ident(
+                    Ident::from("foo"),
+                    Type::Struct(String::from("Foo"), vec![]),
+                    ((8, 1), (8, 3)),
+                )),
+                name: String::from("hello"),
+                args: vec![Expr::Literal(
+                    Literal::Str(String::from("world")),
+                    ((8, 11), (8, 17)),
+                )],
+                ret_t: Type::Void,
+                span: ((8, 1), (8, 18)),
+            }),
+        ),
     ]);
 }
 

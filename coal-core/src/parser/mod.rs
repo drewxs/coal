@@ -1248,7 +1248,8 @@ impl Parser {
 
                     let val = self.parse_expr(Precedence::Lowest)?.cast(expected_t);
                     let val_t = Type::try_from(&val).ok()?;
-                    if val_t != *expected_t {
+
+                    if !val_t.partial_eq(expected_t) {
                         self.errors.push(ParserError::new(
                             ParserErrorKind::TypeMismatch(expected_t.clone(), val_t),
                             val.span(),
