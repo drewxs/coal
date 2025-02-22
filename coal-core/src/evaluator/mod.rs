@@ -883,6 +883,10 @@ impl Evaluator<'_> {
         }
 
         let mut obj = self.env.borrow().get(&var);
+        if obj.is_none() {
+            obj = self.eval_expr(lhs);
+        }
+
         match obj {
             Some(Object::List { ref data, .. }) => match name {
                 "map" => {

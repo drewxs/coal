@@ -1,37 +1,30 @@
-struct Foo {}
+struct Cat {
+    name: str,
 
-struct Contact {
-    email: str,
+    fn meow() {
+        println("Meow!");
+    }
 }
 
-struct User {
-    id: u64,
-    contact: Contact,
-    enabled: bool = true,
+struct Human {
+    name: str,
+    age: u32 = 0,
+    cat: Cat,
+    is_alive: bool = true,
 
     fn greet(name: str) {
-        println("Hello, {name}");
-    }
-
-    fn show_email(self) {
-        println("{self.email}");
+        println("Hello, {name}!");
     }
 }
 
 fn main() {
-    let foo: Foo = Foo {};
-    let user: User = User {
-        id: 1,
-        contact: Contact {
-            email: "foo@bar.com",
-        },
+    let john = Human {
+        name: "John Doe",
+        age: 100,
+        cat: Cat { name: "Ciel" },
     };
 
-    user.contact.email = "baz@foobar.com";
-
-    println(foo);
-    println(user);
-
-    user.greet("bar");
+    john.greet("world");
+    john.cat.meow();
 }
 

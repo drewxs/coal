@@ -690,6 +690,22 @@ fn test_eval_structs() {
             "#,
             Object::Str(String::from("Alice")),
         ),
+        (
+            r#"
+            struct Cat {
+                name: str,
+                fn meow() -> str {
+                    return "Meow!";
+                }
+            }
+            struct Person {
+                cat: Cat,
+            }
+            let p = Person { cat: Cat { name: "Ciel" } };
+            return p.cat.meow();
+            "#,
+            Object::Str(String::from("Meow!")),
+        ),
     ]);
 }
 
