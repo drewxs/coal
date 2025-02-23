@@ -1,0 +1,13 @@
+let x: map[i32, str] = {};
+
+x[0] = "foo";
+println(x[0]);
+
+x[0] = "bar";
+println(x.get(0));
+
+x[1] = "baz";
+x.remove(0);
+
+println(x);
+
