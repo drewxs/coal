@@ -186,6 +186,20 @@ impl Object {
                         )))
                     }
                 }
+                "remove" => {
+                    let idx_t = Type::from(&args[0]);
+                    if idx_t == *kt {
+                        data.remove(&args[0]);
+                    } else if let Some(idx) = args[0].cast(kt) {
+                        data.remove(&idx);
+                    } else {
+                        return Some(Object::Error(RuntimeError::new(
+                            RuntimeErrorKind::TypeMismatch(idx_t, kt.clone()),
+                            *span,
+                        )));
+                    }
+                    None
+                }
                 _ => Some(Object::Error(RuntimeError::new(
                     RuntimeErrorKind::MethodNotFound(name.to_owned()),
                     *span,

@@ -575,6 +575,25 @@ fn test_eval_maps() {
                 t: (Type::Str, I32),
             },
         ),
+        (
+            r#"
+            let x = {1: 2};
+            x.get(1);
+            "#,
+            Object::I32(2),
+        ),
+        (
+            r#"
+            let x = {1: 2};
+            x[2] = 3;
+            x.remove(1);
+            x;
+            "#,
+            Object::Map {
+                data: HashMap::from([(Object::I32(2), Object::I32(3))]),
+                t: (I32, I32),
+            },
+        ),
     ]);
 }
 
