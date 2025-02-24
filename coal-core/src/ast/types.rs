@@ -209,6 +209,7 @@ impl Type {
         match method {
             "get" => Some(MethodSignature::new(&[kt.clone()], vt.clone())),
             "remove" => Some(MethodSignature::new(&[kt.clone()], Type::Void)),
+            "clear" => Some(MethodSignature::new(&[], Type::Void)),
             _ => None,
         }
     }

@@ -200,6 +200,10 @@ impl Object {
                     }
                     None
                 }
+                "clear" => {
+                    data.clear();
+                    None
+                }
                 _ => Some(Object::Error(RuntimeError::new(
                     RuntimeErrorKind::MethodNotFound(name.to_owned()),
                     *span,

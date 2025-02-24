@@ -594,6 +594,17 @@ fn test_eval_maps() {
                 t: (I32, I32),
             },
         ),
+        (
+            r#"
+            let x = {1: 2, 3: 4};
+            x.clear();
+            x;
+            "#,
+            Object::Map {
+                data: HashMap::new(),
+                t: (I32, I32),
+            },
+        ),
     ]);
 }
 
