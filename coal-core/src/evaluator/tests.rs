@@ -508,6 +508,17 @@ fn test_eval_lists() {
                 t: I32,
             },
         ),
+        (
+            r#"
+            let x = [1, 2, 3];
+            x.clear();
+            x;
+            "#,
+            Object::List {
+                data: vec![],
+                t: I32,
+            },
+        ),
     ]);
 }
 

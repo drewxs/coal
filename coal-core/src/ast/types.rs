@@ -201,6 +201,7 @@ impl Type {
                 &[Type::Fn(vec![t.clone()], Box::new(t.clone()))],
                 Type::List(Box::new(Type::Unknown)),
             )),
+            "clear" => Some(MethodSignature::new(&[], Type::Void)),
             _ => None,
         }
     }
