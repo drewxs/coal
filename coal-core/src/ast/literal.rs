@@ -174,47 +174,8 @@ impl Literal {
             Literal::F32(x) => write!(f, "{}{x:?}", inner_indent),
             Literal::F64(x) => write!(f, "{}{x:?}", inner_indent),
             Literal::Bool(b) => write!(f, "{}{b}", inner_indent),
-            Literal::List(l) => {
-                if let (Some(n), Some(e)) = (&l.repeat, l.data.first()) {
-                    write!(f, "{}[{e}; {n}]", inner_indent)
-                } else {
-                    match l.data.len() {
-                        0 => write!(f, "{}[]", inner_indent),
-                        1 | 2 => {
-                            let v = l
-                                .data
-                                .iter()
-                                .map(|x| x.to_string())
-                                .collect::<Vec<_>>()
-                                .join(", ");
-                            write!(f, "{}[{v}]", inner_indent)
-                        }
-                        _ => {
-                            writeln!(f, "{}[", inner_indent)?;
-                            for item in &l.data {
-                                item.fmt_inner(f, indent_level + 1)?;
-                                writeln!(f, ",")?;
-                            }
-                            write!(f, "{}]", base_indent)
-                        }
-                    }
-                }
-            }
-            Literal::Map(m) => match m.data.len() {
-                0 => write!(f, "{}{{}}", inner_indent),
-                1 => {
-                    let (k, v) = m.data.first().unwrap();
-                    write!(f, "{}{{{k}: {v}}}", inner_indent)
-                }
-                _ => {
-                    writeln!(f, "{}{{", inner_indent)?;
-                    for (k, v) in &m.data {
-                        k.fmt_inner(f, indent_level + 1)?;
-                        writeln!(f, ": {v},")?;
-                    }
-                    write!(f, "{}}}", base_indent)
-                }
-            },
+            Literal::List(l) => l.fmt_with_indent(f, indent_level, inner),
+            Literal::Map(m) => m.fmt_with_indent(f, indent_level, inner),
             Literal::Nil => write!(f, "{}nil", inner_indent),
         }
     }
