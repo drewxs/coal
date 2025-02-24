@@ -2,13 +2,13 @@ program := coal
 
 debug ?=
 ifdef debug
-  release :=
-  target := debug
-  extension := debug
+	release :=
+	target := debug
+	extension := debug
 else
-  release := --release
-  target := release
-  extension :=
+	release := --release
+	target := release
+	extension :=
 endif
 
 .PHONY: help build clean run test docs install vsc
@@ -42,7 +42,7 @@ docs:
 	@cargo doc --no-deps --document-private-items --open
 
 # install: Install the program
-install: 
+install:
 	@cargo install --path ./$(program)
 
 # vsc: Install the VSCode language extension
