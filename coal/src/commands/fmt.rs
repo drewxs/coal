@@ -190,17 +190,9 @@ println([
 ";
 
         let expected = "let l1: list[i32] = [0; 100];
-let l2: list[list[i32]] = [
-    [1, 2],
-    [3, 4],
-    [5, 6],
-];
+let l2: list[list[i32]] = [[1, 2], [3, 4], [5, 6]];
 
-println([
-    [1, 2],
-    [3, 4],
-    [5, 6],
-]);
+println([[1, 2], [3, 4], [5, 6]]);
 ";
 
         assert_eq!(expected, fmt(input));
@@ -213,20 +205,14 @@ let m: map[i32, i32] = {};
 let m2 = {1: 2};
 let m3: map[i32, i32] = { 1: 2, 3: 4, };
 
-println ({1:2,3:4});
+println ({1:2,3:4,5:6});
 ";
 
         let expected = "let m: map[i32, i32] = {};
 let m2: map[i32, i32] = {1: 2};
-let m3: map[i32, i32] = {
-    1: 2,
-    3: 4,
-};
+let m3: map[i32, i32] = {1: 2, 3: 4};
 
-println({
-    1: 2,
-    3: 4,
-});
+println({1: 2, 3: 4, 5: 6});
 ";
 
         assert_eq!(expected, fmt(input));

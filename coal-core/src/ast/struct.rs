@@ -42,7 +42,7 @@ impl Struct {
                 writeln!(f, "{name} {{")?;
                 for (k, v) in state {
                     write!(f, "{}{k}: ", inner_indent)?;
-                    v.fmt_with_indent(f, indent_level + 1)?;
+                    v.fmt_with_indent(f, indent_level + 1, true)?;
                     writeln!(f, ",")?;
                 }
                 write!(f, "{}}}", base_indent)
@@ -87,7 +87,7 @@ impl StructDecl {
             attr.fmt_with_indent(f, indent_level + 1)?;
             if let Some(val) = default {
                 write!(f, " = ")?;
-                val.fmt_with_indent(f, 0)?;
+                val.fmt_with_indent(f, 0, true)?;
             }
             writeln!(f, ",")?;
         }

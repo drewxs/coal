@@ -39,26 +39,35 @@ impl List {
 
         if let (Some(n), Some(e)) = (&self.repeat, self.data.first()) {
             write!(f, "{}[{e}; {n}]", inner_indent)
+        } else if self.data.is_empty() {
+            write!(f, "{}[]", inner_indent)
         } else {
-            match self.data.len() {
-                0 => write!(f, "{}[]", inner_indent),
-                1 | 2 => {
-                    let v = self
-                        .data
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    write!(f, "{}[{v}]", inner_indent)
+            let data_str = self
+                .data
+                .iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            let width = data_str.len() + inner_indent.len();
+
+            if width > 40 {
+                writeln!(f, "{}[", inner_indent)?;
+                let nested_indent = indent(indent_level + 1);
+                for item in &self.data {
+                    write!(f, "{}", nested_indent)?;
+                    item.fmt_with_indent(f, indent_level + 1, true)?;
+                    writeln!(f, ",")?;
                 }
-                _ => {
-                    writeln!(f, "{}[", inner_indent)?;
-                    for item in &self.data {
-                        item.fmt_inner(f, indent_level + 1)?;
-                        writeln!(f, ",")?;
+                write!(f, "{}]", base_indent)
+            } else {
+                write!(f, "{}[", inner_indent)?;
+                for (i, item) in self.data.iter().enumerate() {
+                    item.fmt_with_indent(f, indent_level + 1, true)?;
+                    if i < self.data.len() - 1 {
+                        write!(f, ", ")?;
                     }
-                    write!(f, "{}]", base_indent)
                 }
+                write!(f, "{}]", inner_indent)
             }
         }
     }

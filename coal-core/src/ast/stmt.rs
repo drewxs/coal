@@ -66,22 +66,22 @@ impl Stmt {
                 } else {
                     write!(f, "{}let {ident}: {t} = ", base_indent)?;
                 }
-                expr.fmt_with_indent(f, indent_level)?;
+                expr.fmt_with_indent(f, indent_level, true)?;
                 writeln!(f, ";")
             }
             Stmt::Assign(lhs, rhs) => {
                 write!(f, "{}{lhs} = ", base_indent)?;
-                rhs.fmt_with_indent(f, indent_level)?;
+                rhs.fmt_with_indent(f, indent_level, true)?;
                 writeln!(f, ";")
             }
             Stmt::OpAssign(op, lhs, rhs) => {
                 write!(f, "{}{lhs} {op}= ", base_indent)?;
-                rhs.fmt_with_indent(f, indent_level)?;
+                rhs.fmt_with_indent(f, indent_level, true)?;
                 writeln!(f, ";")
             }
             Stmt::Return(expr) => {
                 write!(f, "{}return ", base_indent)?;
-                expr.fmt_with_indent(f, indent_level)?;
+                expr.fmt_with_indent(f, indent_level, true)?;
                 writeln!(f, ";")
             }
             Stmt::Expr(expr) => match expr {
@@ -93,10 +93,10 @@ impl Stmt {
                 | Expr::MethodCall { .. }
                 | Expr::AttrAccess { .. } => {
                     write!(f, "{base_indent}")?;
-                    expr.fmt_with_indent(f, indent_level)?;
+                    expr.fmt_with_indent(f, indent_level, true)?;
                     writeln!(f, ";")
                 }
-                _ => expr.fmt_with_indent(f, indent_level),
+                _ => expr.fmt_with_indent(f, indent_level, true),
             },
             Stmt::StructDecl(s, _) => s.fmt_with_indent(f, indent_level),
         }

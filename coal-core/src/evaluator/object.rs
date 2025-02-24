@@ -704,27 +704,35 @@ impl fmt::Display for Object {
             Object::Str(s) => write!(f, "\"{s}\""),
             Object::Bool(b) => write!(f, "{b}"),
             Object::Range(start, end) => write!(f, "({start}..{end})"),
-            Object::List { data, .. } => match data.len() {
-                0 => write!(f, "[]"),
-                1 | 2 => {
-                    let v = data
+            Object::List { data, .. } => {
+                if data.is_empty() {
+                    write!(f, "[]")
+                } else {
+                    let data_str = data
                         .iter()
-                        .map(|x| match x {
-                            Object::Str(s) => format!("\"{s}\""),
-                            _ => x.to_string(),
-                        })
+                        .map(|e| e.to_string())
                         .collect::<Vec<_>>()
                         .join(", ");
-                    write!(f, "[{v}]")
-                }
-                _ => {
-                    writeln!(f, "[")?;
-                    for i in data {
-                        writeln!(f, "{}{i},", base_indent)?;
+                    let width = data_str.len() + base_indent.len();
+
+                    if width > 80 {
+                        writeln!(f, "[")?;
+                        for item in data {
+                            writeln!(f, "{}{item},", base_indent)?;
+                        }
+                        write!(f, "]")
+                    } else {
+                        write!(f, "[")?;
+                        for (i, item) in data.iter().enumerate() {
+                            write!(f, "{item}")?;
+                            if i < data.len() - 1 {
+                                write!(f, ", ")?;
+                            }
+                        }
+                        write!(f, "]")
                     }
-                    write!(f, "]")
                 }
-            },
+            }
             Object::Map { data, .. } => match data.len() {
                 0 => write!(f, "{{}}"),
                 1 | 2 => {

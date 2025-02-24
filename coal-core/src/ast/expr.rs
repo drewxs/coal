@@ -211,28 +211,19 @@ impl Expr {
         }
     }
 
-    pub fn fmt_inner(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
-        match self {
-            Expr::Literal(literal, _) => literal.fmt_with_indent(f, indent_level, false),
-            _ => self.fmt_with_indent(f, indent_level),
-        }
-    }
-
-    pub fn fmt_inner_start(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
-        match self {
-            Expr::Literal(literal, _) => literal.fmt_with_indent(f, indent_level, true),
-            _ => self.fmt_with_indent(f, indent_level),
-        }
-    }
-
-    pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
+    pub fn fmt_with_indent(
+        &self,
+        f: &mut fmt::Formatter,
+        indent_level: usize,
+        inner: bool,
+    ) -> fmt::Result {
         let base_indent = indent(indent_level);
 
         match self {
             Expr::Ident(ident, _, _) => write!(f, "{ident}"),
             Expr::Literal(l, _) => {
                 if l.is_composite() {
-                    l.fmt_with_indent(f, indent_level, true)
+                    l.fmt_with_indent(f, indent_level, inner)
                 } else {
                     write!(f, "{l}")
                 }
@@ -299,7 +290,7 @@ impl Expr {
             Expr::Call { name, args, .. } => {
                 write!(f, "{name}(")?;
                 for (i, arg) in args.iter().enumerate() {
-                    arg.fmt_inner_start(f, indent_level)?;
+                    arg.fmt_with_indent(f, indent_level, true)?;
                     if i < args.len() - 1 {
                         write!(f, ", ")?;
                     }
@@ -311,7 +302,7 @@ impl Expr {
             } => {
                 write!(f, "{lhs}.{name}(")?;
                 for (i, arg) in args.iter().enumerate() {
-                    arg.fmt_inner_start(f, indent_level)?;
+                    arg.fmt_with_indent(f, indent_level, true)?;
                     if i < args.len() - 1 {
                         write!(f, ", ")?;
                     }
@@ -338,6 +329,6 @@ impl TryInto<usize> for Expr {
 
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.fmt_with_indent(f, 0)
+        self.fmt_with_indent(f, 0, false)
     }
 }
