@@ -208,6 +208,7 @@ impl Type {
 
     fn map_sig(&self, method: &str, (kt, vt): &(Type, Type)) -> Option<MethodSignature> {
         match method {
+            "len" => Some(MethodSignature::new(&[], U64)),
             "get" => Some(MethodSignature::new(&[kt.clone()], vt.clone())),
             "remove" => Some(MethodSignature::new(&[kt.clone()], Type::Void)),
             "clear" => Some(MethodSignature::new(&[], Type::Void)),

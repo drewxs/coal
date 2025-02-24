@@ -177,6 +177,7 @@ impl Object {
                 ))),
             },
             Object::Map { data, t: (kt, _vt) } => match name {
+                "len" => Some(Object::U64(data.len() as u64)),
                 "get" => {
                     let idx_t = Type::from(&args[0]);
                     if idx_t == *kt {

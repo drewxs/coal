@@ -588,6 +588,13 @@ fn test_eval_maps() {
         ),
         (
             r#"
+            let x = {1: 2, 3: 4};
+            x.len();
+            "#,
+            Object::U64(2),
+        ),
+        (
+            r#"
             let x = {1: 2};
             x.get(1);
             "#,
