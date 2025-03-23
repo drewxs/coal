@@ -949,7 +949,14 @@ fn test_parse_function_expressions() {
                 name: String::from("add"),
                 args: vec![
                     Param::new("x", U32),
-                    Param::new("f", Type::Fn(vec![U32, U32], Box::new(U32))),
+                    Param::new(
+                        "f",
+                        Type::Fn {
+                            args_t: vec![U32, U32],
+                            ret_t: Box::new(U32),
+                            uses_self: false,
+                        },
+                    ),
                 ],
                 ret_t: U32,
                 body: vec![Stmt::Return(Expr::Call {
@@ -1129,10 +1136,18 @@ fn test_parse_infer_type_from_fn() {
     let input = "fn foo() -> u32 { return 0 }; let x = foo;";
     let expected = Stmt::Let(
         Ident(String::from("x")),
-        Type::Fn(vec![], Box::new(U32)),
+        Type::Fn {
+            args_t: vec![],
+            ret_t: Box::new(U32),
+            uses_self: false,
+        },
         Expr::Ident(
             Ident::from("foo"),
-            Type::Fn(vec![], Box::new(U32)),
+            Type::Fn {
+                args_t: vec![],
+                ret_t: Box::new(U32),
+                uses_self: false,
+            },
             ((1, 39), (1, 41)),
         ),
     );

@@ -11,7 +11,11 @@ pub enum Type {
     Num(Num),
     List(Box<Type>),
     Map(Box<(Type, Type)>),
-    Fn(Vec<Type>, Box<Type>),
+    Fn {
+        args_t: Vec<Type>,
+        ret_t: Box<Type>,
+        uses_self: bool,
+    },
     Range,
     UserDefined(String, Box<Type>),
     StructDecl(String, Vec<(String, Type, bool)>, Vec<(String, Type)>),
@@ -46,13 +50,15 @@ pub const F64: Type = Type::Num(Num::F64);
 pub struct MethodSignature {
     pub args_t: Vec<Type>,
     pub ret_t: Type,
+    pub uses_self: bool,
 }
 
 impl MethodSignature {
-    pub fn new(args_t: &[Type], ret_t: Type) -> Self {
+    pub fn new(args_t: &[Type], ret_t: Type, uses_self: bool) -> Self {
         MethodSignature {
             args_t: args_t.to_owned(),
             ret_t,
+            uses_self,
         }
     }
 
@@ -92,7 +98,7 @@ impl Type {
             Type::UserDefined(_, t) => t.is_composite(),
             Type::List(_)
             | Type::Map(_)
-            | Type::Fn(_, _)
+            | Type::Fn { .. }
             | Type::StructDecl(_, _, _)
             | Type::Struct(_, _) => true,
             _ => false,
@@ -144,7 +150,7 @@ impl Type {
                 return false;
             }
             for (_, attr_t) in a_attrs {
-                if !matches!(attr_t, Type::Fn(_, _)) && a_name != b_name && a_attrs != b_attrs {
+                if !matches!(attr_t, Type::Fn { .. }) && a_name != b_name && a_attrs != b_attrs {
                     return false;
                 }
             }
@@ -168,7 +174,7 @@ impl Type {
 
     fn global_sig(&self, method: &str) -> Option<MethodSignature> {
         match method {
-            "to_s" => Some(MethodSignature::new(&[], Type::Str)),
+            "to_s" => Some(MethodSignature::new(&[], Type::Str, false)),
             _ => None,
         }
     }
@@ -179,10 +185,11 @@ impl Type {
 
     fn str_sig(&self, method: &str) -> Option<MethodSignature> {
         match method {
-            "len" => Some(MethodSignature::new(&[], U64)),
+            "len" => Some(MethodSignature::new(&[], U64, false)),
             "split" => Some(MethodSignature::new(
                 &[Type::Str],
                 Type::List(Box::new(Type::Str)),
+                false,
             )),
             _ => None,
         }
@@ -190,28 +197,33 @@ impl Type {
 
     fn list_sig(&self, method: &str, t: &Type) -> Option<MethodSignature> {
         match method {
-            "len" => Some(MethodSignature::new(&[], U64)),
-            "push" => Some(MethodSignature::new(&[t.clone()], Type::Void)),
-            "pop" => Some(MethodSignature::new(&[], t.clone())),
-            "get" => Some(MethodSignature::new(&[I64], t.clone())),
-            "first" => Some(MethodSignature::new(&[], t.clone())),
-            "last" => Some(MethodSignature::new(&[], t.clone())),
-            "join" => Some(MethodSignature::new(&[Type::Str], Type::Str)),
+            "len" => Some(MethodSignature::new(&[], U64, false)),
+            "push" => Some(MethodSignature::new(&[t.clone()], Type::Void, false)),
+            "pop" => Some(MethodSignature::new(&[], t.clone(), false)),
+            "get" => Some(MethodSignature::new(&[I64], t.clone(), false)),
+            "first" => Some(MethodSignature::new(&[], t.clone(), false)),
+            "last" => Some(MethodSignature::new(&[], t.clone(), false)),
+            "join" => Some(MethodSignature::new(&[Type::Str], Type::Str, false)),
             "map" => Some(MethodSignature::new(
-                &[Type::Fn(vec![t.clone()], Box::new(t.clone()))],
+                &[Type::Fn {
+                    args_t: vec![t.clone()],
+                    ret_t: Box::new(t.clone()),
+                    uses_self: false,
+                }],
                 Type::List(Box::new(Type::Unknown)),
+                false,
             )),
-            "clear" => Some(MethodSignature::new(&[], Type::Void)),
+            "clear" => Some(MethodSignature::new(&[], Type::Void, false)),
             _ => None,
         }
     }
 
     fn map_sig(&self, method: &str, (kt, vt): &(Type, Type)) -> Option<MethodSignature> {
         match method {
-            "len" => Some(MethodSignature::new(&[], U64)),
-            "get" => Some(MethodSignature::new(&[kt.clone()], vt.clone())),
-            "remove" => Some(MethodSignature::new(&[kt.clone()], Type::Void)),
-            "clear" => Some(MethodSignature::new(&[], Type::Void)),
+            "len" => Some(MethodSignature::new(&[], U64, false)),
+            "get" => Some(MethodSignature::new(&[kt.clone()], vt.clone(), false)),
+            "remove" => Some(MethodSignature::new(&[kt.clone()], Type::Void, false)),
+            "clear" => Some(MethodSignature::new(&[], Type::Void, false)),
             _ => None,
         }
     }
@@ -219,8 +231,13 @@ impl Type {
     fn struct_sig(&self, method: &str, attrs: &Vec<(String, Type)>) -> Option<MethodSignature> {
         for (name, t) in attrs {
             if name == method {
-                if let Type::Fn(arg, ret) = t {
-                    return Some(MethodSignature::new(arg, *ret.clone()));
+                if let Type::Fn {
+                    args_t,
+                    ret_t,
+                    uses_self,
+                } = t
+                {
+                    return Some(MethodSignature::new(args_t, *ret_t.clone(), *uses_self));
                 }
             }
         }
@@ -325,11 +342,13 @@ impl TryFrom<&Expr> for Type {
                 Ok(t) | Err(t) => Err(t),
             },
             Expr::Range(_, _, _) => Ok(U64),
-            Expr::Fn(Func { args, ret_t, .. }) | Expr::Closure { args, ret_t, .. } => Ok(Type::Fn(
-                args.iter().map(|arg| arg.t.to_owned()).collect(),
-                Box::new(ret_t.to_owned()),
-            )),
-            Expr::Struct(s, _) => Ok(Type::from(s)),
+            Expr::Fn(f @ Func { .. }) => Ok(f.into()),
+            Expr::Closure { args, ret_t, .. } => Ok(Type::Fn {
+                args_t: args.iter().map(|arg| arg.t.to_owned()).collect(),
+                ret_t: Box::new(ret_t.to_owned()),
+                uses_self: false,
+            }),
+            Expr::Struct(s, _) => Ok(s.into()),
             Expr::Call { ret_t, .. } => Ok(ret_t.to_owned()),
             Expr::MethodCall { ret_t, .. } => Ok(ret_t.to_owned()),
             Expr::AttrAccess { t, .. } => Ok(t.to_owned()),
@@ -356,10 +375,11 @@ fn infer_infix_type(lhs: &Expr, rhs: &Expr) -> Result<Type, Type> {
 
 impl From<&Func> for Type {
     fn from(f: &Func) -> Self {
-        Type::Fn(
-            f.args.iter().map(|arg| arg.t.to_owned()).collect(),
-            Box::new(f.ret_t.to_owned()),
-        )
+        Type::Fn {
+            args_t: f.args.iter().map(|arg| arg.t.to_owned()).collect(),
+            ret_t: Box::new(f.ret_t.to_owned()),
+            uses_self: f.uses_self(),
+        }
     }
 }
 
@@ -408,8 +428,8 @@ impl fmt::Display for Type {
             &F64 => write!(f, "f64"),
             Type::List(t) => write!(f, "list[{t}]"),
             Type::Map(t) => write!(f, "map[{}, {}]", t.0, t.1),
-            Type::Fn(args, ret_t) => {
-                let args_str = args
+            Type::Fn { args_t, ret_t, .. } => {
+                let args_str = args_t
                     .iter()
                     .map(|arg| format!("{arg}"))
                     .collect::<Vec<String>>()

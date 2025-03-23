@@ -347,7 +347,7 @@ impl Parser {
         });
 
         self.symbol_table.borrow().set(ident.name(), t.clone());
-        if let Type::Fn(_, ret_t) = &t {
+        if let Type::Fn { ret_t, .. } = &t {
             self.symbol_table
                 .borrow()
                 .set_ret_t(ident.name(), *ret_t.clone());
@@ -921,7 +921,12 @@ impl Parser {
         }
 
         if let Some(method) = lhs_t.sig(&method_name) {
-            if args.len() != method.args_t.len() {
+            let expected_len = if method.uses_self {
+                method.args_t.len() - 1
+            } else {
+                method.args_t.len()
+            };
+            if args.len() != expected_len {
                 self.error(ParserErrorKind::InvalidArgumentsLength(
                     method.args_t.len(),
                     args.len(),
@@ -1152,7 +1157,6 @@ impl Parser {
         self.advance();
 
         let args = self.parse_decl_args(ctx)?;
-        let args_t = args.iter().map(|arg| arg.t.clone()).collect();
         let declared_ret_t = self.parse_ret_type();
         self.advance();
         self.consume(TokenKind::Lbrace);
@@ -1160,8 +1164,8 @@ impl Parser {
         let st = SymbolTable::from(Rc::clone(&self.symbol_table));
         for arg in args.iter() {
             st.set(arg.name.clone(), arg.t.clone());
-            if let Type::Fn(_, t) = &arg.t {
-                st.set_ret_t(arg.name.clone(), *t.clone());
+            if let Type::Fn { ret_t, .. } = &arg.t {
+                st.set_ret_t(arg.name.clone(), *ret_t.clone());
             }
         }
 
@@ -1190,17 +1194,18 @@ impl Parser {
         self.symbol_table
             .borrow()
             .set_ret_t(ident.name(), ret_t.clone());
-        self.symbol_table
-            .borrow()
-            .set(ident.name(), Type::Fn(args_t, Box::new(ret_t.clone())));
 
-        Some(Func {
+        let func = Func {
             name: ident.name(),
             args,
             ret_t,
             body,
             span: (start, self.curr_tok.span.1),
-        })
+        };
+
+        self.symbol_table.borrow().set(ident.name(), (&func).into());
+
+        Some(func)
     }
 
     fn parse_closure_expr(&mut self) -> Option<Expr> {
@@ -1214,8 +1219,8 @@ impl Parser {
         let st = SymbolTable::from(Rc::clone(&self.symbol_table));
         for arg in args.iter() {
             st.set(arg.name.clone(), arg.t.clone());
-            if let Type::Fn(_, t) = &arg.t {
-                st.set_ret_t(arg.name.clone(), *t.clone());
+            if let Type::Fn { ret_t, .. } = &arg.t {
+                st.set_ret_t(arg.name.clone(), *ret_t.clone());
             }
         }
 
@@ -1375,7 +1380,12 @@ impl Parser {
             _ => Type::Void,
         };
 
-        Some(Type::Fn(args, Box::new(ret_t)))
+        Some(Type::Fn {
+            args_t: args,
+            ret_t: Box::new(ret_t),
+            // There is no way to indicate a method in a function type signature.
+            uses_self: false,
+        })
     }
 
     fn parse_list_type(&mut self) -> Option<Type> {
