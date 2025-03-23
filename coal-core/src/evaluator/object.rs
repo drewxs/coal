@@ -221,42 +221,6 @@ impl Object {
         }
     }
 
-    pub fn validate_call_args(
-        &self,
-        name: &str,
-        args: &[Object],
-        span: &Span,
-    ) -> Result<(), Object> {
-        if let Some(method) = Type::from(self).sig(name) {
-            for (arg, t) in args.iter().zip(method.args_t.iter()) {
-                let arg_t = Type::from(arg);
-                if arg_t != *t {
-                    if arg.cast(t).is_some() {
-                        continue;
-                    }
-
-                    let args_t = args
-                        .iter()
-                        .map(|arg| Type::from(arg).to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ");
-
-                    return Err(Object::Error(RuntimeError::new(
-                        RuntimeErrorKind::InvalidArguments(method.args_str(), args_t),
-                        *span,
-                    )));
-                }
-            }
-
-            Ok(())
-        } else {
-            Err(Object::Error(RuntimeError::new(
-                RuntimeErrorKind::MethodNotFound(name.to_owned()),
-                *span,
-            )))
-        }
-    }
-
     pub fn calculate_hash(&self) -> String {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
