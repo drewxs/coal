@@ -1,4 +1,7 @@
-use std::fmt;
+use std::{
+    fmt,
+    ops::{Deref, DerefMut, Index, IndexMut},
+};
 
 use crate::indent;
 
@@ -80,6 +83,34 @@ impl Default for List {
             t: Type::Unknown,
             repeat: None,
         }
+    }
+}
+
+impl Deref for List {
+    type Target = Vec<Expr>;
+
+    fn deref(&self) -> &Vec<Expr> {
+        &self.data
+    }
+}
+
+impl DerefMut for List {
+    fn deref_mut(&mut self) -> &mut Vec<Expr> {
+        &mut self.data
+    }
+}
+
+impl Index<usize> for List {
+    type Output = Expr;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.data[index]
+    }
+}
+
+impl IndexMut<usize> for List {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.data[index]
     }
 }
 
