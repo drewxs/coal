@@ -17,7 +17,7 @@ use crate::{
 pub use error::{ParserError, ParserErrorKind};
 pub use function_context::FunctionContext;
 pub use precedence::Precedence;
-pub use symbol_table::SymbolTable;
+use symbol_table::SymbolTable;
 pub use warning::{ParserWarning, ParserWarningKind};
 
 #[derive(Clone, Debug, Default)]
