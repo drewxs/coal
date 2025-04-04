@@ -71,10 +71,6 @@ impl Object {
     }
 
     pub fn call(&mut self, name: &str, args: &[Object], span: &Span) -> Option<Object> {
-        if let Err(e) = self.validate_call_args(name, args, span) {
-            return Some(e);
-        }
-
         if name == "to_s" {
             return Some(Object::Str(self.to_string()));
         }
