@@ -25,7 +25,7 @@ fn test(tests: &[(&str, &[Object], Instructions)]) {
 }
 
 #[test]
-fn test_int_arithmetic() {
+fn test_arithmetic() {
     test(&[(
         "1 + 2",
         &[Object::I32(1), Object::I32(2)],

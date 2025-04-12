@@ -28,9 +28,9 @@ fn test_instructions() {
 #[test]
 fn test_instructions_str() {
     test_opcodes_str(&[
-        (Opcode::Const, &[1], "00 00 01"),
-        (Opcode::Const, &[2], "00 00 02"),
-        (Opcode::Const, &[65535], "00 FF FF"),
+        (Opcode::Const, &[1], "01 00 01"),
+        (Opcode::Const, &[2], "01 00 02"),
+        (Opcode::Const, &[65535], "01 FF FF"),
     ]);
 }
 

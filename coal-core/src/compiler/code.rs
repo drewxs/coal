@@ -6,22 +6,23 @@ use std::{
 
 use crate::{Infix, Object, Prefix};
 
-use super::Compiler;
-
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub enum Opcode {
-    Const = 0,
+    #[default]
+    Nil = 0,
+
+    Const,
     Pop,
+
+    True,
+    False,
 
     Add,
     Sub,
     Mul,
     Div,
     Rem,
-
-    True,
-    False,
 
     EQ,
     NEQ,
@@ -33,11 +34,8 @@ pub enum Opcode {
     Minus,
     Bang,
 
-    JumpIfNot,
     Jump,
-
-    #[default]
-    Nil,
+    JumpIfNot,
 
     GetGlobal,
     SetGlobal,
@@ -65,15 +63,16 @@ pub enum Opcode {
 impl Opcode {
     pub fn operand_widths(&self) -> Vec<u8> {
         match self {
+            Opcode::Nil => vec![],
             Opcode::Const => vec![2],
             Opcode::Pop => vec![],
+            Opcode::True => vec![],
+            Opcode::False => vec![],
             Opcode::Add => vec![],
             Opcode::Sub => vec![],
             Opcode::Mul => vec![],
             Opcode::Div => vec![],
             Opcode::Rem => vec![],
-            Opcode::True => vec![],
-            Opcode::False => vec![],
             Opcode::EQ => vec![],
             Opcode::NEQ => vec![],
             Opcode::LT => vec![],
@@ -82,9 +81,8 @@ impl Opcode {
             Opcode::GTE => vec![],
             Opcode::Minus => vec![],
             Opcode::Bang => vec![],
-            Opcode::JumpIfNot => vec![2],
             Opcode::Jump => vec![2],
-            Opcode::Nil => vec![],
+            Opcode::JumpIfNot => vec![2],
             Opcode::GetGlobal => vec![2],
             Opcode::SetGlobal => vec![2],
             Opcode::List => vec![2],
@@ -227,15 +225,6 @@ impl From<Vec<Instructions>> for Instructions {
     }
 }
 
-impl From<&Compiler> for Bytecode {
-    fn from(c: &Compiler) -> Self {
-        Bytecode {
-            instructions: c.scopes[c.scope_idx].instructions.clone(),
-            constants: c.constants.clone(),
-        }
-    }
-}
-
 pub fn make(opcode: Opcode, operands: &[usize]) -> Vec<u8> {
     let op_widths = opcode.operand_widths();
     let len = op_widths.iter().map(|&b| b as usize).sum::<usize>() + 1;
@@ -247,9 +236,8 @@ pub fn make(opcode: Opcode, operands: &[usize]) -> Vec<u8> {
     for (o, w) in operands.iter().zip(op_widths) {
         match w {
             2 => {
-                // convert to big endian
-                instruction[offset] = (o >> 8) as u8; // high byte
-                instruction[offset + 1] = (o & 0xFF) as u8; // low byte
+                instruction[offset] = (o >> 8) as u8;
+                instruction[offset + 1] = *o as u8;
             }
             1 => instruction[offset] = *o as u8,
             _ => {}
@@ -269,8 +257,7 @@ pub fn read_operands(opcode: &Opcode, ins: &[u8]) -> (Vec<usize>, usize) {
     for w in widths {
         match w {
             2 => {
-                let value = ((ins[offset] as u16) << 8) | (ins[offset + 1] as u16);
-                operands.push(value as usize);
+                operands.push(read_u16(&ins[offset..offset + 2]) as usize);
                 offset += 2;
             }
             1 => {
@@ -282,4 +269,8 @@ pub fn read_operands(opcode: &Opcode, ins: &[u8]) -> (Vec<usize>, usize) {
     }
 
     (operands, offset)
+}
+
+pub fn read_u16(ins: &[u8]) -> u16 {
+    u16::from_be_bytes(ins[0..2].try_into().unwrap())
 }

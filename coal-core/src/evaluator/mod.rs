@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests;
 
-pub mod builtins;
 pub mod env;
 mod error;
 pub mod object;
@@ -9,11 +8,10 @@ pub mod object;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
-    Builtin, Expr, Func, Ident, IfExpr, Infix, List, Literal, Map, Param, Parser, Prefix, Span,
-    Stmt, Struct, StructDecl, Type,
+    Builtin, Def, Expr, Func, Ident, IfExpr, Infix, List, Literal, Map, Param, Parser, Prefix,
+    Span, Stmt, Struct, StructDecl, Type,
 };
 
-pub use builtins::Def;
 pub use env::Env;
 pub use error::{RuntimeError, RuntimeErrorKind};
 use object::StructObj;

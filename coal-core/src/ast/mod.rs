@@ -1,4 +1,3 @@
-mod builtin;
 mod comment;
 mod expr;
 mod func;
@@ -13,7 +12,6 @@ mod stmt;
 mod r#struct;
 mod types;
 
-pub use builtin::*;
 pub use comment::*;
 pub use expr::*;
 pub use func::*;

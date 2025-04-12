@@ -1,24 +1,26 @@
+use std::rc::Rc;
+
 use crate::{Builtin, Object, Param, Type};
 
 use super::Def;
 
-pub struct Print;
+pub struct Println;
 
-impl Def for Print {
+impl Def for Println {
     fn name() -> &'static str {
-        "print"
+        "println"
     }
 
     fn def() -> Builtin {
         Builtin {
-            func: Print::func,
+            func: Self::func,
             args: vec![Param::new("args", Type::Any)],
             ret_t: Type::Void,
         }
     }
 
-    fn func(args: &[Object]) -> Option<Object> {
-        print!("{}", args[0]);
+    fn func(args: &[Rc<Object>]) -> Option<Rc<Object>> {
+        println!("{}", args[0]);
         None
     }
 }

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{object::StructObj, Object, TokenKind};
+use crate::TokenKind;
 
 use super::{Expr, Func, Literal, Prefix, Stmt, Struct, StructDecl};
 
@@ -225,38 +225,6 @@ impl Type {
             }
         }
         None
-    }
-}
-
-impl From<&Object> for Type {
-    fn from(obj: &Object) -> Self {
-        match obj {
-            Object::U32(_) => U32,
-            Object::U64(_) => U64,
-            Object::I32(_) => I32,
-            Object::I64(_) => I64,
-            Object::I128(_) => I128,
-            Object::F32(_) => F32,
-            Object::F64(_) => F64,
-            Object::Str(_) => Type::Str,
-            Object::Bool(_) => Type::Bool,
-            Object::List { t, .. } => Type::List(Box::new(t.to_owned())),
-            Object::Map { t, .. } => Type::Map(Box::new(t.to_owned())),
-            Object::Fn { args, ret_t, .. } | Object::Closure { args, ret_t, .. } => Type::Fn(
-                args.iter().map(|arg| arg.t.to_owned()).collect(),
-                Box::new(ret_t.to_owned()),
-            ),
-            Object::Struct(StructObj { name, attrs, funcs }) => Type::Struct(
-                name.to_owned(),
-                attrs
-                    .iter()
-                    .chain(funcs.iter())
-                    .map(|(k, v)| (k.to_owned(), Type::from(v)))
-                    .collect(),
-            ),
-            Object::Nil => Type::Nil,
-            _ => Type::Void,
-        }
     }
 }
 

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{Builtin, Object, Param, Type};
 
 use super::Def;
@@ -11,13 +13,13 @@ impl Def for Dbg {
 
     fn def() -> Builtin {
         Builtin {
-            func: Dbg::func,
+            func: Self::func,
             args: vec![Param::new("args", Type::Any)],
             ret_t: Type::Void,
         }
     }
 
-    fn func(args: &[Object]) -> Option<Object> {
+    fn func(args: &[Rc<Object>]) -> Option<Rc<Object>> {
         println!("{:?}", args[0]);
         None
     }

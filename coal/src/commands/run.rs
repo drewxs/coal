@@ -1,11 +1,43 @@
 use std::{fs::File, io::Read, process};
+use terminal_size::{terminal_size, Width};
 
-use coal_core::{Evaluator, Lexer, Parser};
-
-use super::eval_with;
+use coal_core::{clean_input, Compiler, Lexer, Parser, VM};
 
 pub fn run(path: &str) {
-    eval_with(&mut Evaluator::default(), &contents(path), false);
+    let input = contents(path);
+    let mut compiler = Compiler::new();
+
+    match compiler.compile(&input) {
+        Ok(bytecode) => {
+            let mut vm = VM::from(bytecode);
+            vm.run().unwrap();
+
+            println!("{}", vm.last_stack_obj());
+        }
+        Err(errs) => errs.iter().for_each(|e| {
+            let ((l1, c1), (_, c2)) = e.span;
+            let term_w = terminal_size().map(|(w, _)| w).unwrap_or(Width(80)).0 as usize;
+
+            if input.lines().count() > 1 {
+                let line = input.lines().nth(l1 - 1).unwrap();
+                println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
+                println!("{}", clean_input(line));
+                println!(
+                    "\x1b[31m{}\x1b[0m",
+                    " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
+                );
+                println!("{e}");
+            } else {
+                println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
+                println!("{}", clean_input(&input));
+                println!(
+                    "\x1b[31m{}\x1b[0m",
+                    " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
+                );
+                println!("{}\n", e.kind);
+            }
+        }),
+    }
 }
 
 pub fn print_tokens(input: &str) {

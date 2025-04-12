@@ -12,9 +12,9 @@ use rustyline::{
     RepeatCount, Result, Validator,
 };
 
-use coal_core::Evaluator;
+// use coal_core::Evaluator;
 
-use crate::eval_with;
+// use crate::eval_with;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const TAB: &str = "    ";
@@ -23,7 +23,7 @@ pub fn repl() {
     println!("Coal {VERSION}");
 
     let mut rl = editor();
-    let mut evaluator = Evaluator::default();
+    // let mut evaluator = Evaluator::default();
 
     loop {
         match rl.readline(">> ") {
@@ -31,8 +31,9 @@ pub fn repl() {
                 "exit" | "quit" => break,
                 "clear" => println!("\x1B[2J\x1B[1;1H"),
                 input => {
-                    eval_with(&mut evaluator, input, true);
-                    let _ = rl.add_history_entry(input);
+                    println!("{}", input);
+                    // eval_with(&mut evaluator, input, true);
+                    // let _ = rl.add_history_entry(input);
                 }
             },
             Err(ReadlineError::Interrupted) => {

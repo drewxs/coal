@@ -4,7 +4,6 @@ mod dbg;
 mod def;
 mod print;
 mod println;
-mod r#typeof;
 
 use std::collections::HashMap;
 
@@ -16,17 +15,15 @@ use dbg::Dbg;
 pub use def::Def;
 use print::Print;
 use println::Println;
-use r#typeof::Typeof;
 
 pub fn map<'s>() -> HashMap<&'s str, Builtin> {
     let mut builtins = HashMap::new();
 
+    builtins.insert(Assert::name(), Assert::def());
+    builtins.insert(AssertEq::name(), AssertEq::def());
     builtins.insert(Dbg::name(), Dbg::def());
     builtins.insert(Print::name(), Print::def());
     builtins.insert(Println::name(), Println::def());
-    builtins.insert(Typeof::name(), Typeof::def());
-    builtins.insert(Assert::name(), Assert::def());
-    builtins.insert(AssertEq::name(), AssertEq::def());
 
     builtins
 }

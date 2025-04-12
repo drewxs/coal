@@ -1,4 +1,7 @@
-use std::fmt;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+};
 
 use crate::indent;
 
@@ -101,6 +104,20 @@ impl StructDecl {
             }
         }
         writeln!(f, "{}}}", base_indent)
+    }
+}
+
+impl Hash for StructDecl {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.attrs.len().hash(state);
+        for (p, _) in &self.attrs {
+            p.hash(state);
+        }
+        self.funcs.len().hash(state);
+        for f in &self.funcs {
+            f.hash(state);
+        }
     }
 }
 

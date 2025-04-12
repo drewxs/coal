@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{Builtin, Object, Param, Type};
 
 use super::Def;
@@ -11,13 +13,13 @@ impl Def for AssertEq {
 
     fn def() -> Builtin {
         Builtin {
-            func: AssertEq::func,
+            func: Self::func,
             args: vec![Param::new("lhs", Type::Any), Param::new("rhs", Type::Any)],
             ret_t: Type::Void,
         }
     }
 
-    fn func(args: &[Object]) -> Option<Object> {
+    fn func(args: &[Rc<Object>]) -> Option<Rc<Object>> {
         assert_eq!(args[0], args[1]);
         None
     }

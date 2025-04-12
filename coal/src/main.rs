@@ -15,6 +15,7 @@ fn main() {
             },
             Command::Run { path, tokens, ast } => match path::main_program(path) {
                 Ok(path) => {
+                    println!("path: {path}");
                     if tokens {
                         coal::print_file_tokens(&path);
                     } else if ast {
@@ -26,12 +27,13 @@ fn main() {
                 Err(err) => eprintln!("{err}"),
             },
             Command::Eval { input, tokens, ast } => {
+                println!("input: {input:?}");
                 if tokens {
-                    coal::print_tokens(&input);
+                    // coal::print_tokens(&input);
                 } else if ast {
-                    coal::print_ast(&input);
+                    // coal::print_ast(&input);
                 } else {
-                    coal::eval(&input);
+                    // coal::eval(&input);
                 }
             }
             Command::Lint { input, path } => {
