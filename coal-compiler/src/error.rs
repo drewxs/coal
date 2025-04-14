@@ -2,7 +2,7 @@ use std::fmt;
 
 use thiserror::Error;
 
-use crate::{ParserError, Span};
+use coal_core::{ParserError, Span};
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct CompileError {

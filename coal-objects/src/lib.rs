@@ -11,17 +11,11 @@ use std::{
     rc::Rc,
 };
 
-pub use builtin::Builtin;
-use func::Func;
-pub use func::{Closure, CompiledFunc};
-pub use r#struct::StructObj;
+use coal_core::{Expr, F32, F64, I32, I64, I128, Literal, StructDecl, Type, U32, U64, ast, indent};
 
-use crate::{
-    ast, indent, Expr, Literal, ParserError, Span, StructDecl, Type, F32, F64, I128, I32, I64, U32,
-    U64,
-};
-
-use super::{CompileError, CompileErrorKind};
+pub use builtin::*;
+pub use func::*;
+pub use r#struct::Struct;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Object {
@@ -42,10 +36,9 @@ pub enum Object {
     CompiledFunc(Rc<CompiledFunc>),
     Closure(Closure),
     StructDecl(StructDecl),
-    Struct(StructObj),
+    Struct(Struct),
     Return(Rc<Object>),
     Type(Type),
-    Error(CompileError),
     Nil,
     Void,
 }
@@ -62,7 +55,7 @@ impl Object {
         matches!(self, Object::Func { .. } | Object::Closure { .. })
     }
 
-    pub fn call(&mut self, name: &str, args: &[Rc<Object>], span: &Span) -> Option<Rc<Object>> {
+    pub fn call(&mut self, name: &str, args: &[Rc<Object>]) -> Option<Rc<Object>> {
         if name == "to_s" {
             return Some(Rc::new(Object::Str(self.to_string())));
         }
@@ -90,10 +83,7 @@ impl Object {
                         None
                     }
                 }
-                _ => Some(Rc::new(Object::Error(CompileError::new(
-                    CompileErrorKind::NotFound(name.to_owned()),
-                    *span,
-                )))),
+                _ => None,
             },
             Object::List(data) => match name {
                 "len" => Some(Rc::new(Object::U64(data.len() as u64))),
@@ -140,10 +130,7 @@ impl Object {
                     data.clear();
                     None
                 }
-                _ => Some(Rc::new(Object::Error(CompileError::new(
-                    CompileErrorKind::NotFound(name.to_owned()),
-                    *span,
-                )))),
+                _ => None,
             },
             Object::Map(data) => match name {
                 "len" => Some(Rc::new(Object::U64(data.len() as u64))),
@@ -156,15 +143,9 @@ impl Object {
                     data.clear();
                     None
                 }
-                _ => Some(Rc::new(Object::Error(CompileError::new(
-                    CompileErrorKind::NotFound(name.to_owned()),
-                    *span,
-                )))),
+                _ => None,
             },
-            _ => Some(Rc::new(Object::Error(CompileError::new(
-                CompileErrorKind::NotFound(name.to_owned()),
-                *span,
-            )))),
+            _ => None,
         }
     }
 
@@ -333,11 +314,7 @@ impl Eq for Object {}
 
 impl From<bool> for Object {
     fn from(b: bool) -> Self {
-        if b {
-            TRUE
-        } else {
-            FALSE
-        }
+        if b { TRUE } else { FALSE }
     }
 }
 
@@ -393,15 +370,6 @@ impl From<&StructDecl> for Object {
     }
 }
 
-impl From<&ParserError> for Object {
-    fn from(value: &ParserError) -> Self {
-        Object::Error(CompileError {
-            kind: CompileErrorKind::ParserError(value.kind.to_string()),
-            span: value.span,
-        })
-    }
-}
-
 impl Hash for Object {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
@@ -437,7 +405,6 @@ impl Hash for Object {
             Object::Struct(s) => s.hash(state),
             Object::Return(v) => v.hash(state),
             Object::Type(t) => t.hash(state),
-            Object::Error(e) => e.hash(state),
             Object::Nil => 0.hash(state),
             Object::Void => 0.hash(state),
         }
@@ -632,7 +599,7 @@ impl fmt::Display for Object {
             Object::CompiledFunc(_) => write!(f, "<compiled_fn_{}>", self.calculate_hash()),
             Object::Closure { .. } => write!(f, "<closure_{}>", self.calculate_hash()),
             Object::StructDecl { .. } => write!(f, "<struct_{}>", self.calculate_hash()),
-            Object::Struct(StructObj { name, attrs, .. }) => {
+            Object::Struct(Struct { name, attrs, .. }) => {
                 write!(f, "{name} {{")?;
                 match attrs.len() {
                     0 => {}
@@ -655,7 +622,6 @@ impl fmt::Display for Object {
             }
             Object::Return(v) => write!(f, "{v}"),
             Object::Type(t) => write!(f, "{t}"),
-            Object::Error(e) => write!(f, "{e}"),
             Object::Nil => write!(f, "nil"),
             Object::Void => Ok(()),
         }

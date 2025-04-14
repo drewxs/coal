@@ -1,6 +1,5 @@
-use crate::Instructions;
-
-use super::Closure;
+use coal_compiler::Instructions;
+use coal_objects::Closure;
 
 #[derive(Clone, Debug, Default)]
 pub struct Frame {

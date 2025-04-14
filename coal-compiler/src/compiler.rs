@@ -1,10 +1,11 @@
 use std::rc::Rc;
 
-use crate::{Expr, Ident, Infix, Literal, Object, Parser, Prefix, Span, Stmt};
+use coal_core::{Expr, Ident, Infix, Literal, Parser, Prefix, Span, Stmt};
+use coal_objects::Object;
 
-use super::{
-    make, Bytecode, CompileError, CompileErrorKind, Instructions, Opcode, Symbol, SymbolScope,
-    SymbolTable,
+use crate::{
+    Bytecode, CompileError, CompileErrorKind, Instructions, Opcode, Symbol, SymbolScope,
+    SymbolTable, make,
 };
 
 #[derive(Clone, Debug, PartialEq, Default)]

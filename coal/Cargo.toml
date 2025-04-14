@@ -2,14 +2,16 @@
 name = "coal"
 description = "CLI/tooling for Coal lang"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["Andrew X. Shah <drew@drewxs.dev>"]
 repository = "https://github.com/drewxs/coal"
 readme = "README.md"
 license = "Apache-2.0"
 
 [dependencies]
+coal-compiler = { path = "../coal-compiler" }
 coal-core = { path = "../coal-core" }
+coal-vm = { path = "../coal-vm" }
 clap = { version = "4.5.26", features = ["derive"] }
 dirs = "6.0.0"
 ignore = "0.4.23"

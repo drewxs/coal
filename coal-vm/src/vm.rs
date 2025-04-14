@@ -1,12 +1,9 @@
 use std::rc::Rc;
 
-use crate::{read_u16, Object};
+use coal_compiler::{Bytecode, CompileError, Opcode, read_u16};
+use coal_objects::{Closure, CompiledFunc, FALSE, Object, TRUE};
 
-mod frame;
-
-use frame::Frame;
-
-use super::{Bytecode, Closure, CompileError, CompiledFunc, Opcode, FALSE, TRUE};
+use crate::Frame;
 
 pub const STACK_SIZE: usize = 2048;
 pub const GLOBALS_SIZE: usize = 65536;

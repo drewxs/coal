@@ -1,0 +1,9 @@
+[package]
+name = "coal-vm"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+coal-compiler = { path = "../coal-compiler" }
+coal-core = { path = "../coal-core" }
+coal-objects = { path = "../coal-objects" }

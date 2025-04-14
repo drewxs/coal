@@ -1,0 +1,8 @@
+[package]
+name = "coal-interpreter"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+coal-core = { path = "../coal-core" }
+coal-objects = { path = "../coal-objects" }

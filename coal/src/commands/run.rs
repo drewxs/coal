@@ -1,7 +1,9 @@
+use coal_vm::VM;
 use std::{fs::File, io::Read, process};
-use terminal_size::{terminal_size, Width};
+use terminal_size::{Width, terminal_size};
 
-use coal_core::{clean_input, Compiler, Lexer, Parser, VM};
+use coal_compiler::Compiler;
+use coal_core::{Lexer, Parser, clean_input};
 
 pub fn run(path: &str) {
     let input = contents(path);

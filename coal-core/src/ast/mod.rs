@@ -1,3 +1,4 @@
+pub mod builtin;
 mod comment;
 mod expr;
 mod func;
@@ -22,6 +23,6 @@ pub use literal::*;
 pub use map::*;
 pub use param::*;
 pub use prefix::*;
-pub use r#struct::*;
 pub use stmt::*;
+pub use r#struct::*;
 pub use types::*;

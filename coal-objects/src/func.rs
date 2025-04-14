@@ -3,7 +3,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{Param, Stmt, Type};
+use coal_core::{Param, Stmt, Type};
 
 use super::Object;
 

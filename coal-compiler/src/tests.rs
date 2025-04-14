@@ -1,8 +1,8 @@
 use crate::Object;
 
 use super::{
-    code::{Instructions, Opcode},
     Compiler,
+    code::{Instructions, Opcode},
 };
 
 fn test(tests: &[(&str, &[Object], Instructions)]) {

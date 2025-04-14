@@ -1,10 +1,3 @@
-#[cfg(test)]
-mod tests;
-
-pub mod env;
-mod error;
-pub mod object;
-
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
@@ -12,10 +5,11 @@ use crate::{
     Span, Stmt, Struct, StructDecl, Type,
 };
 
-pub use env::Env;
-pub use error::{RuntimeError, RuntimeErrorKind};
+use coal_objects::{FALSE, TRUE};
+use env::Env;
+use error::{RuntimeError, RuntimeErrorKind};
 use object::StructObj;
-pub use object::{Object, FALSE, TRUE};
+use object::{FALSE, Object, TRUE};
 
 #[derive(Clone, Debug)]
 pub struct Evaluator<'s> {
@@ -207,7 +201,7 @@ impl Evaluator<'_> {
                 return Some(Object::Error(RuntimeError::new(
                     RuntimeErrorKind::IdentifierNotFound(name),
                     lhs.span(),
-                )))
+                )));
             }
         };
 

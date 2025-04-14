@@ -1,3 +1,3 @@
-# coal-core
+# Coal Core
 
-Core module for interpreting and compiling Coal code.
+Core module containing the lexer, parser, and AST.

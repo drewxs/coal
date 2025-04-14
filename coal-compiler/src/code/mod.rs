@@ -1,10 +1,14 @@
+#[cfg(test)]
+mod tests;
+
 use std::{
     fmt,
     ops::{Deref, DerefMut, Index, IndexMut},
     rc::Rc,
 };
 
-use crate::{Infix, Object, Prefix};
+use coal_core::{Infix, Prefix};
+use coal_objects::Object;
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
@@ -109,11 +113,7 @@ impl From<u8> for Opcode {
 
 impl From<bool> for Opcode {
     fn from(value: bool) -> Self {
-        if value {
-            Opcode::True
-        } else {
-            Opcode::False
-        }
+        if value { Opcode::True } else { Opcode::False }
     }
 }
 

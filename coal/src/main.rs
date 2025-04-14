@@ -2,7 +2,7 @@ use std::fs;
 
 use clap::Parser;
 
-use coal::{path, CacheCommand, Cli, Command, DataCommand};
+use coal::{CacheCommand, Cli, Command, DataCommand, path};
 
 fn main() {
     let args = Cli::parse();
@@ -15,7 +15,6 @@ fn main() {
             },
             Command::Run { path, tokens, ast } => match path::main_program(path) {
                 Ok(path) => {
-                    println!("path: {path}");
                     if tokens {
                         coal::print_file_tokens(&path);
                     } else if ast {
