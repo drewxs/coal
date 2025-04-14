@@ -1304,9 +1304,9 @@ impl Parser {
                     ))
                 }
                 match ctx {
-                    FunctionContext::Struct(s) => args.push(Param {
+                    FunctionContext::Struct(struct_decl) => args.push(Param {
                         name: "self".into(),
-                        t: s.into(),
+                        t: Type::from(struct_decl).into_struct_t().unwrap(),
                     }),
                     FunctionContext::Standard => unreachable!(),
                 }
