@@ -1,15 +1,4 @@
-program := coal
-
-debug ?=
-ifdef debug
-	release :=
-	target := debug
-	extension := debug
-else
-	release := --release
-	target := release
-	extension :=
-endif
+MAKEFLAGS += --no-print-directory --always-make
 
 .PHONY: help build clean run test docs install vsc
 
@@ -23,7 +12,7 @@ help: Makefile
 
 # build: Build binary
 build:
-	@cargo build $(release)
+	@cargo build --release
 
 # clean: Clean build artifacts
 clean:
@@ -43,7 +32,7 @@ docs:
 
 # install: Install the program
 install:
-	@cargo install --path ./$(program)
+	@cargo install --path ./coal
 
 # vsc: Install the VSCode language extension
 vsc:
