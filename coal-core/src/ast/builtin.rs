@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::Type;
 
-pub fn definitions() -> HashMap<String, Type> {
+pub fn builtin_types() -> HashMap<String, Type> {
     let mut builtins = HashMap::new();
 
     builtins.insert(
