@@ -1,10 +1,10 @@
 use std::{
     cell::RefCell,
-    collections::{hash_map::Entry, HashMap},
+    collections::{HashMap, hash_map::Entry},
     rc::Rc,
 };
 
-use super::Object;
+use coal_objects::Object;
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Env {

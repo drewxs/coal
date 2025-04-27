@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 coal-core = { path = "../coal-core" }
 coal-objects = { path = "../coal-objects" }
+thiserror = "2.0.12"

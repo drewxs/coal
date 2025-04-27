@@ -30,7 +30,7 @@ fn println(args: &[Rc<Object>]) -> Option<Rc<Object>> {
     None
 }
 
-pub fn definitions<'s>() -> HashMap<&'s str, Builtin> {
+pub fn builtin_defs<'s>() -> HashMap<&'s str, Builtin> {
     let mut builtins = HashMap::new();
 
     builtins.insert("assert", Builtin(assert));

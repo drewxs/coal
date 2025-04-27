@@ -2,7 +2,7 @@ use std::fmt;
 
 use thiserror::Error;
 
-use crate::{Infix, ParserError, Span, Type};
+use coal_core::{ParserError, Span};
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct RuntimeError {
@@ -40,9 +40,6 @@ pub enum RuntimeErrorKind {
     #[error("[parse] {0}")]
     ParserError(String),
 
-    #[error("[runtime] bad operand type for unary {0}: {1}")]
-    BadOperandTypeForUnary(char, Type),
-
     #[error("[runtime] failed to evaluate expression")]
     FailedToEvaluate,
 
@@ -64,15 +61,6 @@ pub enum RuntimeErrorKind {
     #[error("[runtime] method not found: {0}")]
     MethodNotFound(String),
 
-    #[error("[runtime] mismatch: expected={0}, got={1}")]
-    Mismatch(String, Type),
-
     #[error("[runtime] reassignment to function")]
     ReassignmentToFunction,
-
-    #[error("[runtime] type mismatch: expected={0}, got={1}")]
-    TypeMismatch(Type, Type),
-
-    #[error("[runtime] unsupported operation: {0} {1} {2}")]
-    UnsupportedOperation(Infix, Type, Type),
 }

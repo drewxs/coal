@@ -1,15 +1,15 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::{
-    Builtin, Def, Expr, Func, Ident, IfExpr, Infix, List, Literal, Map, Param, Parser, Prefix,
-    Span, Stmt, Struct, StructDecl, Type,
+use coal_core::{
+    ast, Expr,  Ident, IfExpr, Infix, List, Literal, Map, Param, Parser, Prefix, Span, Stmt,
+    Struct, StructDecl, Type,
 };
+use coal_objects::{builtin_defs, Builtin, Closure,  Func, Object, FALSE, TRUE};
 
-use coal_objects::{FALSE, TRUE};
-use env::Env;
-use error::{RuntimeError, RuntimeErrorKind};
-use object::StructObj;
-use object::{FALSE, Object, TRUE};
+use crate::{
+    Env,
+    error::{RuntimeError, RuntimeErrorKind},
+};
 
 #[derive(Clone, Debug)]
 pub struct Evaluator<'s> {
@@ -23,7 +23,7 @@ impl Evaluator<'_> {
         Self {
             env,
             parser: Parser::default(),
-            builtins: builtins::map(),
+            builtins: builtin_defs(),
         }
     }
 
@@ -46,9 +46,9 @@ impl Evaluator<'_> {
             }
 
             match self.eval_stmt(stmt) {
-                Some(Object::Return(val)) => return Ok(*val),
-                Some(Object::Error(e)) => errors.push(e),
-                obj => res = obj,
+                Ok(Object::Return(val)) => return Ok(*val),
+                Ok(obj) => res = Some(obj),
+                Err(e) => errors.push(e),
             }
         }
 
@@ -59,7 +59,6 @@ impl Evaluator<'_> {
         let main_fn = self.env.borrow().get("main");
         let res = main_fn
             .map(|f| self.eval_call_obj(&f, &[], &Span::default()))
-            .unwrap_or(res)
             .unwrap_or(Object::Void);
 
         Ok(res)
@@ -84,9 +83,9 @@ impl Evaluator<'_> {
             }
 
             match self.eval_stmt(stmt) {
-                Some(Object::Return(val)) => return Ok(*val),
-                Some(Object::Error(e)) => errors.push(e),
-                obj => res = obj,
+                Ok(Object::Return(val)) => return Ok((*val).clone()),
+                Ok(obj) => res = Some(obj),
+                Err(e) => errors.push(e),
             }
         }
 
@@ -97,7 +96,7 @@ impl Evaluator<'_> {
         Ok(res.unwrap_or(Object::Void))
     }
 
-    fn eval_stmt(&mut self, stmt: &Stmt) -> Option<Object> {
+    fn eval_stmt(&mut self, stmt: &Stmt) -> Result<Object, RuntimeError> {
         match stmt {
             Stmt::Let(ident, _, expr) => self.eval_let_stmt(ident, expr),
             Stmt::Assign(lhs, rhs) => self.eval_assign_stmt(lhs, rhs, None),
@@ -109,24 +108,24 @@ impl Evaluator<'_> {
         }
     }
 
-    fn eval_stmts(&mut self, stmts: &[Stmt]) -> Option<Object> {
+    fn eval_stmts(&mut self, stmts: &[Stmt]) -> Result<Option<Object>, RuntimeError> {
         for (i, stmt) in stmts.iter().enumerate() {
             if stmt == &Stmt::Void {
                 continue;
             }
 
             match self.eval_stmt(stmt) {
-                Some(Object::Return(val)) => return Some(Object::Return(val)),
-                Some(Object::Error(e)) => return Some(Object::Error(e)),
-                obj if i == stmts.len() - 1 => return obj,
+                Ok(Object::Return(val)) => return Ok(Some(Object::Return(val))),
+                Err(e) => return Err(e),
+                obj if i == stmts.len() - 1 => return Ok(obj.ok()),
                 _ => {}
             }
         }
 
-        None
+        Ok(None)
     }
 
-    fn eval_stmts_in_scope(&mut self, stmts: &[Stmt], env: Env) -> Option<Object> {
+    fn eval_stmts_in_scope(&mut self, stmts: &[Stmt], env: Env) -> Result<Object, RuntimeError> {
         let curr_env = Rc::clone(&self.env);
         self.env = Rc::new(RefCell::new(env));
         let res = self.eval_stmts(stmts);
@@ -135,7 +134,7 @@ impl Evaluator<'_> {
         res
     }
 
-    fn eval_block(&mut self, stmts: &[Stmt]) -> Option<Object> {
+    fn eval_block(&mut self, stmts: &[Stmt]) -> Result<Object, RuntimeError> {
         let curr_env = Rc::clone(&self.env);
         self.env = Env::new_enclosed(Rc::clone(&self.env));
         let res = self.eval_stmts(stmts);
@@ -144,18 +143,18 @@ impl Evaluator<'_> {
         res
     }
 
-    fn eval_let_stmt(&mut self, ident: &Ident, expr: &Expr) -> Option<Object> {
+    fn eval_let_stmt(&mut self, ident: &Ident, expr: &Expr) -> Result<(), RuntimeError> {
         let val = self.eval_expr(expr)?;
-        if let Object::Error { .. } = val {
-            return Some(val);
-        }
-
         self.env.borrow().set(ident.name(), val);
-
-        None
+        Ok(())
     }
 
-    fn eval_assign_stmt(&mut self, lhs: &Expr, rhs: &Expr, op: Option<&Infix>) -> Option<Object> {
+    fn eval_assign_stmt(
+        &mut self,
+        lhs: &Expr,
+        rhs: &Expr,
+        op: Option<&Infix>,
+    ) -> Result<(), RuntimeError> {
         // Create list of indices for nested indexing
         let (name, indices, attrs) = match lhs {
             Expr::Ident(ident, _, _) => (ident.name(), vec![], vec![]),
@@ -193,22 +192,19 @@ impl Evaluator<'_> {
             }
             _ => unreachable!(),
         };
-        let lhs_t = Type::try_from(lhs).ok()?;
+        let lhs_t = Type::try_from(lhs)?;
 
         let curr = match self.env.borrow().get(&name) {
             Some(value) => value,
             None => {
-                return Some(Object::Error(RuntimeError::new(
+                return Err(RuntimeError::new(
                     RuntimeErrorKind::IdentifierNotFound(name),
                     lhs.span(),
-                )));
+                ));
             }
         };
 
         let mut val = self.eval_expr(rhs)?;
-        if let Object::Error { .. } = val {
-            return Some(val);
-        }
 
         let val_t = Type::from(&val);
         if val_t.is_numeric() && val_t != lhs_t {
@@ -220,23 +216,23 @@ impl Evaluator<'_> {
         }
 
         match curr {
-            Object::Fn { .. } => {
-                return Some(Object::Error(RuntimeError::new(
+            Object::Func(_) => {
+                return Err(RuntimeError::new(
                     RuntimeErrorKind::ReassignmentToFunction,
                     rhs.span(),
-                )));
+                ));
             }
-            Object::List { mut data, t } => {
+            Object::List(mut data) => {
                 let mut target = &mut data;
 
                 // Nested indexing (e.g. list[0][1])
                 for (i, index) in indices.iter().enumerate() {
                     if let Ok(idx) = self.eval_expr(index)?.try_into() {
                         if idx >= target.len() {
-                            return Some(Object::Error(RuntimeError::new(
+                            return Err(RuntimeError::new(
                                 RuntimeErrorKind::IndexOutOfBounds(idx, target.len()),
                                 index.span(),
-                            )));
+                            ));
                         }
 
                         // Final index, assign value
@@ -252,15 +248,12 @@ impl Evaluator<'_> {
                                 target[idx] = val;
                             }
 
-                            self.env.borrow().set(name, Object::List { data, t });
+                            self.env.borrow().set(name, Object::List(data));
 
                             return None;
                         }
 
-                        if let Object::List {
-                            data: inner_data, ..
-                        } = &mut target[idx]
-                        {
+                        if let Object::List(inner_data) = &mut target[idx] {
                             // Drill down into the nested list
                             target = inner_data;
                             continue;
@@ -272,11 +265,11 @@ impl Evaluator<'_> {
                     return None;
                 }
             }
-            Object::Map { mut data, t } => {
+            Object::Map(mut data) => {
                 if let Some(idx) = indices.first() {
-                    if let Some(i) = self.eval_expr(idx) {
+                    if let Ok(i) = self.eval_expr(idx) {
                         data.insert(i, val);
-                        self.env.borrow().set(name, Object::Map { data, t });
+                        self.env.borrow().set(name, Object::Map(data));
                     } else {
                         return None;
                     }
@@ -299,33 +292,29 @@ impl Evaluator<'_> {
         None
     }
 
-    fn eval_return_stmt(&mut self, expr: &Expr) -> Option<Object> {
-        self.eval_expr(expr).map(|val| match val {
-            Object::Error { .. } => val,
-            _ => Object::Return(Box::new(val)),
-        })
+    fn eval_return_stmt(&mut self, expr: &Expr) -> Result<Object, RuntimeError> {
+        self.eval_expr(expr).map(|val| Object::Return(Rc::new(val)))
     }
 
-    fn eval_struct_decl(&mut self, s: &StructDecl) -> Option<Object> {
+    fn eval_struct_decl(&mut self, s: &StructDecl) -> Result<Object, RuntimeError> {
         let obj = Object::from(s);
         self.env.borrow().set_local(s.name.to_owned(), obj.clone());
 
-        Some(obj)
+        Ok(obj)
     }
 
-    fn eval_expr(&mut self, expr: &Expr) -> Option<Object> {
+    fn eval_expr(&mut self, expr: &Expr) -> Result<Object, RuntimeError> {
         match expr {
             Expr::Ident(Ident(name), _, _) => self
                 .builtins
                 .get(name.as_str())
                 .map(|b| Object::Builtin(b.clone()))
-                .or_else(|| {
-                    self.env.borrow().get(name).or_else(|| {
-                        Some(Object::Error(RuntimeError::new(
-                            RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
-                            expr.span(),
-                        )))
-                    })
+                .or_else(|| self.env.borrow().get(name).map(|obj| obj.clone()))
+                .ok_or_else(|| {
+                    Err(RuntimeError::new(
+                        RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
+                        expr.span(),
+                    ))
                 }),
             Expr::Literal(literal, _) => self.eval_literal_expr(literal, &expr.span()),
             Expr::Prefix(prefix, rhs, span) => self.eval_prefix_expr(prefix, rhs, span),
@@ -343,12 +332,11 @@ impl Evaluator<'_> {
             Expr::Iter {
                 ident, expr, body, ..
             } => self.eval_iter_expr(ident, expr, body),
-            Expr::Fn(Func {
+            Expr::Fn(ast::Func {
                 name,
                 args,
                 ret_t,
                 body,
-                span,
             }) => self.eval_fn_expr(name, args, ret_t, body, span),
             Expr::Closure {
                 args, ret_t, body, ..
@@ -378,16 +366,20 @@ impl Evaluator<'_> {
         }
     }
 
-    fn eval_literal_expr(&mut self, literal: &Literal, span: &Span) -> Option<Object> {
+    fn eval_literal_expr(
+        &mut self,
+        literal: &Literal,
+        span: &Span,
+    ) -> Result<Object, RuntimeError> {
         match literal {
             Literal::Str(s) => self.eval_str(s, span),
             Literal::List(l) => self.eval_list_expr(l),
             Literal::Map(m) => self.eval_map_expr(m),
-            _ => Some(Object::from(literal)),
+            _ => Ok(Object::from(literal)),
         }
     }
 
-    fn eval_str(&mut self, s: &str, span: &Span) -> Option<Object> {
+    fn eval_str(&mut self, s: &str, span: &Span) -> Result<Option<Object>, RuntimeError> {
         let mut res = String::new();
         let mut expr = String::new();
         let mut in_expr = false;
@@ -408,16 +400,16 @@ impl Evaluator<'_> {
                 expr.clear();
             } else if c == '}' && in_expr {
                 match self.eval_scoped(&expr) {
-                    Ok(Object::Error(e)) => {
-                        let ((l1, c1), (l2, c2)) = e.span;
-                        let ((_, offset), (_, _)) = *span;
-                        return Some(Object::Error(RuntimeError::new(
-                            e.kind,
-                            ((l1, c1 + offset + 1), (l2, c2 + offset + 1)),
-                        )));
-                    }
                     Ok(obj) => {
                         res.push_str(&obj.to_string_raw());
+                    }
+                    Err(e) => {
+                        let ((l1, c1), (l2, c2)) = e.span;
+                        let ((_, offset), (_, _)) = *span;
+                        return Err(RuntimeError::new(
+                            e.kind,
+                            ((l1, c1 + offset + 1), (l2, c2 + offset + 1)),
+                        ));
                     }
                     _ => {}
                 }
@@ -431,40 +423,34 @@ impl Evaluator<'_> {
         }
 
         if in_expr {
-            return None;
+            return Ok(None);
         }
 
-        Some(Object::Str(res))
+        Ok(Some(Object::Str(res)))
     }
 
-    fn eval_list_expr(&mut self, list: &List) -> Option<Object> {
+    fn eval_list_expr(&mut self, list: &List) -> Result<Object, RuntimeError> {
         let mut data = vec![];
 
         if let Some(repeat) = &list.repeat {
             if let Some(i) = list.data.first() {
                 let item = self.eval_expr(i)?;
                 let n_obj = self.eval_expr(repeat)?;
-                let n: usize = n_obj.try_into().ok()?;
+                let n: usize = n_obj.try_into()?;
                 data = vec![item; n];
             }
         } else {
             for item in &list.data {
-                if let Some(val) = self.eval_expr(item) {
-                    if let Object::Error { .. } = val {
-                        return Some(val);
-                    }
+                if let Ok(val) = self.eval_expr(item) {
                     data.push(val);
                 }
             }
         }
 
-        Some(Object::List {
-            data,
-            t: list.t.clone(),
-        })
+        Ok(Object::List(data))
     }
 
-    fn eval_map_expr(&mut self, m: &Map) -> Option<Object> {
+    fn eval_map_expr(&mut self, m: &Map) -> Result<Object, RuntimeError> {
         let mut data = HashMap::new();
 
         for (k, v) in &m.data {
@@ -472,22 +458,24 @@ impl Evaluator<'_> {
             let v = self.eval_expr(v)?;
 
             if let Object::Error { .. } = k {
-                return Some(k);
+                return Ok(k);
             }
             if let Object::Error { .. } = v {
-                return Some(v);
+                return Ok(v);
             }
 
             data.insert(k, v);
         }
 
-        Some(Object::Map {
-            data,
-            t: m.t.clone(),
-        })
+        Some(Object::Map(data))
     }
 
-    fn eval_prefix_expr(&mut self, prefix: &Prefix, rhs: &Expr, span: &Span) -> Option<Object> {
+    fn eval_prefix_expr(
+        &mut self,
+        prefix: &Prefix,
+        rhs: &Expr,
+        span: &Span,
+    ) -> Result<Object, RuntimeError> {
         let rhs = self.eval_expr(rhs)?;
         let obj = match prefix {
             Prefix::Not => match rhs {
@@ -502,14 +490,16 @@ impl Evaluator<'_> {
                 Object::F64(f) => Object::F64(-f),
                 TRUE => Object::I32(-1),
                 FALSE => Object::I32(0),
-                _ => Object::Error(RuntimeError::new(
-                    RuntimeErrorKind::BadOperandTypeForUnary('-', Type::from(&rhs)),
-                    *span,
-                )),
+                _ => {
+                    return Err(RuntimeError::new(
+                        RuntimeErrorKind::BadOperandTypeForUnary('-', Type::from(&rhs)),
+                        *span,
+                    ));
+                }
             },
         };
 
-        Some(obj)
+        Ok(obj)
     }
 
     fn eval_infix_objects(
@@ -518,7 +508,7 @@ impl Evaluator<'_> {
         lhs: Object,
         rhs: Object,
         span: &Span,
-    ) -> Option<Object> {
+    ) -> Result<Object, RuntimeError> {
         let (lhs_t, rhs_t) = (Type::from(&lhs), Type::from(&rhs));
 
         let result = match op {
@@ -527,18 +517,20 @@ impl Evaluator<'_> {
             Infix::Mul => lhs * rhs,
             Infix::Div => lhs / rhs,
             Infix::Rem => lhs % rhs,
-            Infix::EQ => Some(Object::Bool(lhs == rhs)),
-            Infix::NEQ => Some(Object::Bool(lhs != rhs)),
-            Infix::LT => Some(Object::Bool(lhs < rhs)),
-            Infix::LTE => Some(Object::Bool(lhs <= rhs)),
-            Infix::GT => Some(Object::Bool(lhs > rhs)),
-            Infix::GTE => Some(Object::Bool(lhs >= rhs)),
+            Infix::EQ => Ok(Object::Bool(lhs == rhs)),
+            Infix::NEQ => Ok(Object::Bool(lhs != rhs)),
+            Infix::LT => Ok(Object::Bool(lhs < rhs)),
+            Infix::LTE => Ok(Object::Bool(lhs <= rhs)),
+            Infix::GT => Ok(Object::Bool(lhs > rhs)),
+            Infix::GTE => Ok(Object::Bool(lhs >= rhs)),
         };
 
-        result.or(Some(Object::Error(RuntimeError::new(
-            RuntimeErrorKind::UnsupportedOperation(op.clone(), lhs_t, rhs_t),
-            *span,
-        ))))
+        result.or_else(|| {
+            Err(RuntimeError::new(
+                RuntimeErrorKind::UnsupportedOperation(op.clone(), lhs_t, rhs_t),
+                *span,
+            ))
+        })
     }
 
     fn eval_infix_expr(
@@ -547,21 +539,26 @@ impl Evaluator<'_> {
         lhs: &Expr,
         rhs: &Expr,
         span: &Span,
-    ) -> Option<Object> {
+    ) -> Result<Object, RuntimeError> {
         let lhs = self.eval_expr(lhs)?;
         let rhs = self.eval_expr(rhs)?;
 
         self.eval_infix_objects(op, lhs, rhs, span)
     }
 
-    fn eval_index_expr(&mut self, lhs: &Expr, rhs: &Expr, span: &Span) -> Option<Object> {
+    fn eval_index_expr(
+        &mut self,
+        lhs: &Expr,
+        rhs: &Expr,
+        span: &Span,
+    ) -> Result<Object, RuntimeError> {
         let mut lhs = self.eval_expr(lhs)?;
         let rhs = self.eval_expr(rhs)?;
 
         match lhs {
-            Object::List { .. } => lhs.call("get", &[rhs], span),
-            Object::Map { .. } => lhs.call("get", &[rhs], span),
-            _ => None,
+            Object::List(_) => lhs.call("get", &[rhs], span),
+            Object::Map(_) => lhs.call("get", &[rhs], span),
+            _ => unreachable!(),
         }
     }
 
@@ -571,10 +568,10 @@ impl Evaluator<'_> {
         then: &[Stmt],
         elifs: &[IfExpr],
         alt: &Option<Vec<Stmt>>,
-    ) -> Option<Object> {
+    ) -> Result<(), RuntimeError> {
         let cond = self.eval_expr(cond)?;
         if let Object::Error { .. } = cond {
-            return Some(cond);
+            return Ok(cond);
         }
         if cond.is_truthy() {
             return self.eval_block(then);
@@ -587,32 +584,34 @@ impl Evaluator<'_> {
         if let Some(alt) = alt {
             self.eval_block(alt)
         } else {
-            None
+            Ok(())
         }
     }
 
-    fn eval_while_expr(&mut self, cond: &Expr, body: &[Stmt]) -> Option<Object> {
+    fn eval_while_expr(&mut self, cond: &Expr, body: &[Stmt]) -> Result<(), RuntimeError> {
         let mut resolved_cond = self.eval_expr(cond)?;
-        if let Object::Error { .. } = resolved_cond {
-            return Some(resolved_cond);
-        }
 
         while resolved_cond.is_truthy() {
             self.eval_block(body);
             resolved_cond = self.eval_expr(cond)?;
         }
 
-        None
+        Ok(())
     }
 
-    fn eval_range_expr(&mut self, start: &Expr, end: &Expr) -> Option<Object> {
-        let start: usize = self.eval_expr(start)?.try_into().ok()?;
-        let end: usize = self.eval_expr(end)?.try_into().ok()?;
+    fn eval_range_expr(&mut self, start: &Expr, end: &Expr) -> Result<Object, RuntimeError> {
+        let start: usize = self.eval_expr(start)?.try_into()?;
+        let end: usize = self.eval_expr(end)?.try_into()?;
 
-        Some(Object::Range(start, end))
+        Ok(Object::Range(start, end))
     }
 
-    fn eval_iter_expr(&mut self, ident: &Ident, expr: &Expr, body: &[Stmt]) -> Option<Object> {
+    fn eval_iter_expr(
+        &mut self,
+        ident: &Ident,
+        expr: &Expr,
+        body: &[Stmt],
+    ) -> Result<(), RuntimeError> {
         let iterable = self.eval_expr(expr)?;
 
         let curr_env = Rc::clone(&self.env);
@@ -627,7 +626,7 @@ impl Evaluator<'_> {
                     self.eval_stmts(body);
                 }
             }
-            Object::List { data, .. } => {
+            Object::List(data) => {
                 for item in data {
                     self.env.borrow().set_local(ident.name(), item);
                     self.eval_stmts(body);
@@ -638,7 +637,7 @@ impl Evaluator<'_> {
 
         self.env = curr_env;
 
-        None
+        Ok(())
     }
 
     fn eval_fn_expr(
@@ -648,23 +647,24 @@ impl Evaluator<'_> {
         ret_t: &Type,
         body: &Vec<Stmt>,
         span: &Span,
-    ) -> Option<Object> {
+    ) -> Result<Object, RuntimeError> {
         if self.env.borrow().has(name) {
-            return Some(Object::Error(RuntimeError::new(
+            return Err(RuntimeError::new(
                 RuntimeErrorKind::IdentifierExists(name.to_owned()),
                 *span,
-            )));
+            ));
         }
 
-        let func = Object::Fn {
+        let func = Object::Func(Func {
             name: name.to_owned(),
             args: args.to_owned(),
             body: body.to_owned(),
             ret_t: ret_t.to_owned(),
-        };
+            span: *span,
+        });
         self.env.borrow().set(name.to_owned(), func.to_owned());
 
-        Some(func)
+        Ok(func)
     }
 
     fn eval_closure_expr(
@@ -672,15 +672,16 @@ impl Evaluator<'_> {
         args: &[Param],
         ret_t: &Type,
         body: &Vec<Stmt>,
-    ) -> Option<Object> {
-        Some(Object::Closure {
+    ) -> Result<Object, RuntimeError> {
+        Ok(Object::Closure(Closure {
             args: args.to_owned(),
             body: body.to_owned(),
-            ret_t: ret_t.to_owned(),
-        })
+            func: CompiledFunc
+            free: vec![],
+        }))
     }
 
-    fn eval_struct_expr(&mut self, s: &Struct, span: &Span) -> Option<Object> {
+    fn eval_struct_expr(&mut self, s: &Struct, span: &Span) -> Result<Object, RuntimeError> {
         let decl = self.env.borrow().get(&s.name);
         let mut attrs = vec![];
         let mut funcs = vec![];
@@ -689,9 +690,6 @@ impl Evaluator<'_> {
             Some(Object::StructDecl(decl)) => {
                 for (k, v) in &s.state {
                     let v = self.eval_expr(v)?;
-                    if let Object::Error { .. } = v {
-                        return Some(v);
-                    }
                     attrs.push((k.clone(), v));
                 }
 
@@ -701,9 +699,6 @@ impl Evaluator<'_> {
                     }
                     if let Some(v) = default_val {
                         let v = self.eval_expr(v)?;
-                        if let Object::Error { .. } = v {
-                            return Some(v);
-                        }
                         attrs.push((param.name.clone(), v));
                     }
                 }
@@ -712,28 +707,32 @@ impl Evaluator<'_> {
                     funcs.push((f.name.clone(), Object::from(f)));
                 }
 
-                let obj = Object::Struct(StructObj {
+                let obj = Object::Struct(Struct {
                     name: s.name.clone(),
-                    attrs,
-                    funcs,
+                    state: vec![],
                 });
                 self.env.borrow().set_local(s.name.clone(), obj.clone());
 
-                Some(obj)
+                Ok(obj)
             }
-            _ => Some(Object::Error(RuntimeError::new(
+            _ => Err(RuntimeError::new(
                 RuntimeErrorKind::IdentifierNotFound(s.name.to_owned()),
                 *span,
-            ))),
+            )),
         }
     }
 
-    fn eval_call_expr(&mut self, func: &Expr, args: &[Expr], span: &Span) -> Option<Object> {
+    fn eval_call_expr(
+        &mut self,
+        func: &Expr,
+        args: &[Expr],
+        span: &Span,
+    ) -> Result<Object, RuntimeError> {
         let resolved_args: Vec<Object> =
             args.iter().filter_map(|arg| self.eval_expr(arg)).collect();
         let resolved_fn = self.eval_expr(func)?;
 
-        if let Object::Fn { name, .. } = &resolved_fn
+        if let Object::Func(Func { name, .. }) = &resolved_fn
             && name == "main"
         {
             return None;
@@ -742,16 +741,23 @@ impl Evaluator<'_> {
         self.eval_call_obj(&resolved_fn, &resolved_args, span)
     }
 
-    fn eval_call_obj(&mut self, func: &Object, argsc: &[Object], span: &Span) -> Option<Object> {
-        if let Object::Fn { args, body, .. } | Object::Closure { args, body, .. } = func {
+    fn eval_call_obj(
+        &mut self,
+        func: &Object,
+        argsc: &[Object],
+        span: &Span,
+    ) -> Result<Object, RuntimeError> {
+        if let Object::Func(Func { args, body, .. }) | Object::Closure(Closure { args, body, .. }) =
+            func
+        {
             let expected_arity = args.len();
             let actual_arity = argsc.len();
 
             if expected_arity != actual_arity {
-                return Some(Object::Error(RuntimeError::new(
+                return Err(RuntimeError::new(
                     RuntimeErrorKind::InvalidArgumentsLength(expected_arity, actual_arity),
                     *span,
-                )));
+                ));
             }
 
             let enclosed_env = Env::from(Rc::clone(&self.env));
@@ -765,45 +771,45 @@ impl Evaluator<'_> {
                     let expected_t = self.vars_str(args);
                     let resolved_t = self.objects_str(argsc);
 
-                    return Some(Object::Error(RuntimeError::new(
+                    return Err(RuntimeError::new(
                         RuntimeErrorKind::InvalidArguments(expected_t, resolved_t),
                         *span,
-                    )));
+                    ));
                 }
             }
 
             let mut res = self.eval_stmts_in_scope(body, enclosed_env);
-            if let Some(Object::Return(val)) = res {
-                res = Some(*val);
+            if let Ok(Object::Return(val)) = res {
+                res = Ok(*val);
             }
 
             res
         } else {
-            Some(Object::Error(RuntimeError::new(
+            Err(RuntimeError::new(
                 RuntimeErrorKind::Mismatch(String::from("function"), Type::from(func)),
                 *span,
-            )))
+            ))
         }
     }
 
-    fn eval_builtin(&mut self, expr: &Expr, args: &[Expr], span: &Span) -> Option<Object> {
+    fn eval_builtin(
+        &mut self,
+        expr: &Expr,
+        args: &[Expr],
+        span: &Span,
+    ) -> Result<Object, RuntimeError> {
         let resolved_args: Vec<_> = args.iter().filter_map(|arg| self.eval_expr(arg)).collect();
         let resolved_fn = self.eval_expr(expr)?;
 
-        if let Object::Builtin(Builtin {
-            func,
-            args: fn_args,
-            ..
-        }) = resolved_fn
-        {
+        if let Object::Builtin(Builtin(b)) = resolved_fn {
             let expected_arity = fn_args.len();
             let actual_arity = resolved_args.len();
 
             if expected_arity != actual_arity {
-                return Some(Object::Error(RuntimeError::new(
+                return Err(RuntimeError::new(
                     RuntimeErrorKind::InvalidArgumentsLength(expected_arity, actual_arity),
                     *span,
-                )));
+                ));
             }
 
             for (var, value) in fn_args.iter().zip(resolved_args.iter()) {
@@ -815,10 +821,10 @@ impl Evaluator<'_> {
                     let expected_t = self.vars_str(&fn_args);
                     let resolved_t = self.objects_str(&resolved_args);
 
-                    return Some(Object::Error(RuntimeError::new(
+                    return Err(RuntimeError::new(
                         RuntimeErrorKind::InvalidArguments(expected_t, resolved_t),
                         *span,
-                    )));
+                    ));
                 }
             }
 
@@ -830,10 +836,10 @@ impl Evaluator<'_> {
 
             res
         } else {
-            Some(Object::Error(RuntimeError::new(
-                RuntimeErrorKind::Mismatch(String::from("function"), Type::from(&resolved_fn)),
+            Err(RuntimeError::new(
+                RuntimeErrorKind::M(String::from("function")),
                 *span,
-            )))
+            ))
         }
     }
 
@@ -844,29 +850,19 @@ impl Evaluator<'_> {
             .join(", ")
     }
 
-    fn objects_str(&self, args: &[Object]) -> String {
-        args.iter()
-            .map(|arg| format!("{}", Type::from(arg)))
-            .collect::<Vec<String>>()
-            .join(", ")
-    }
-
     fn eval_method_call(
         &mut self,
         lhs: &Expr,
         name: &str,
         args: &[Expr],
         span: &Span,
-    ) -> Option<Object> {
+    ) -> Result<Object, RuntimeError> {
         let mut var = lhs.to_string();
         let args = args
             .iter()
             .map(|expr| {
                 self.eval_expr(expr)
-                    .unwrap_or(Object::Error(RuntimeError::new(
-                        RuntimeErrorKind::FailedToEvaluate,
-                        expr.span(),
-                    )))
+                    .map_err(|_| RuntimeError::new(RuntimeErrorKind::FailedToEvaluate, expr.span()))
             })
             .collect::<Vec<Object>>();
 
@@ -918,20 +914,22 @@ impl Evaluator<'_> {
 
     fn eval_struct_method_call(
         &mut self,
-        s: &StructObj,
+        s: &Struct,
         name: &str,
         argsc: &[Object],
         span: &Span,
-    ) -> Option<Object> {
-        if let Some((_, Object::Fn { args, body, .. })) = s.funcs.iter().find(|(n, _)| n == name) {
+    ) -> Result<Object, RuntimeError> {
+        if let Some((_, Object::Func(Func { args, body, .. }))) =
+            s.funcs.iter().find(|(n, _)| n == name)
+        {
             let expected_arity = args.len();
             let actual_arity = argsc.len();
 
             if expected_arity != actual_arity {
-                return Some(Object::Error(RuntimeError::new(
+                return Err(RuntimeError::new(
                     RuntimeErrorKind::InvalidArgumentsLength(expected_arity, actual_arity),
                     *span,
-                )));
+                ));
             }
 
             let enclosed_env = Env::from(Rc::clone(&self.env));
@@ -942,35 +940,38 @@ impl Evaluator<'_> {
                 } else if let Some(casted) = value.cast(&param.t) {
                     enclosed_env.set_local(param.name.clone(), casted);
                 } else {
-                    let expected_t = self.vars_str(args);
+                    let expected_t = self.vars_str(&args);
                     let resolved_t = self.objects_str(argsc);
 
-                    return Some(Object::Error(RuntimeError::new(
+                    return Err(RuntimeError::new(
                         RuntimeErrorKind::InvalidArguments(expected_t, resolved_t),
                         *span,
-                    )));
+                    ));
                 }
             }
 
             let mut res = self.eval_stmts_in_scope(body, enclosed_env);
-            if let Some(Object::Return(val)) = res {
-                res = Some(*val);
+            if let Ok(Object::Return(val)) = res {
+                res = Ok(*val);
             }
 
             res
         } else {
-            Some(Object::Error(RuntimeError::new(
+            Err(RuntimeError::new(
                 RuntimeErrorKind::MethodNotFound(name.to_owned()),
                 *span,
-            )))
+            ))
         }
     }
 
-    fn eval_attr_access(&mut self, lhs: &Expr, name: &str) -> Option<Object> {
+    fn eval_attr_access(&mut self, lhs: &Expr, name: &str) -> Result<Object, RuntimeError> {
         if let Object::Struct(s) = &self.eval_expr(lhs)? {
             s.get(name).cloned()
         } else {
-            None
+            Err(RuntimeError(
+                RuntimeErrorKind::IdentifierNotFound(name.to_owned()),
+                lhs.span(),
+            ))
         }
     }
 }
