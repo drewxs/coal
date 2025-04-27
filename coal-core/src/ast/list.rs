@@ -7,7 +7,7 @@ use crate::indent;
 
 use super::{Expr, Type};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct List {
     pub data: Vec<Expr>,
     pub t: Type,
@@ -72,16 +72,6 @@ impl List {
                 }
                 write!(f, "{}]", inner_indent)
             }
-        }
-    }
-}
-
-impl Default for List {
-    fn default() -> Self {
-        List {
-            data: vec![],
-            t: Type::Unknown,
-            repeat: None,
         }
     }
 }
