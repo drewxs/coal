@@ -88,3 +88,45 @@ fn test_run_bool() {
         ("!!5", TRUE),
     ]);
 }
+
+#[test]
+fn test_run_global_let_stmts() {
+    test(&[
+        ("let one = 1; one", Object::I32(1)),
+        ("let one = 1; let two = 2; one + two", Object::I32(3)),
+        (
+            "let one = 1; let two = one + one; one + two",
+            Object::I32(3),
+        ),
+    ]);
+}
+
+#[test]
+fn test_run_assign_stmts() {
+    test(&[
+        ("let x = 1; x = 2; x", Object::I32(2)),
+        ("let x = 1; let y = 2; x = x + y; x", Object::I32(3)),
+    ]);
+}
+
+#[test]
+fn test_run_op_assign_stmts() {
+    test(&[
+        ("let x = 1; x += 2; x", Object::I32(3)),
+        (
+            "let x = 1; let y = 2; let z = 1; z += x + y; z",
+            Object::I32(4),
+        ),
+    ]);
+}
+
+#[test]
+fn test_run_str_exprs() {
+    test(&[
+        (r#""foo""#, Object::Str(String::from("foo"))),
+        (r#""foo" + "bar""#, Object::Str(String::from("foobar"))),
+        (r#""foo" == "foo""#, TRUE),
+        (r#""a" * 3"#, Object::Str(String::from("aaa"))),
+        (r#""a" < "b""#, TRUE),
+    ]);
+}

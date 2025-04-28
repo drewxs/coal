@@ -125,3 +125,51 @@ fn test_bools() {
         ),
     ]);
 }
+
+#[test]
+fn test_global_let_stmts() {
+    test(&[
+        (
+            r#"
+                let one = 1;
+                let two = 2;
+            "#,
+            &[Object::I32(1), Object::I32(2)],
+            Instructions::from(vec![
+                Instructions::new(Opcode::Const, &[0]),
+                Instructions::new(Opcode::SetGlobal, &[0]),
+                Instructions::new(Opcode::Const, &[1]),
+                Instructions::new(Opcode::SetGlobal, &[1]),
+            ]),
+        ),
+        (
+            r#"
+                let one = 1;
+                one;
+            "#,
+            &[Object::I32(1)],
+            Instructions::from(vec![
+                Instructions::new(Opcode::Const, &[0]),
+                Instructions::new(Opcode::SetGlobal, &[0]),
+                Instructions::new(Opcode::GetGlobal, &[0]),
+                Instructions::new(Opcode::Pop, &[]),
+            ]),
+        ),
+        (
+            r#"
+                let one = 1;
+                let two = one;
+                two;
+            "#,
+            &[Object::I32(1)],
+            Instructions::from(vec![
+                Instructions::new(Opcode::Const, &[0]),
+                Instructions::new(Opcode::SetGlobal, &[0]),
+                Instructions::new(Opcode::GetGlobal, &[0]),
+                Instructions::new(Opcode::SetGlobal, &[1]),
+                Instructions::new(Opcode::GetGlobal, &[1]),
+                Instructions::new(Opcode::Pop, &[]),
+            ]),
+        ),
+    ]);
+}

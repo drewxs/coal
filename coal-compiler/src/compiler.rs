@@ -63,13 +63,48 @@ impl Compiler {
 
     fn compile_stmt(&mut self, stmt: &Stmt) -> Result<(), CompileError> {
         match stmt {
-            Stmt::Expr(expr) => {
+            Stmt::Let(ident, _, expr) => {
+                let symbol = self.symbol_table.set(ident.name());
                 self.compile_expr(expr)?;
-                self.emit(Opcode::Pop, &[]);
+                if symbol.scope == SymbolScope::Global {
+                    self.emit(Opcode::SetGlobal, &[symbol.idx]);
+                } else {
+                    self.emit(Opcode::SetLocal, &[symbol.idx]);
+                }
+            }
+            Stmt::Assign(lhs, rhs) => {
+                let symbol = match lhs {
+                    Expr::Ident(ident, _, _) => self.symbol_table.get(&ident.0).unwrap(),
+                    // TODO: handle index/attr access
+                    _ => unreachable!(),
+                };
+                self.compile_expr(rhs)?;
+                if symbol.scope == SymbolScope::Global {
+                    self.emit(Opcode::SetGlobal, &[symbol.idx]);
+                } else {
+                    self.emit(Opcode::SetLocal, &[symbol.idx]);
+                }
+            }
+            Stmt::OpAssign(op, lhs, rhs) => {
+                let symbol = match lhs {
+                    Expr::Ident(ident, _, _) => self.symbol_table.get(&ident.0).unwrap(),
+                    // TODO: handle index/attr access
+                    _ => unreachable!(),
+                };
+                self.compile_infix(op, lhs, rhs)?;
+                if symbol.scope == SymbolScope::Global {
+                    self.emit(Opcode::SetGlobal, &[symbol.idx]);
+                } else {
+                    self.emit(Opcode::SetLocal, &[symbol.idx]);
+                }
             }
             Stmt::Return(expr) => {
                 self.compile_expr(expr)?;
                 self.emit(Opcode::Ret, &[]);
+            }
+            Stmt::Expr(expr) => {
+                self.compile_expr(expr)?;
+                self.emit(Opcode::Pop, &[]);
             }
             _ => {}
         }
