@@ -9,7 +9,7 @@ pub const STACK_SIZE: usize = 2048;
 pub const GLOBALS_SIZE: usize = 65536;
 pub const MAX_FRAMES: usize = 1024;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct VM {
     pub globals: Vec<Rc<Object>>,
     pub constants: Vec<Rc<Object>>,
@@ -20,12 +20,6 @@ pub struct VM {
 }
 
 impl VM {
-    pub fn new(bytecode: Bytecode, globals: Vec<Rc<Object>>) -> Self {
-        let mut vm = VM::from(bytecode);
-        vm.globals = globals;
-        vm
-    }
-
     pub fn push(&mut self, o: Rc<Object>) {
         if self.sp >= STACK_SIZE {
             panic!("stack overflow");

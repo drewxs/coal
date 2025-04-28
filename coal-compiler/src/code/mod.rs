@@ -207,7 +207,7 @@ impl fmt::Display for Instructions {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Bytecode {
     pub instructions: Instructions,
     pub constants: Vec<Rc<Object>>,

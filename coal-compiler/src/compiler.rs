@@ -21,8 +21,9 @@ struct CompilationScope {
     pub prev_instruction: EmittedInstruction,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default)]
 pub struct Compiler {
+    pub parser: Parser,
     pub constants: Vec<Rc<Object>>,
     pub symbol_table: SymbolTable,
     scopes: Vec<CompilationScope>,
@@ -32,6 +33,7 @@ pub struct Compiler {
 impl Compiler {
     pub fn new() -> Self {
         Compiler {
+            parser: Parser::default(),
             constants: vec![],
             symbol_table: SymbolTable::default(),
             scopes: vec![CompilationScope::default()],
@@ -39,9 +41,21 @@ impl Compiler {
         }
     }
 
+    pub fn new_with(constants: Vec<Rc<Object>>, symbol_table: SymbolTable) -> Self {
+        Compiler {
+            parser: Parser::default(),
+            constants,
+            symbol_table,
+            scopes: vec![CompilationScope::default()],
+            scope_idx: 0,
+        }
+    }
+
     pub fn compile(&mut self, input: &str) -> Result<Bytecode, Vec<CompileError>> {
-        let mut parser = Parser::from(input);
-        let stmts = parser.parse();
+        self.parser = self
+            .parser
+            .new_with(input, Rc::clone(&self.parser.symbol_table));
+        let stmts = self.parser.parse();
 
         let mut errors = vec![];
 
@@ -49,6 +63,10 @@ impl Compiler {
             if let Err(e) = self.compile_stmt(&stmt) {
                 errors.push(e);
             }
+        }
+
+        if !errors.is_empty() {
+            return Err(errors);
         }
 
         Ok(self.bytecode())

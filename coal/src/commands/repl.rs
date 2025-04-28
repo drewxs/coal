@@ -1,20 +1,20 @@
 use std::{borrow::Cow, cell::Cell};
 
 use rustyline::{
+    Cmd, Completer, CompletionType, ConditionalEventHandler, Config, Context, EditMode, Editor,
+    Event, EventContext, EventHandler, Helper, Highlighter, Hinter, KeyCode, KeyEvent, Modifiers,
+    RepeatCount, Result, Validator,
     completion::{Completer, Pair},
     error::ReadlineError,
     highlight::{CmdKind, Highlighter},
     hint::{Hint, Hinter},
     history::{FileHistory, SearchDirection},
     validate::MatchingBracketValidator,
-    Cmd, Completer, CompletionType, ConditionalEventHandler, Config, Context, EditMode, Editor,
-    Event, EventContext, EventHandler, Helper, Highlighter, Hinter, KeyCode, KeyEvent, Modifiers,
-    RepeatCount, Result, Validator,
 };
 
-// use coal_core::Evaluator;
+use coal_compiler::Compiler;
 
-// use crate::eval_with;
+use crate::exec_with;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const TAB: &str = "    ";
@@ -23,7 +23,7 @@ pub fn repl() {
     println!("Coal {VERSION}");
 
     let mut rl = editor();
-    // let mut evaluator = Evaluator::default();
+    let mut compiler = Compiler::new();
 
     loop {
         match rl.readline(">> ") {
@@ -31,9 +31,8 @@ pub fn repl() {
                 "exit" | "quit" => break,
                 "clear" => println!("\x1B[2J\x1B[1;1H"),
                 input => {
-                    println!("{}", input);
-                    // eval_with(&mut evaluator, input, true);
-                    // let _ = rl.add_history_entry(input);
+                    exec_with(input, &mut compiler);
+                    let _ = rl.add_history_entry(input);
                 }
             },
             Err(ReadlineError::Interrupted) => {

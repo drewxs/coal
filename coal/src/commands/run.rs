@@ -1,17 +1,24 @@
-use coal_vm::VM;
 use std::{fs::File, io::Read, process};
+
 use terminal_size::{Width, terminal_size};
 
 use coal_compiler::Compiler;
 use coal_core::{Lexer, Parser, clean_input};
+use coal_vm::VM;
 
 pub fn run(path: &str) {
-    let input = contents(path);
-    let mut compiler = Compiler::new();
+    exec(&contents(path));
+}
 
-    match compiler.compile(&input) {
+pub fn exec(input: &str) {
+    let mut compiler = Compiler::new();
+    exec_with(input, &mut compiler);
+}
+
+pub fn exec_with(input: &str, compiler: &mut Compiler) {
+    match compiler.compile(input) {
         Ok(bytecode) => {
-            let mut vm = VM::from(bytecode);
+            let mut vm = VM::from(bytecode.clone());
             vm.run().unwrap();
 
             println!("{}", vm.last_stack_obj());
@@ -31,7 +38,7 @@ pub fn run(path: &str) {
                 println!("{e}");
             } else {
                 println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
-                println!("{}", clean_input(&input));
+                println!("{}", clean_input(input));
                 println!(
                     "\x1b[31m{}\x1b[0m",
                     " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),

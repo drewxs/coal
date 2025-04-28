@@ -3,9 +3,9 @@ use std::{
     io::{self, IsTerminal, Read},
 };
 
-use terminal_size::{terminal_size, Width};
+use terminal_size::{Width, terminal_size};
 
-use coal_core::{clean_input, Parser};
+use coal_core::{Parser, clean_input};
 
 use crate::path::program_files;
 

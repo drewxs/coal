@@ -5,7 +5,7 @@ use std::{
     time::Instant,
 };
 
-use coal_core::{trim_input, Parser};
+use coal_core::{Parser, trim_input};
 
 use crate::path::program_files;
 
