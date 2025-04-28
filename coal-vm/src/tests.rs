@@ -1,6 +1,7 @@
-use crate::{Compiler, VM};
+use coal_compiler::Compiler;
+use coal_objects::{FALSE, Object, TRUE};
 
-use super::{Object, FALSE, TRUE};
+use crate::VM;
 
 fn test(tests: &[(&str, Object)]) {
     for (input, expected) in tests {
@@ -54,5 +55,36 @@ fn test_run_infix() {
         (r#""foo" == "foo""#, TRUE),
         (r#""a" * 3"#, Object::Str(String::from("aaa"))),
         (r#""a" < "b""#, TRUE),
+    ]);
+}
+
+#[test]
+fn test_run_bool() {
+    test(&[
+        ("true", TRUE),
+        ("false", FALSE),
+        ("1 < 2", TRUE),
+        ("1 > 2", FALSE),
+        ("1 < 1", FALSE),
+        ("1 > 1", FALSE),
+        ("1 == 1", TRUE),
+        ("1 != 1", FALSE),
+        ("1 == 2", FALSE),
+        ("1 != 2", TRUE),
+        ("true == true", TRUE),
+        ("false == false", TRUE),
+        ("true == false", FALSE),
+        ("true != false", TRUE),
+        ("false != true", TRUE),
+        ("(1 < 2) == true", TRUE),
+        ("(1 < 2) == false", FALSE),
+        ("(1 > 2) == true", FALSE),
+        ("(1 > 2) == false", TRUE),
+        ("!true", FALSE),
+        ("!false", TRUE),
+        ("!5", FALSE),
+        ("!!true", TRUE),
+        ("!!false", FALSE),
+        ("!!5", TRUE),
     ]);
 }

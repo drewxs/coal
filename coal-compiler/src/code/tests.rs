@@ -1,4 +1,4 @@
-use super::code::{make, read_operands, Instructions, Opcode};
+use crate::{Instructions, Opcode, make, read_operands};
 
 fn test_opcodes(tests: &[(Opcode, &[usize], &[u8])]) {
     for (op, operands, expected) in tests {

@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use coal_compiler::{Bytecode, CompileError, Opcode, read_u16};
 use coal_objects::{Closure, CompiledFunc, FALSE, Object, TRUE};
@@ -166,6 +166,65 @@ impl VM {
                     let cond = self.pop();
                     if cond.is_truthy() {
                         self.curr_frame().ip = pos.saturating_sub(1);
+                    }
+                }
+                Opcode::GetGlobal => {
+                    let idx = read_u16(&ins[ip + 1..ip + 3]) as usize;
+                    self.curr_frame().ip += 2;
+                    self.push(Rc::clone(&self.globals[idx]));
+                }
+                Opcode::SetGlobal => {
+                    let idx = read_u16(&ins[ip + 1..ip + 3]) as usize;
+                    self.curr_frame().ip += 2;
+                    self.globals[idx] = Rc::new(self.pop());
+                }
+                Opcode::List => {
+                    let count = read_u16(&ins[ip + 1..ip + 3]) as usize;
+                    self.curr_frame().ip += 2;
+
+                    let mut data = Vec::with_capacity(count);
+                    for i in self.sp - count..self.sp {
+                        data.push(Rc::clone(&self.stack[i]));
+                    }
+
+                    self.sp -= count;
+                    self.push(Rc::new(Object::List(data)));
+                }
+                Opcode::Hash => {
+                    let count = read_u16(&ins[ip + 1..ip + 3]) as usize;
+                    self.curr_frame().ip += 2;
+
+                    let mut data = HashMap::new();
+                    for i in (self.sp - count..self.sp).step_by(2) {
+                        let k = Rc::clone(&self.stack[i]);
+                        let v = Rc::clone(&self.stack[i + 1]);
+                        data.insert(k, v);
+                    }
+
+                    self.sp -= count;
+                    self.push(Rc::new(Object::Map(data)));
+                }
+                Opcode::Index => {
+                    let idx = self.pop();
+                    let lhs = self.pop();
+
+                    match (&lhs, &idx) {
+                        (Object::List(l), Object::U64(i)) => {
+                            if *i < l.len() as u64 {
+                                self.push(Rc::clone(&l[*i as usize]));
+                            } else {
+                                self.push(Rc::new(Object::Nil));
+                            }
+                        }
+                        (Object::Map(m), _) => {
+                            if idx.is_hashable() {
+                                match m.get(&idx) {
+                                    Some(v) => self.push(Rc::clone(v)),
+                                    None => self.push(Rc::new(Object::Nil)),
+                                }
+                            }
+                        }
+                        _ => {}
                     }
                 }
                 _ => {}

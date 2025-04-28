@@ -55,6 +55,25 @@ impl Object {
         matches!(self, Object::Func { .. } | Object::Closure { .. })
     }
 
+    pub fn is_int(&self) -> bool {
+        matches!(
+            self,
+            Object::U32(_) | Object::U64(_) | Object::I32(_) | Object::I64(_) | Object::I128(_)
+        )
+    }
+
+    pub fn is_float(&self) -> bool {
+        matches!(self, Object::F32(_) | Object::F64(_))
+    }
+
+    pub fn is_numeric(&self) -> bool {
+        self.is_int() || self.is_float()
+    }
+
+    pub fn is_hashable(&self) -> bool {
+        self.is_int() || matches!(self, Object::Bool(_) | Object::Str(_))
+    }
+
     pub fn call(&mut self, name: &str, args: &[Rc<Object>]) -> Option<Rc<Object>> {
         if name == "to_s" {
             return Some(Rc::new(Object::Str(self.to_string())));
