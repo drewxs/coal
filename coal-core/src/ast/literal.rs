@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::indent;
 
-use super::{List, Map, Type, F32, F64, I128, I32, I64, U32, U64};
+use super::{F32, F64, I32, I64, I128, List, Map, Type, U32, U64};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {

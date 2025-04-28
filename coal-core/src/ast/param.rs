@@ -3,7 +3,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use crate::{indent, Type};
+use crate::{Type, indent};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Param {

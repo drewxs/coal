@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{indent, TokenKind};
+use crate::{TokenKind, indent};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Ident(pub String);

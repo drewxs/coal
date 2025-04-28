@@ -3,7 +3,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use crate::{indent, Span};
+use crate::{Span, indent};
 
 use super::{Param, Stmt, Type};
 

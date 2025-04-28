@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{indent, ParserError, ParserErrorKind, Span};
+use crate::{ParserError, ParserErrorKind, Span, indent};
 
 use super::{Comment, Expr, Ident, Infix, StructDecl, Type};
 
