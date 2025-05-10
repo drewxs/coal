@@ -15,7 +15,7 @@ pub enum Expr {
     If {
         cond: Box<Expr>,
         then: Vec<Stmt>,
-        elifs: Vec<IfExpr>,
+        elifs: Vec<ElifExpr>,
         alt: Option<Vec<Stmt>>,
         span: Span,
     },
@@ -60,7 +60,7 @@ pub enum Expr {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct IfExpr {
+pub struct ElifExpr {
     pub cond: Box<Expr>,
     pub then: Vec<Stmt>,
 }

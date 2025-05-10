@@ -52,13 +52,10 @@ impl Compiler {
     }
 
     pub fn compile(&mut self, input: &str) -> Result<Bytecode, Vec<CompileError>> {
-        self.parser = self
-            .parser
-            .new_with(input, Rc::clone(&self.parser.symbol_table));
+        self.parser.extend(input);
         let stmts = self.parser.parse();
 
         let mut errors = vec![];
-
         for stmt in stmts {
             if let Err(e) = self.compile_stmt(&stmt) {
                 errors.push(e);

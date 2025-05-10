@@ -67,13 +67,13 @@ fn main() {
                 }
             }
             Command::Data { cmd } => match cmd {
-                DataCommand::Clear => match fs::remove_dir_all(coal::path::data()) {
+                DataCommand::Clear => match fs::remove_dir_all(path::data()) {
                     Ok(_) => println!("Data cleared"),
                     Err(err) => eprintln!("{err}"),
                 },
             },
             Command::Cache { cmd } => match cmd {
-                CacheCommand::Clear => match fs::remove_dir_all(coal::path::data()) {
+                CacheCommand::Clear => match fs::remove_dir_all(path::data()) {
                     Ok(_) => println!("Cache cleared"),
                     Err(err) => eprintln!("{err}"),
                 },

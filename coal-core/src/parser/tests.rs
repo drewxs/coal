@@ -802,7 +802,7 @@ fn test_parse_elif_expression() {
             ((2, 8), (2, 8)),
         ))],
         elifs: vec![
-            IfExpr {
+            ElifExpr {
                 cond: Box::new(Expr::Infix(
                     Infix::GT,
                     Box::new(Expr::Ident(
@@ -823,7 +823,7 @@ fn test_parse_elif_expression() {
                     ((4, 8), (4, 8)),
                 ))],
             },
-            IfExpr {
+            ElifExpr {
                 cond: Box::new(Expr::Infix(
                     Infix::GT,
                     Box::new(Expr::Ident(

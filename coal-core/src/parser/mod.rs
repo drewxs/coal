@@ -10,7 +10,7 @@ mod warning;
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 use crate::{
-    Comment, Expr, Func, Ident, IfExpr, Infix, Lexer, List, Literal, Map, Param, Prefix, Stmt,
+    Comment, ElifExpr, Expr, Func, Ident, Infix, Lexer, List, Literal, Map, Param, Prefix, Stmt,
     Struct, StructDecl, Token, TokenKind, Type, U32,
 };
 
@@ -45,29 +45,23 @@ impl Parser {
         parser
     }
 
-    pub fn new_with(&self, input: &str, symbol_table: Rc<RefCell<SymbolTable>>) -> Self {
-        let mut parser = Parser {
-            lexer: Lexer::new(input),
-            curr_tok: Token::default(),
-            next_tok: Token::default(),
-            symbol_table: Rc::new(RefCell::new(SymbolTable::from(symbol_table))),
-            errors: vec![],
-            warnings: vec![],
-        };
-        parser.advance();
-        parser.advance();
-        parser
+    pub fn extend(&mut self, input: &str) {
+        self.lexer = Lexer::new(input);
+        self.curr_tok = Token::default();
+        self.next_tok = Token::default();
+        self.symbol_table = Rc::new(RefCell::new(SymbolTable::from(Rc::clone(
+            &self.symbol_table,
+        ))));
+        self.errors = vec![];
+        self.warnings = vec![];
+
+        self.advance();
+        self.advance();
     }
 
     pub fn parse(&mut self) -> Vec<Stmt> {
         let mut stmts = vec![];
-        while !matches!(
-            self.curr_tok,
-            Token {
-                kind: TokenKind::EOF,
-                ..
-            }
-        ) {
+        while !matches!(self.curr_tok.kind, TokenKind::EOF,) {
             if let Some(stmt) = self.parse_stmt() {
                 stmts.push(stmt);
             }
@@ -1060,7 +1054,7 @@ impl Parser {
             self.expect_next(TokenKind::Lbrace)?;
             self.advance();
 
-            elifs.push(IfExpr {
+            elifs.push(ElifExpr {
                 cond: Box::new(cond),
                 then: self.parse_block(),
             });

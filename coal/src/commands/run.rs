@@ -11,14 +11,13 @@ pub fn run(path: &str) {
 }
 
 pub fn exec(input: &str) {
-    let mut compiler = Compiler::new();
-    exec_with(input, &mut compiler);
+    exec_with(input, &mut Compiler::new());
 }
 
 pub fn exec_with(input: &str, compiler: &mut Compiler) {
     match compiler.compile(input) {
         Ok(bytecode) => {
-            let mut vm = VM::from(bytecode.clone());
+            let mut vm = VM::from(bytecode);
             vm.run().unwrap();
 
             println!("{}", vm.last_stack_obj());

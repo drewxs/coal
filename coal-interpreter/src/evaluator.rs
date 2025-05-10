@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use coal_core::{
-    ast, Expr,  Ident, IfExpr, Infix, List, Literal, Map, Param, Parser, Prefix, Span, Stmt,
+    ast, Expr,  Ident, ElifExpr, Infix, List, Literal, Map, Param, Parser, Prefix, Span, Stmt,
     Struct, StructDecl, Type,
 };
 use coal_objects::{builtin_defs, Builtin, Closure,  Func, Object, FALSE, TRUE};
@@ -28,9 +28,7 @@ impl Evaluator<'_> {
     }
 
     pub fn eval(&mut self, input: &str) -> Result<Object, Vec<RuntimeError>> {
-        self.parser = self
-            .parser
-            .new_with(input, Rc::clone(&self.parser.symbol_table));
+        self.parser.extend(input);
         let stmts = self.parser.parse();
 
         if !self.parser.errors.is_empty() {
@@ -65,9 +63,7 @@ impl Evaluator<'_> {
     }
 
     pub fn eval_scoped(&mut self, input: &str) -> Result<Object, Vec<RuntimeError>> {
-        self.parser = self
-            .parser
-            .new_with(input, Rc::clone(&self.parser.symbol_table));
+        self.parser.extend(input);
         let stmts = self.parser.parse();
 
         if !self.parser.errors.is_empty() {
@@ -566,7 +562,7 @@ impl Evaluator<'_> {
         &mut self,
         cond: &Expr,
         then: &[Stmt],
-        elifs: &[IfExpr],
+        elifs: &[ElifExpr],
         alt: &Option<Vec<Stmt>>,
     ) -> Result<(), RuntimeError> {
         let cond = self.eval_expr(cond)?;

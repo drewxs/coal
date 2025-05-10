@@ -18,7 +18,7 @@ pub struct Func {
 
 impl Func {
     pub fn uses_self(&self) -> bool {
-        self.args.get(0).map_or(false, |param| param.name == "self")
+        self.args.first().is_some_and(|param| param.name == "self")
     }
 
     pub fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent_level: usize) -> fmt::Result {
