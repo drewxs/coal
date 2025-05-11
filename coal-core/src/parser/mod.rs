@@ -378,7 +378,7 @@ impl Parser {
 
         if lhs_t != rhs_t && !(lhs_t.is_numeric() && rhs_t.is_numeric()) {
             self.errors.push(ParserError::new(
-                ParserErrorKind::TypeMismatch(lhs_t, rhs_t),
+                ParserErrorKind::TypeMismatch(lhs_t.into(), rhs_t.into()),
                 rhs.span(),
             ));
             self.advance_line();
@@ -450,7 +450,7 @@ impl Parser {
                     let val_t = Type::try_from(v).ok()?;
                     if val_t != t {
                         self.errors.push(ParserError::new(
-                            ParserErrorKind::TypeMismatch(t.clone(), val_t),
+                            ParserErrorKind::TypeMismatch(t.clone().into(), val_t.into()),
                             v.span(),
                         ));
                     }
@@ -658,7 +658,7 @@ impl Parser {
         if !lhs.is_indexable() {
             let (_, end) = self.curr_tok.span;
             self.errors.push(ParserError::new(
-                ParserErrorKind::NonIndexableType(lhs_t.clone()),
+                ParserErrorKind::NonIndexableType(lhs_t.clone().into()),
                 (start, (end.0, end.1 + 1)),
             ));
         }
@@ -669,13 +669,13 @@ impl Parser {
         match lhs_t {
             Type::List(_) if !idx_t.is_int() => {
                 self.errors.push(ParserError::new(
-                    ParserErrorKind::InvalidIndex(lhs_t, idx_t),
+                    ParserErrorKind::InvalidIndex(lhs_t.into(), idx_t.into()),
                     idx.span(),
                 ));
             }
             Type::Map(ref t) if !idx_t.is_hashable() || t.0 != idx_t => {
                 self.errors.push(ParserError::new(
-                    ParserErrorKind::InvalidIndex(lhs_t, idx_t),
+                    ParserErrorKind::InvalidIndex(lhs_t.into(), idx_t.into()),
                     idx.span(),
                 ));
             }
@@ -750,7 +750,7 @@ impl Parser {
                 Ok(curr_t) => {
                     if curr_t != t {
                         self.errors.push(ParserError::new(
-                            ParserErrorKind::TypeMismatch(t, curr_t),
+                            ParserErrorKind::TypeMismatch(t.into(), curr_t.into()),
                             (start, self.curr_tok.span.1),
                         ));
                         self.advance_line();
@@ -761,7 +761,7 @@ impl Parser {
                 }
                 Err(e) => {
                     self.errors.push(ParserError::new(
-                        ParserErrorKind::TypeMismatch(t, e),
+                        ParserErrorKind::TypeMismatch(t.into(), e.into()),
                         (start, self.curr_tok.span.1),
                     ));
                     return None;
@@ -792,7 +792,7 @@ impl Parser {
             Expr::Call { ret_t, .. } | Expr::MethodCall { ret_t, .. } => {
                 if !ret_t.is_numeric() {
                     self.errors.push(ParserError::new(
-                        ParserErrorKind::TypeMismatch(U32, t.clone()),
+                        ParserErrorKind::TypeMismatch(U32.into(), t.clone().into()),
                         self.next_tok.span,
                     ));
                     (vec![], None)
@@ -802,7 +802,7 @@ impl Parser {
             }
             _ => {
                 self.errors.push(ParserError::new(
-                    ParserErrorKind::TypeMismatch(U32, t.clone()),
+                    ParserErrorKind::TypeMismatch(U32.into(), t.clone().into()),
                     self.next_tok.span,
                 ));
                 (vec![], None)
@@ -862,7 +862,10 @@ impl Parser {
 
             if kt != Type::try_from(&k).unwrap_or_default() {
                 self.errors.push(ParserError::new(
-                    ParserErrorKind::TypeMismatch(kt, Type::try_from(&k).unwrap_or_default()),
+                    ParserErrorKind::TypeMismatch(
+                        kt.into(),
+                        Type::try_from(&k).unwrap_or_default().into(),
+                    ),
                     (start, self.curr_tok.span.1),
                 ));
                 self.advance_line();
@@ -875,7 +878,10 @@ impl Parser {
             let v = self.parse_expr(Precedence::Lowest)?;
             if vt != Type::try_from(&v).unwrap_or_default() {
                 self.errors.push(ParserError::new(
-                    ParserErrorKind::TypeMismatch(vt, Type::try_from(&v).unwrap_or_default()),
+                    ParserErrorKind::TypeMismatch(
+                        vt.into(),
+                        Type::try_from(&v).unwrap_or_default().into(),
+                    ),
                     (start, self.curr_tok.span.1),
                 ));
                 self.advance_line();
@@ -941,7 +947,7 @@ impl Parser {
             self.consume_next(TokenKind::Lparen);
 
             self.errors.push(ParserError::new(
-                ParserErrorKind::MethodNotFound(lhs_t, String::from(&method_name)),
+                ParserErrorKind::MethodNotFound(lhs_t.into(), method_name),
                 (start, self.curr_tok.span.1),
             ));
 
@@ -1169,7 +1175,7 @@ impl Parser {
         let ret_t = if let Some(dt) = declared_ret_t {
             if ret_stmts.is_empty() {
                 self.errors.push(ParserError::new(
-                    ParserErrorKind::TypeMismatch(dt.clone(), Type::Void),
+                    ParserErrorKind::TypeMismatch(dt.clone().into(), Type::Void.into()),
                     (start, self.curr_tok.span.1),
                 ));
             }
@@ -1250,7 +1256,7 @@ impl Parser {
 
                     if !val_t.partial_eq(expected_t) {
                         self.errors.push(ParserError::new(
-                            ParserErrorKind::TypeMismatch(expected_t.clone(), val_t),
+                            ParserErrorKind::TypeMismatch(expected_t.clone().into(), val_t.into()),
                             val.span(),
                         ));
                     }

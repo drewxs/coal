@@ -38,7 +38,7 @@ pub enum ParserErrorKind {
     InvalidArgumentsLength(usize, usize),
 
     #[error("the type `{0}` cannot be indexed by `{1}`")]
-    InvalidIndex(Type, Type),
+    InvalidIndex(Box<Type>, Box<Type>),
 
     #[error("`self` is reserved for the first argument in a method argument list")]
     InvalidSelfPlacement,
@@ -47,7 +47,7 @@ pub enum ParserErrorKind {
     InvalidStructAttr(String),
 
     #[error("method not found: `{0}.{1}()`")]
-    MethodNotFound(Type, String),
+    MethodNotFound(Box<Type>, String),
 
     #[error("`if` may be missing an `else` clause")]
     MissingElseClause,
@@ -56,7 +56,7 @@ pub enum ParserErrorKind {
     NotFound(String),
 
     #[error("type `{0}` is not indexable")]
-    NonIndexableType(Type),
+    NonIndexableType(Box<Type>),
 
     #[error("syntax error: `{0}`")]
     SyntaxError(TokenKind),
@@ -65,11 +65,11 @@ pub enum ParserErrorKind {
     TypeAnnotationsNeeded,
 
     #[error("type mismatch. expected: `{0}`, got: `{1}`")]
-    TypeMismatch(Type, Type),
+    TypeMismatch(Box<Type>, Box<Type>),
 
     #[error("unexpected token: `{0}`, expected: `{1}`")]
     UnexpectedToken(TokenKind, TokenKind),
 
     #[error("map key not hashable: type `{0}`")]
-    UnhashableMapKey(Type),
+    UnhashableMapKey(Box<Type>),
 }

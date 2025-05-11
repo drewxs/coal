@@ -112,7 +112,10 @@ impl Expr {
                     let t = stmt.ret_t(expected, last)?;
                     if t != Type::Void && t != *expected {
                         return Err(ParserError::new(
-                            ParserErrorKind::TypeMismatch(expected.clone(), t.clone()),
+                            ParserErrorKind::TypeMismatch(
+                                expected.clone().into(),
+                                t.clone().into(),
+                            ),
                             self.span(),
                         ));
                     }
@@ -123,7 +126,10 @@ impl Expr {
                         let t = stmt.ret_t(expected, last)?;
                         if t != *expected {
                             return Err(ParserError::new(
-                                ParserErrorKind::TypeMismatch(expected.clone(), t.clone()),
+                                ParserErrorKind::TypeMismatch(
+                                    expected.clone().into(),
+                                    t.clone().into(),
+                                ),
                                 self.span(),
                             ));
                         }
@@ -135,14 +141,20 @@ impl Expr {
                         if let Some((rt, if_then)) = &returning {
                             if rt != expected {
                                 return Err(ParserError::new(
-                                    ParserErrorKind::TypeMismatch(expected.clone(), rt.clone()),
+                                    ParserErrorKind::TypeMismatch(
+                                        expected.clone().into(),
+                                        rt.clone().into(),
+                                    ),
                                     if_then.span(),
                                 ));
                             }
                         }
                         if t != *expected {
                             return Err(ParserError::new(
-                                ParserErrorKind::TypeMismatch(expected.clone(), t.clone()),
+                                ParserErrorKind::TypeMismatch(
+                                    expected.clone().into(),
+                                    t.clone().into(),
+                                ),
                                 stmt.span(),
                             ));
                         }
@@ -160,7 +172,10 @@ impl Expr {
                     let t = stmt.ret_t(expected, last)?;
                     if t != Type::Void && t != *expected {
                         return Err(ParserError::new(
-                            ParserErrorKind::TypeMismatch(expected.clone(), t.clone()),
+                            ParserErrorKind::TypeMismatch(
+                                expected.clone().into(),
+                                t.clone().into(),
+                            ),
                             self.span(),
                         ));
                     }

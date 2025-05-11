@@ -34,7 +34,7 @@ impl Stmt {
         match self {
             Stmt::Return(e) => Type::try_from(e).map_err(|_| {
                 ParserError::new(
-                    ParserErrorKind::TypeMismatch(expected.clone(), Type::Void),
+                    ParserErrorKind::TypeMismatch(expected.clone().into(), Type::Void.into()),
                     e.span(),
                 )
             }),
