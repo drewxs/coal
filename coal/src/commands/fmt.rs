@@ -34,7 +34,7 @@ pub fn fmt_timed(input: &str) -> (String, u128) {
 }
 
 pub fn fmt_file(path: &str) -> Result<u128, String> {
-    let input = fs::read_to_string(path).unwrap_or(String::from("failed to read file"));
+    let input = fs::read_to_string(path).map_err(|_| String::from("failed to read file"))?;
     let (out, elapsed) = fmt_timed(&input);
 
     match fs::write(path, out) {
@@ -44,7 +44,7 @@ pub fn fmt_file(path: &str) -> Result<u128, String> {
 }
 
 pub fn fmt_file_dry_run(path: &str) -> Result<String, String> {
-    let input = fs::read_to_string(path).unwrap_or(String::from("failed to read file"));
+    let input = fs::read_to_string(path).map_err(|_| String::from("failed to read file"))?;
     let out = fmt(&input);
 
     Ok(out)
@@ -146,10 +146,10 @@ let x: u32 = 2;
     fn test_fmt_functions() {
         let input = "
   fn  adder (x :  u32 ) ->  Fn ( u32  ) ->    u32  {
-      fn add(n: u32) -> u32 { 
+      fn add(n: u32) -> u32 {
 let i = 0
   while  1 < n  { i   +=  1  }
-return 
+return
 x + n;
         }
  return  add; }

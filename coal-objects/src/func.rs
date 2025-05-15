@@ -3,16 +3,17 @@ use std::{
     rc::Rc,
 };
 
-use coal_core::{Param, Stmt, Type};
+use bincode::{Decode, Encode};
+
+use coal_core::Stmt;
 
 use super::Object;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Func {
     pub name: String,
-    pub args: Vec<Param>,
+    pub args: Vec<String>,
     pub body: Vec<Stmt>,
-    pub ret_t: Type,
 }
 
 impl Hash for Func {
@@ -20,11 +21,10 @@ impl Hash for Func {
         self.name.hash(state);
         self.args.len().hash(state);
         self.args.hash(state);
-        self.ret_t.hash(state);
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, Encode, Decode)]
 pub struct CompiledFunc {
     pub instructions: Vec<u8>,
     pub n_locals: usize,

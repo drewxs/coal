@@ -1,7 +1,7 @@
 use std::{collections::HashMap, rc::Rc};
 
 use coal_compiler::{Bytecode, CompileError, Opcode, read_u16};
-use coal_objects::{Closure, CompiledFunc, FALSE, Object, TRUE};
+use coal_objects::{Closure, CompiledFunc, Constant, FALSE, Object, TRUE};
 
 use crate::Frame;
 
@@ -12,7 +12,7 @@ pub const MAX_FRAMES: usize = 1024;
 #[derive(Clone, Debug, Default)]
 pub struct VM {
     pub globals: Vec<Rc<Object>>,
-    pub constants: Vec<Rc<Object>>,
+    pub constants: Vec<Rc<Constant>>,
     pub stack: Vec<Rc<Object>>,
     pub sp: usize,
     pub frames: Vec<Frame>,
@@ -67,9 +67,9 @@ impl VM {
                     self.push(Rc::new(Object::Nil));
                 }
                 Opcode::Const => {
-                    let const_idx = read_u16(&ins[ip + 1..ip + 3]) as usize;
+                    let i = read_u16(&ins[ip + 1..ip + 3]) as usize;
                     self.curr_frame().ip += 2;
-                    self.push(Rc::clone(&self.constants[const_idx]));
+                    self.push(Rc::new((*self.constants[i]).clone().into()));
                 }
                 Opcode::Pop => {
                     self.pop();
@@ -252,5 +252,11 @@ impl From<Bytecode> for VM {
             frames,
             frame_idx: 1,
         }
+    }
+}
+
+impl From<Vec<u8>> for VM {
+    fn from(bytes: Vec<u8>) -> Self {
+        Self::from(Bytecode::from(bytes))
     }
 }

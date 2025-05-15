@@ -17,23 +17,22 @@ pub enum Command {
     #[command(about = "Create a new project")]
     New { name: String },
 
-    #[command(about = "Compile and run programs")]
-    #[command(long_about = "Compile and run the current project or a given program")]
+    #[command(about = "Compile the current project")]
+    #[command(visible_alias = "c")]
+    Compile,
+
+    #[command(about = "Run the current project")]
     #[command(visible_alias = "r")]
-    Run {
-        path: Option<String>,
+    Run,
 
-        #[arg(short = 't', long, action)]
-        tokens: bool,
+    #[command(about = "Execute a standalone script")]
+    #[command(visible_alias = "x")]
+    Exec { path: String },
 
-        #[arg(short = 'a', long, action)]
-        ast: bool,
-    },
-
-    #[command(about = "Evaluate scripts")]
-    #[command(visible_alias = "e")]
-    Eval {
-        input: String,
+    #[command(about = "Parse a given program")]
+    #[command(visible_alias = "p")]
+    Parse {
+        path: String,
 
         #[arg(short = 't', long, action)]
         tokens: bool,

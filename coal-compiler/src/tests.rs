@@ -1,8 +1,8 @@
-use coal_objects::Object;
+use coal_objects::Constant;
 
 use super::{Compiler, Instructions, Opcode};
 
-fn test(tests: &[(&str, &[Object], Instructions)]) {
+fn test(tests: &[(&str, &[Constant], Instructions)]) {
     for (input, constants, instructions) in tests {
         let mut compiler = Compiler::new();
         compiler.compile(input).unwrap();
@@ -14,7 +14,7 @@ fn test(tests: &[(&str, &[Object], Instructions)]) {
                 .constants
                 .into_iter()
                 .map(|rc| (*rc).clone())
-                .collect::<Vec<Object>>()
+                .collect::<Vec<Constant>>()
         );
 
         assert_eq!(instructions, &bytecode.instructions);
@@ -25,7 +25,7 @@ fn test(tests: &[(&str, &[Object], Instructions)]) {
 fn test_arithmetic() {
     test(&[(
         "1 + 2",
-        &[Object::I32(1), Object::I32(2)],
+        &[Constant::I32(1), Constant::I32(2)],
         Instructions::from(vec![
             Instructions::new(Opcode::Const, &[0]),
             Instructions::new(Opcode::Const, &[1]),
@@ -56,7 +56,7 @@ fn test_bools() {
         ),
         (
             "1 > 2",
-            &[Object::I32(1), Object::I32(2)],
+            &[Constant::I32(1), Constant::I32(2)],
             Instructions::from(vec![
                 Instructions::new(Opcode::Const, &[0]),
                 Instructions::new(Opcode::Const, &[1]),
@@ -66,7 +66,7 @@ fn test_bools() {
         ),
         (
             "1 < 2",
-            &[Object::I32(1), Object::I32(2)],
+            &[Constant::I32(1), Constant::I32(2)],
             Instructions::from(vec![
                 Instructions::new(Opcode::Const, &[0]),
                 Instructions::new(Opcode::Const, &[1]),
@@ -76,7 +76,7 @@ fn test_bools() {
         ),
         (
             "1 == 2",
-            &[Object::I32(1), Object::I32(2)],
+            &[Constant::I32(1), Constant::I32(2)],
             Instructions::from(vec![
                 Instructions::new(Opcode::Const, &[0]),
                 Instructions::new(Opcode::Const, &[1]),
@@ -86,7 +86,7 @@ fn test_bools() {
         ),
         (
             "1 != 2",
-            &[Object::I32(1), Object::I32(2)],
+            &[Constant::I32(1), Constant::I32(2)],
             Instructions::from(vec![
                 Instructions::new(Opcode::Const, &[0]),
                 Instructions::new(Opcode::Const, &[1]),
@@ -134,7 +134,7 @@ fn test_global_let_stmts() {
                 let one = 1;
                 let two = 2;
             "#,
-            &[Object::I32(1), Object::I32(2)],
+            &[Constant::I32(1), Constant::I32(2)],
             Instructions::from(vec![
                 Instructions::new(Opcode::Const, &[0]),
                 Instructions::new(Opcode::SetGlobal, &[0]),
@@ -147,7 +147,7 @@ fn test_global_let_stmts() {
                 let one = 1;
                 one;
             "#,
-            &[Object::I32(1)],
+            &[Constant::I32(1)],
             Instructions::from(vec![
                 Instructions::new(Opcode::Const, &[0]),
                 Instructions::new(Opcode::SetGlobal, &[0]),
@@ -161,7 +161,7 @@ fn test_global_let_stmts() {
                 let two = one;
                 two;
             "#,
-            &[Object::I32(1)],
+            &[Constant::I32(1)],
             Instructions::from(vec![
                 Instructions::new(Opcode::Const, &[0]),
                 Instructions::new(Opcode::SetGlobal, &[0]),
@@ -171,5 +171,34 @@ fn test_global_let_stmts() {
                 Instructions::new(Opcode::Pop, &[]),
             ]),
         ),
+    ]);
+}
+
+#[test]
+fn test_conditionals() {
+    test(&[
+        (
+            "if true { 1 }",
+            &[Constant::I32(1)],
+            Instructions::from(vec![
+                Instructions::new(Opcode::True, &[]),
+                Instructions::new(Opcode::JumpIfNot, &[10]),
+                Instructions::new(Opcode::Const, &[0]),
+                Instructions::new(Opcode::Jump, &[11]),
+                Instructions::new(Opcode::Nil, &[]),
+                Instructions::new(Opcode::Pop, &[]),
+            ]),
+        ),
+        // (
+        //     "if false { 1 }",
+        //     &[],
+        //     Instructions::from(vec![
+        //         Instructions::new(Opcode::False, &[]),
+        //         Instructions::new(Opcode::JumpIfNot, &[9999]),
+        //         Instructions::new(Opcode::Const, &[0]),
+        //         Instructions::new(Opcode::Pop, &[]),
+        //         Instructions::new(Opcode::Jump, &[9999]),
+        //     ]),
+        // ),
     ]);
 }

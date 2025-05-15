@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use coal_core::{Expr, Ident, Infix, Literal, Parser, Prefix, Span, Stmt};
-use coal_objects::Object;
+use coal_core::{ElifExpr, Expr, Ident, Infix, Literal, Parser, Prefix, Span, Stmt};
+use coal_objects::{Constant, Object};
 
 use crate::{
     Bytecode, CompileError, CompileErrorKind, Instructions, Opcode, Symbol, SymbolScope,
@@ -24,7 +24,7 @@ struct CompilationScope {
 #[derive(Clone, Debug, Default)]
 pub struct Compiler {
     pub parser: Parser,
-    pub constants: Vec<Rc<Object>>,
+    pub constants: Vec<Rc<Constant>>,
     pub symbol_table: SymbolTable,
     scopes: Vec<CompilationScope>,
     scope_idx: usize,
@@ -41,7 +41,7 @@ impl Compiler {
         }
     }
 
-    pub fn new_with(constants: Vec<Rc<Object>>, symbol_table: SymbolTable) -> Self {
+    pub fn new_with(constants: Vec<Rc<Constant>>, symbol_table: SymbolTable) -> Self {
         Compiler {
             parser: Parser::default(),
             constants,
@@ -71,7 +71,7 @@ impl Compiler {
 
     pub fn bytecode(&mut self) -> Bytecode {
         Bytecode {
-            instructions: self.instructions().clone(),
+            instructions: self.instructions_mut().clone(),
             constants: self.constants.clone(),
         }
     }
@@ -127,12 +127,27 @@ impl Compiler {
         Ok(())
     }
 
+    fn compile_stmts(&mut self, stmts: &[Stmt]) -> Result<(), CompileError> {
+        for stmt in stmts {
+            self.compile_stmt(stmt)?;
+        }
+
+        Ok(())
+    }
+
     fn compile_expr(&mut self, expr: &Expr) -> Result<(), CompileError> {
         match expr {
             Expr::Ident(ident, _, span) => self.compile_ident(ident, span),
             Expr::Literal(l, _) => self.compile_literal(l),
             Expr::Prefix(op, expr, _) => self.compile_prefix(op, expr),
             Expr::Infix(op, lhs, rhs, _) => self.compile_infix(op, lhs, rhs),
+            Expr::If {
+                cond,
+                then,
+                elifs,
+                alt,
+                ..
+            } => self.compile_if(cond, then, elifs, alt),
             _ => Ok(()),
         }
     }
@@ -222,36 +237,87 @@ impl Compiler {
         Ok(())
     }
 
-    fn scope(&mut self) -> &mut CompilationScope {
+    fn compile_if(
+        &mut self,
+        cond: &Expr,
+        then: &[Stmt],
+        _elifs: &[ElifExpr],
+        alt: &Option<Vec<Stmt>>,
+    ) -> Result<(), CompileError> {
+        self.compile_expr(cond)?;
+        let jump_not_truthy = self.emit(Opcode::JumpIfNot, &[9999]);
+
+        self.compile_stmts(then)?;
+        if self.last_instruction_mut().opcode == Opcode::Pop {
+            self.remove_last_pop();
+        }
+
+        let jump_pos = self.emit(Opcode::Jump, &[9999]);
+        let after_then_pos = self.instructions().len();
+
+        self.change_operand(jump_not_truthy, after_then_pos);
+
+        if let Some(alt) = alt {
+            self.compile_stmts(alt)?;
+            if self.last_instruction().opcode == Opcode::Pop {
+                self.remove_last_pop();
+            }
+        } else {
+            self.emit(Opcode::Nil, &[]);
+        }
+
+        let after_alt_pos = self.instructions().len();
+        self.change_operand(jump_pos, after_alt_pos);
+
+        Ok(())
+    }
+
+    fn scope(&self) -> &CompilationScope {
+        &self.scopes[self.scope_idx]
+    }
+
+    fn scope_mut(&mut self) -> &mut CompilationScope {
         &mut self.scopes[self.scope_idx]
     }
 
-    fn instructions(&mut self) -> &mut Instructions {
-        &mut self.scope().instructions
+    fn instructions(&self) -> &Instructions {
+        &self.scope().instructions
     }
 
-    fn last_instruction(&mut self) -> &mut EmittedInstruction {
-        &mut self.scope().last_instruction
+    fn instructions_mut(&mut self) -> &mut Instructions {
+        &mut self.scope_mut().instructions
     }
 
-    fn prev_instruction(&mut self) -> &mut EmittedInstruction {
-        &mut self.scope().prev_instruction
+    fn last_instruction(&self) -> &EmittedInstruction {
+        &self.scope().last_instruction
+    }
+
+    fn last_instruction_mut(&mut self) -> &mut EmittedInstruction {
+        &mut self.scope_mut().last_instruction
+    }
+
+    fn prev_instruction(&self) -> &EmittedInstruction {
+        &self.scope().prev_instruction
+    }
+
+    fn prev_instruction_mut(&mut self) -> &mut EmittedInstruction {
+        &mut self.scope_mut().prev_instruction
     }
 
     fn emit(&mut self, opcode: Opcode, operands: &[usize]) -> usize {
         let ins = make(opcode, operands);
-        let pos = self.instructions().len();
+        let pos = self.instructions_mut().len();
 
-        self.instructions().extend_from_slice(&ins);
+        self.instructions_mut().extend_from_slice(&ins);
 
-        *self.prev_instruction() = self.last_instruction().clone();
-        *self.last_instruction() = EmittedInstruction { opcode, pos };
+        *self.prev_instruction_mut() = self.last_instruction_mut().clone();
+        *self.last_instruction_mut() = EmittedInstruction { opcode, pos };
 
         pos
     }
 
     fn add_constant(&mut self, obj: Object) -> usize {
-        self.constants.push(obj.into());
+        self.constants.push(Rc::new(obj.into()));
         self.constants.len() - 1
     }
 
@@ -263,6 +329,24 @@ impl Compiler {
             SymbolScope::Free => self.emit(Opcode::GetFree, &[symbol.idx]),
             SymbolScope::Func => self.emit(Opcode::CurrClosure, &[]),
         };
+    }
+
+    fn remove_last_pop(&mut self) {
+        let last = self.last_instruction().clone();
+
+        self.instructions_mut().truncate(last.pos);
+        *self.last_instruction_mut() = self.prev_instruction().clone();
+    }
+
+    fn change_operand(&mut self, pos: usize, operand: usize) {
+        let op = Opcode::from(self.instructions()[pos]);
+        let ins = make(op, &[operand]);
+
+        self.replace_instruction(pos, &ins);
+    }
+
+    fn replace_instruction(&mut self, pos: usize, new_ins: &[u8]) {
+        self.instructions_mut().0[pos..pos + new_ins.len()].copy_from_slice(new_ins);
     }
 
     // fn enter_scope(&mut self) {

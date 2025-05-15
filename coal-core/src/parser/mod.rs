@@ -1,11 +1,11 @@
-#[cfg(test)]
-mod tests;
-
 mod error;
 mod function_context;
 mod precedence;
 mod symbol_table;
 mod warning;
+
+#[cfg(test)]
+mod tests;
 
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 

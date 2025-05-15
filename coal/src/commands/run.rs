@@ -1,25 +1,45 @@
-use std::{fs::File, io::Read, process};
+use std::{fs::File, io::BufReader};
 
+use bincode::decode_from_std_read;
 use terminal_size::{Width, terminal_size};
 
-use coal_compiler::Compiler;
+use coal_compiler::{Bytecode, Compiler};
 use coal_core::{Lexer, Parser, clean_input};
 use coal_vm::VM;
 
+use crate::{compile, path::resolve_bin, read_file_to_str};
+
+/// Run a binary (e.g. `main.coal.bin`)
 pub fn run(path: &str) {
-    exec(&contents(path));
+    let path_res = resolve_bin("target", path);
+    if path_res.is_err() {
+        compile(".");
+    }
+
+    let path = resolve_bin("target", path).unwrap();
+    let file = File::open(&path).unwrap();
+    let mut reader = BufReader::new(file);
+
+    let config = bincode::config::standard();
+    let bytecode: Bytecode = decode_from_std_read(&mut reader, config).unwrap();
+    let mut vm = VM::from(bytecode);
+
+    vm.run().unwrap();
+
+    println!("{}", vm.last_stack_obj());
 }
 
-pub fn exec(input: &str) {
-    exec_with(input, &mut Compiler::new());
+/// JIT compile and run a given file
+pub fn compile_and_run(path: &str) {
+    compile_and_exec(&read_file_to_str(path), &mut Compiler::new());
 }
 
-pub fn exec_with(input: &str, compiler: &mut Compiler) {
-    match compiler.compile(input) {
+/// JIT compile and run the given input
+pub fn compile_and_exec(input: &str, c: &mut Compiler) {
+    match c.compile(input) {
         Ok(bytecode) => {
             let mut vm = VM::from(bytecode);
             vm.run().unwrap();
-
             println!("{}", vm.last_stack_obj());
         }
         Err(errs) => errs.iter().for_each(|e| {
@@ -59,24 +79,9 @@ pub fn print_ast(input: &str) {
 }
 
 pub fn print_file_tokens(path: &str) {
-    print_tokens(&contents(path));
+    print_tokens(&read_file_to_str(path));
 }
 
 pub fn print_file_ast(path: &str) {
-    print_ast(&contents(path));
-}
-
-fn contents(path: &str) -> String {
-    let mut file = File::open(path).unwrap_or_else(|_| {
-        eprintln!("file not found: {path}");
-        process::exit(1);
-    });
-
-    let mut input = String::new();
-    file.read_to_string(&mut input).unwrap_or_else(|_| {
-        eprintln!("failed to read file: {path}");
-        process::exit(1);
-    });
-
-    input
+    print_ast(&read_file_to_str(path));
 }
