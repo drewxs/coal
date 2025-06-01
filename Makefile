@@ -24,6 +24,10 @@ clean:
 run:
 	@cargo run
 
+# lint: Run clippy
+lint:
+	@cargo clippy
+
 # test: Run tests
 test:
 	@cargo test
