@@ -16,14 +16,23 @@ impl Instructions {
     }
 }
 
-impl From<&[Instructions]> for Instructions {
-    fn from(value: &[Instructions]) -> Self {
+impl From<Vec<Instructions>> for Instructions {
+    fn from(ins: Vec<Instructions>) -> Self {
         Instructions(
-            value
-                .iter()
+            ins.iter()
                 .map(|i| i.0.clone())
                 .collect::<Vec<Vec<u8>>>()
                 .concat(),
+        )
+    }
+}
+
+impl From<Vec<(Opcode, Vec<usize>)>> for Instructions {
+    fn from(ins: Vec<(Opcode, Vec<usize>)>) -> Self {
+        Instructions::from(
+            ins.iter()
+                .map(|(opcode, operands)| Instructions::new(*opcode, operands))
+                .collect::<Vec<Instructions>>(),
         )
     }
 }
@@ -66,18 +75,6 @@ impl fmt::Display for Instructions {
                 .map(|b| format!("{b:02X}"))
                 .collect::<Vec<String>>()
                 .join(" ")
-        )
-    }
-}
-
-impl From<Vec<Instructions>> for Instructions {
-    fn from(value: Vec<Instructions>) -> Self {
-        Instructions(
-            value
-                .iter()
-                .map(|i| i.0.clone())
-                .collect::<Vec<Vec<u8>>>()
-                .concat(),
         )
     }
 }

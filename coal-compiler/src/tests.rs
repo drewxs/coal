@@ -1,3 +1,5 @@
+use std::vec;
+
 use coal_objects::Constant;
 
 use super::{Compiler, Instructions, Opcode};
@@ -22,7 +24,7 @@ fn test(tests: &[(&str, &[Constant], Instructions)]) {
 }
 
 #[test]
-fn test_arithmetic() {
+fn test_compile_arithmetic() {
     test(&[(
         "1 + 2",
         &[Constant::I32(1), Constant::I32(2)],
@@ -36,7 +38,7 @@ fn test_arithmetic() {
 }
 
 #[test]
-fn test_bools() {
+fn test_compile_bools() {
     test(&[
         (
             "true",
@@ -127,7 +129,7 @@ fn test_bools() {
 }
 
 #[test]
-fn test_global_let_stmts() {
+fn test_compile_global_let_stmts() {
     test(&[
         (
             r#"
@@ -175,30 +177,43 @@ fn test_global_let_stmts() {
 }
 
 #[test]
-fn test_conditionals() {
+fn test_compile_conditionals() {
     test(&[
         (
             "if true { 1 }",
             &[Constant::I32(1)],
             Instructions::from(vec![
-                Instructions::new(Opcode::True, &[]),
-                Instructions::new(Opcode::JumpIfNot, &[10]),
-                Instructions::new(Opcode::Const, &[0]),
-                Instructions::new(Opcode::Jump, &[11]),
-                Instructions::new(Opcode::Nil, &[]),
-                Instructions::new(Opcode::Pop, &[]),
+                // 0000
+                (Opcode::True, vec![]),
+                // 0001
+                (Opcode::JumpIfNot, vec![10]),
+                // 0004
+                (Opcode::Const, vec![0]),
+                // 0007
+                (Opcode::Jump, vec![11]),
+                // 0010
+                (Opcode::Nil, vec![]),
+                // 0011
+                (Opcode::Pop, vec![]),
             ]),
         ),
-        // (
-        //     "if false { 1 }",
-        //     &[],
-        //     Instructions::from(vec![
-        //         Instructions::new(Opcode::False, &[]),
-        //         Instructions::new(Opcode::JumpIfNot, &[9999]),
-        //         Instructions::new(Opcode::Const, &[0]),
-        //         Instructions::new(Opcode::Pop, &[]),
-        //         Instructions::new(Opcode::Jump, &[9999]),
-        //     ]),
-        // ),
+        (
+            "if true { 1 } else { 2 }",
+            &[Constant::I32(1), Constant::I32(2)],
+            Instructions::from(vec![
+                // 0000
+                (Opcode::True, vec![]),
+                // 0001
+                (Opcode::JumpIfNot, vec![10]),
+                // 0004
+                (Opcode::Const, vec![0]),
+                // 0007
+                (Opcode::Jump, vec![13]),
+                // 0010
+                (Opcode::Const, vec![1]),
+                // 0013
+                (Opcode::Pop, vec![]),
+            ]),
+        ),
     ]);
 }
