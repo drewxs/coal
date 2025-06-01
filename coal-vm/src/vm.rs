@@ -154,7 +154,7 @@ impl VM {
                     let pos = read_u16(&ins[ip + 1..ip + 3]) as i32;
                     self.curr_frame().ip = pos.saturating_sub(1);
                 }
-                Opcode::JumpIfNot => {
+                Opcode::JumpFalse => {
                     let pos = read_u16(&ins[ip + 1..ip + 3]) as i32;
                     self.curr_frame().ip += 2;
 

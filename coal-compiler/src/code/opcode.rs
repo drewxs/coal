@@ -29,7 +29,7 @@ pub enum Opcode {
     Bang,
 
     Jump,
-    JumpIfNot,
+    JumpFalse,
 
     GetGlobal,
     SetGlobal,
@@ -76,7 +76,7 @@ impl Opcode {
             Opcode::Minus => vec![],
             Opcode::Bang => vec![],
             Opcode::Jump => vec![2],      // [pos]
-            Opcode::JumpIfNot => vec![2], // [pos]
+            Opcode::JumpFalse => vec![2], // [pos]
             Opcode::GetGlobal => vec![2], // [index]
             Opcode::SetGlobal => vec![2], // [index]
             Opcode::List => vec![2],      // [count]

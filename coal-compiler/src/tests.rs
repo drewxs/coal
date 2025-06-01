@@ -186,7 +186,7 @@ fn test_compile_conditionals() {
                 // 0000
                 (Opcode::True, vec![]),
                 // 0001
-                (Opcode::JumpIfNot, vec![10]),
+                (Opcode::JumpFalse, vec![10]),
                 // 0004
                 (Opcode::Const, vec![0]),
                 // 0007
@@ -204,7 +204,7 @@ fn test_compile_conditionals() {
                 // 0000
                 (Opcode::True, vec![]),
                 // 0001
-                (Opcode::JumpIfNot, vec![10]),
+                (Opcode::JumpFalse, vec![10]),
                 // 0004
                 (Opcode::Const, vec![0]),
                 // 0007

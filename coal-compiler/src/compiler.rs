@@ -245,7 +245,7 @@ impl Compiler {
         alt: &Option<Vec<Stmt>>,
     ) -> Result<(), CompileError> {
         self.compile_expr(cond)?;
-        let jump_not_truthy = self.emit(Opcode::JumpIfNot, &[9999]);
+        let jump_not_truthy = self.emit(Opcode::JumpFalse, &[9999]);
 
         self.compile_stmts(then)?;
         if self.last_instruction_mut().opcode == Opcode::Pop {
