@@ -29,8 +29,8 @@ impl VM {
     }
 
     pub fn pop(&mut self) -> Object {
-        let o = (*self.stack[self.sp - 1]).clone();
-        self.sp -= 1;
+        let o = (*self.stack[self.sp.saturating_sub(1)]).clone();
+        self.sp = self.sp.saturating_sub(1);
         o
     }
 
