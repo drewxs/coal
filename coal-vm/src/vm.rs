@@ -157,8 +157,9 @@ impl VM {
                 Opcode::JumpIfNot => {
                     let pos = read_u16(&ins[ip + 1..ip + 3]) as i32;
                     self.curr_frame().ip += 2;
+
                     let cond = self.pop();
-                    if cond.is_truthy() {
+                    if !cond.is_truthy() {
                         self.curr_frame().ip = pos.saturating_sub(1);
                     }
                 }

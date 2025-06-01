@@ -130,3 +130,11 @@ fn test_run_str_exprs() {
         (r#""a" < "b""#, TRUE),
     ]);
 }
+
+#[test]
+fn test_run_conditionals() {
+    test(&[
+        ("if true { 1 }", Object::I32(1)),
+        ("if false { 1 }", Object::Nil),
+    ]);
+}
