@@ -29,15 +29,14 @@ pub fn compile(working_dir: &str) {
     let bytecode = c.bytecode();
 
     let target_dir = root.join("target");
-    let _ = fs::create_dir_all(&target_dir);
+    fs::create_dir_all(&target_dir).unwrap();
     let path = target_dir.join(format!("{filename}.bin"));
     let file = File::create(path.clone()).unwrap();
+
     let mut writer = BufWriter::new(file);
     let config = bincode::config::standard();
-
     encode_into_std_write(bytecode, &mut writer, config).unwrap();
 
     println!("Compiled: {}", path.display());
-
     writer.flush().unwrap();
 }
