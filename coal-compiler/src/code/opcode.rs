@@ -58,7 +58,7 @@ impl Opcode {
     pub fn operand_widths(&self) -> Vec<u8> {
         match self {
             Opcode::Nil => vec![],
-            Opcode::Const => vec![2],
+            Opcode::Const => vec![2], // [index]
             Opcode::Pop => vec![],
             Opcode::True => vec![],
             Opcode::False => vec![],
@@ -75,21 +75,21 @@ impl Opcode {
             Opcode::GTE => vec![],
             Opcode::Minus => vec![],
             Opcode::Bang => vec![],
-            Opcode::Jump => vec![2],
-            Opcode::JumpIfNot => vec![2],
-            Opcode::GetGlobal => vec![2],
-            Opcode::SetGlobal => vec![2],
-            Opcode::List => vec![2],
-            Opcode::Hash => vec![2],
+            Opcode::Jump => vec![2],      // [pos]
+            Opcode::JumpIfNot => vec![2], // [pos]
+            Opcode::GetGlobal => vec![2], // [index]
+            Opcode::SetGlobal => vec![2], // [index]
+            Opcode::List => vec![2],      // [count]
+            Opcode::Hash => vec![2],      // [count]
             Opcode::Index => vec![],
-            Opcode::Call => vec![1],
+            Opcode::Call => vec![1], // [num args]
             Opcode::RetVal => vec![],
             Opcode::Ret => vec![],
-            Opcode::GetLocal => vec![1],
-            Opcode::SetLocal => vec![1],
-            Opcode::GetBuiltin => vec![1],
-            Opcode::Closure => vec![2, 1], // [const index, num free vars]
-            Opcode::CurrClosure => vec![1],
+            Opcode::GetLocal => vec![1],    // [index]
+            Opcode::SetLocal => vec![1],    // [index]
+            Opcode::GetBuiltin => vec![1],  // [index]
+            Opcode::Closure => vec![2, 1],  // [const index, num free vars]
+            Opcode::CurrClosure => vec![1], // [index]
             Opcode::GetFree => vec![],
         }
     }
