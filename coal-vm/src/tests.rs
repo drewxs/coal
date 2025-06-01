@@ -136,5 +136,30 @@ fn test_run_conditionals() {
     test(&[
         ("if true { 1 }", Object::I32(1)),
         ("if false { 1 }", Object::Nil),
+        (
+            r#"
+            let x = 1;
+            let y = 2;
+            if 2 * 3 > 5 {
+                x + 2
+            } else {
+                y + 3
+            }
+            "#,
+            Object::I32(3),
+        ),
+        (
+            r#"
+            let x = 1;
+            let y = 2;
+            if x < y {
+                x += 9;
+            } else {
+                y *= 5;
+            }
+            x != y
+            "#,
+            TRUE,
+        ),
     ]);
 }
