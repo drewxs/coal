@@ -1,6 +1,6 @@
-use terminal_size::{terminal_size, Width};
+use terminal_size::{Width, terminal_size};
 
-use coal_core::{clean_input, Evaluator, Object};
+use coal_core::{Evaluator, Object, clean_input};
 
 pub fn eval(input: &str) {
     eval_with(&mut Evaluator::default(), input, true);

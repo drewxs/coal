@@ -198,7 +198,11 @@ impl Type {
     fn list_sig(&self, method: &str, t: &Type) -> Option<MethodSignature> {
         match method {
             "len" => Some(MethodSignature::new(&[], U64, false)),
-            "push" => Some(MethodSignature::new(&[t.clone()], Type::Void, false)),
+            "push" => Some(MethodSignature::new(
+                std::slice::from_ref(t),
+                Type::Void,
+                false,
+            )),
             "pop" => Some(MethodSignature::new(&[], t.clone(), false)),
             "get" => Some(MethodSignature::new(&[I64], t.clone(), false)),
             "first" => Some(MethodSignature::new(&[], t.clone(), false)),
@@ -221,8 +225,16 @@ impl Type {
     fn map_sig(&self, method: &str, (kt, vt): &(Type, Type)) -> Option<MethodSignature> {
         match method {
             "len" => Some(MethodSignature::new(&[], U64, false)),
-            "get" => Some(MethodSignature::new(&[kt.clone()], vt.clone(), false)),
-            "remove" => Some(MethodSignature::new(&[kt.clone()], Type::Void, false)),
+            "get" => Some(MethodSignature::new(
+                std::slice::from_ref(kt),
+                vt.clone(),
+                false,
+            )),
+            "remove" => Some(MethodSignature::new(
+                std::slice::from_ref(kt),
+                Type::Void,
+                false,
+            )),
             "clear" => Some(MethodSignature::new(&[], Type::Void, false)),
             _ => None,
         }
@@ -230,15 +242,14 @@ impl Type {
 
     fn struct_sig(&self, method: &str, attrs: &Vec<(String, Type)>) -> Option<MethodSignature> {
         for (name, t) in attrs {
-            if name == method {
-                if let Type::Fn {
+            if name == method
+                && let Type::Fn {
                     args_t,
                     ret_t,
                     uses_self,
                 } = t
-                {
-                    return Some(MethodSignature::new(args_t, *ret_t.clone(), *uses_self));
-                }
+            {
+                return Some(MethodSignature::new(args_t, *ret_t.clone(), *uses_self));
             }
         }
         None
@@ -361,13 +372,13 @@ fn infer_infix_type(lhs: &Expr, rhs: &Expr) -> Result<Type, Type> {
     let lhs_t = Type::try_from(lhs)?;
     let rhs_t = Type::try_from(rhs)?;
 
-    if let Type::Num(lhs_num) = &lhs_t {
-        if let Type::Num(rhs_num) = &rhs_t {
-            if lhs_t == I32 && rhs_t == U64 || lhs_t == U64 && rhs_t == I32 {
-                return Ok(I64);
-            }
-            return Ok(Type::Num(lhs_num.max(rhs_num).clone()));
+    if let Type::Num(lhs_num) = &lhs_t
+        && let Type::Num(rhs_num) = &rhs_t
+    {
+        if lhs_t == I32 && rhs_t == U64 || lhs_t == U64 && rhs_t == I32 {
+            return Ok(I64);
         }
+        return Ok(Type::Num(lhs_num.max(rhs_num).clone()));
     }
 
     Err(Type::Unknown)

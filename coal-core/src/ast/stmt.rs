@@ -59,28 +59,28 @@ impl Stmt {
         match self {
             Stmt::Void => Ok(()),
             Stmt::Newline => writeln!(f),
-            Stmt::Comment(comment) => write!(f, "{}{comment}", base_indent),
+            Stmt::Comment(comment) => write!(f, "{base_indent}{comment}"),
             Stmt::Let(ident, t, expr) => {
                 if let Expr::Struct(_, _) = expr {
-                    write!(f, "{}let {ident} = ", base_indent)?;
+                    write!(f, "{base_indent}let {ident} = ")?;
                 } else {
-                    write!(f, "{}let {ident}: {t} = ", base_indent)?;
+                    write!(f, "{base_indent}let {ident}: {t} = ")?;
                 }
                 expr.fmt_with_indent(f, indent_level, true)?;
                 writeln!(f, ";")
             }
             Stmt::Assign(lhs, rhs) => {
-                write!(f, "{}{lhs} = ", base_indent)?;
+                write!(f, "{base_indent}{lhs} = ")?;
                 rhs.fmt_with_indent(f, indent_level, true)?;
                 writeln!(f, ";")
             }
             Stmt::OpAssign(op, lhs, rhs) => {
-                write!(f, "{}{lhs} {op}= ", base_indent)?;
+                write!(f, "{base_indent}{lhs} {op}= ")?;
                 rhs.fmt_with_indent(f, indent_level, true)?;
                 writeln!(f, ";")
             }
             Stmt::Return(expr) => {
-                write!(f, "{}return ", base_indent)?;
+                write!(f, "{base_indent}return ")?;
                 expr.fmt_with_indent(f, indent_level, true)?;
                 writeln!(f, ";")
             }

@@ -165,7 +165,7 @@ impl Object {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
         let hash = hasher.finish();
-        format!("0x{:x?}", hash)
+        format!("0x{hash:x?}")
     }
 
     pub fn cast(&self, to: &Type) -> Option<Object> {
@@ -581,7 +581,7 @@ impl fmt::Display for Object {
                     if width > 80 {
                         writeln!(f, "[")?;
                         for item in data {
-                            writeln!(f, "{}{item},", base_indent)?;
+                            writeln!(f, "{base_indent}{item},")?;
                         }
                         write!(f, "]")
                     } else {
@@ -609,7 +609,7 @@ impl fmt::Display for Object {
                 _ => {
                     writeln!(f, "{{")?;
                     for (k, v) in data {
-                        writeln!(f, "{}{k}: {v}", base_indent)?;
+                        writeln!(f, "{base_indent}{k}: {v}")?;
                     }
                     write!(f, "}}")
                 }
@@ -633,7 +633,7 @@ impl fmt::Display for Object {
                     _ => {
                         writeln!(f)?;
                         for (k, v) in attrs {
-                            writeln!(f, "{}{k}: {v},", base_indent)?;
+                            writeln!(f, "{base_indent}{k}: {v},")?;
                         }
                     }
                 }

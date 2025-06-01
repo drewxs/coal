@@ -63,7 +63,7 @@ impl fmt::Display for Instructions {
             "{}",
             self.0
                 .iter()
-                .map(|b| format!("{:02X}", b))
+                .map(|b| format!("{b:02X}"))
                 .collect::<Vec<String>>()
                 .join(" ")
         )

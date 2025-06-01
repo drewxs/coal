@@ -20,7 +20,7 @@ pub fn fmt(input: &str) -> String {
     }
 
     for stmt in stmts {
-        let _ = write!(&mut out, "{}", stmt);
+        let _ = write!(&mut out, "{stmt}");
     }
     out
 }

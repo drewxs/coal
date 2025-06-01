@@ -914,10 +914,10 @@ impl Parser {
         }
 
         let mut lhs_t = Type::try_from(&lhs).unwrap_or_default();
-        if let Type::Struct(name, _) = &lhs_t {
-            if let Some(t) = self.symbol_table.borrow().get(name) {
-                lhs_t = t.clone();
-            }
+        if let Type::Struct(name, _) = &lhs_t
+            && let Some(t) = self.symbol_table.borrow().get(name)
+        {
+            lhs_t = t.clone();
         }
 
         if let Some(method) = lhs_t.sig(&method_name) {
@@ -987,29 +987,28 @@ impl Parser {
                 }
             }
             Expr::AttrAccess { .. } => {
-                if let Type::Struct(sname, _) = Type::try_from(&lhs).unwrap_or_default() {
-                    if let Some(Type::StructDecl(_, attrs, _)) =
+                if let Type::Struct(sname, _) = Type::try_from(&lhs).unwrap_or_default()
+                    && let Some(Type::StructDecl(_, attrs, _)) =
                         self.symbol_table.borrow().get(&sname)
-                    {
-                        let t = match attrs.iter().find(|(n, _, _)| *n == attr) {
-                            Some((_, t, _)) => t.clone(),
-                            None => {
-                                self.errors.push(ParserError::new(
-                                    ParserErrorKind::InvalidStructAttr(attr.to_owned()),
-                                    self.curr_tok.span,
-                                ));
-                                return None;
-                            }
-                        };
-                        let span = (lhs.span().0, self.curr_tok.span.1);
+                {
+                    let t = match attrs.iter().find(|(n, _, _)| *n == attr) {
+                        Some((_, t, _)) => t.clone(),
+                        None => {
+                            self.errors.push(ParserError::new(
+                                ParserErrorKind::InvalidStructAttr(attr.to_owned()),
+                                self.curr_tok.span,
+                            ));
+                            return None;
+                        }
+                    };
+                    let span = (lhs.span().0, self.curr_tok.span.1);
 
-                        return Some(Expr::AttrAccess {
-                            lhs: Box::new(lhs),
-                            name: attr,
-                            t,
-                            span,
-                        });
-                    }
+                    return Some(Expr::AttrAccess {
+                        lhs: Box::new(lhs),
+                        name: attr,
+                        t,
+                        span,
+                    });
                 }
             }
             _ => {}
@@ -1416,13 +1415,13 @@ impl Parser {
         let len = stmts.len();
 
         for (i, stmt) in stmts.iter().enumerate() {
-            if let Stmt::Return(expr) = stmt {
-                if i < len - 1 {
-                    self.warnings.push(ParserWarning::new(
-                        ParserWarningKind::UnreachableStatement,
-                        expr.span(),
-                    ))
-                }
+            if let Stmt::Return(expr) = stmt
+                && i < len - 1
+            {
+                self.warnings.push(ParserWarning::new(
+                    ParserWarningKind::UnreachableStatement,
+                    expr.span(),
+                ))
             }
         }
     }

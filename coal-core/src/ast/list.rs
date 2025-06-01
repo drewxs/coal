@@ -41,9 +41,9 @@ impl List {
         let inner_indent = if inner { "" } else { &base_indent };
 
         if let (Some(n), Some(e)) = (&self.repeat, self.data.first()) {
-            write!(f, "{}[{e}; {n}]", inner_indent)
+            write!(f, "{inner_indent}[{e}; {n}]")
         } else if self.data.is_empty() {
-            write!(f, "{}[]", inner_indent)
+            write!(f, "{inner_indent}[]")
         } else {
             let data_str = self
                 .data
@@ -54,23 +54,23 @@ impl List {
             let width = data_str.len() + inner_indent.len();
 
             if width > 40 {
-                writeln!(f, "{}[", inner_indent)?;
+                writeln!(f, "{inner_indent}[")?;
                 let nested_indent = indent(indent_level + 1);
                 for item in &self.data {
-                    write!(f, "{}", nested_indent)?;
+                    write!(f, "{nested_indent}")?;
                     item.fmt_with_indent(f, indent_level + 1, true)?;
                     writeln!(f, ",")?;
                 }
-                write!(f, "{}]", base_indent)
+                write!(f, "{base_indent}]")
             } else {
-                write!(f, "{}[", inner_indent)?;
+                write!(f, "{inner_indent}[")?;
                 for (i, item) in self.data.iter().enumerate() {
                     item.fmt_with_indent(f, indent_level + 1, true)?;
                     if i < self.data.len() - 1 {
                         write!(f, ", ")?;
                     }
                 }
-                write!(f, "{}]", inner_indent)
+                write!(f, "{inner_indent}]")
             }
         }
     }

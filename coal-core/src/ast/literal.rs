@@ -164,19 +164,19 @@ impl Literal {
                     result.push_str(&brace_content);
                 }
 
-                write!(f, "{}\"{result}\"", inner_indent)
+                write!(f, "{inner_indent}\"{result}\"")
             }
-            Literal::U32(i) => write!(f, "{}{i}", inner_indent),
-            Literal::U64(i) => write!(f, "{}{i}", inner_indent),
-            Literal::I32(i) => write!(f, "{}{i}", inner_indent),
-            Literal::I64(i) => write!(f, "{}{i}", inner_indent),
-            Literal::I128(i) => write!(f, "{}{i}", inner_indent),
-            Literal::F32(x) => write!(f, "{}{x:?}", inner_indent),
-            Literal::F64(x) => write!(f, "{}{x:?}", inner_indent),
-            Literal::Bool(b) => write!(f, "{}{b}", inner_indent),
+            Literal::U32(i) => write!(f, "{inner_indent}{i}"),
+            Literal::U64(i) => write!(f, "{inner_indent}{i}"),
+            Literal::I32(i) => write!(f, "{inner_indent}{i}"),
+            Literal::I64(i) => write!(f, "{inner_indent}{i}"),
+            Literal::I128(i) => write!(f, "{inner_indent}{i}"),
+            Literal::F32(x) => write!(f, "{inner_indent}{x:?}"),
+            Literal::F64(x) => write!(f, "{inner_indent}{x:?}"),
+            Literal::Bool(b) => write!(f, "{inner_indent}{b}"),
             Literal::List(l) => l.fmt_with_indent(f, indent_level, inner),
             Literal::Map(m) => m.fmt_with_indent(f, indent_level, inner),
-            Literal::Nil => write!(f, "{}nil", inner_indent),
+            Literal::Nil => write!(f, "{inner_indent}nil"),
         }
     }
 }

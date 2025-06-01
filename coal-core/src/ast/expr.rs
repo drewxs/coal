@@ -138,16 +138,16 @@ impl Expr {
                 if let Some(alt) = alt {
                     for stmt in alt {
                         let t = stmt.ret_t(expected, last)?;
-                        if let Some((rt, if_then)) = &returning {
-                            if rt != expected {
-                                return Err(ParserError::new(
-                                    ParserErrorKind::TypeMismatch(
-                                        expected.clone().into(),
-                                        rt.clone().into(),
-                                    ),
-                                    if_then.span(),
-                                ));
-                            }
+                        if let Some((rt, if_then)) = &returning
+                            && rt != expected
+                        {
+                            return Err(ParserError::new(
+                                ParserErrorKind::TypeMismatch(
+                                    expected.clone().into(),
+                                    rt.clone().into(),
+                                ),
+                                if_then.span(),
+                            ));
                         }
                         if t != *expected {
                             return Err(ParserError::new(
@@ -254,18 +254,18 @@ impl Expr {
                 alt,
                 ..
             } => {
-                writeln!(f, "{}if {cond} {{", base_indent)?;
+                writeln!(f, "{base_indent}if {cond} {{")?;
                 for stmt in then {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
-                for elif in elifs {
-                    writeln!(f, "{}}} elif {} {{", base_indent, elif.cond)?;
-                    for stmt in &elif.then {
+                for ElifExpr { cond, then } in elifs {
+                    writeln!(f, "{base_indent}}} elif {cond} {{")?;
+                    for stmt in then {
                         stmt.fmt_with_indent(f, indent_level + 1)?;
                     }
                 }
                 if let Some(else_block) = alt {
-                    writeln!(f, "{}}} else {{", base_indent)?;
+                    writeln!(f, "{base_indent}}} else {{")?;
                     for stmt in else_block {
                         stmt.fmt_with_indent(f, indent_level + 1)?;
                     }
@@ -273,7 +273,7 @@ impl Expr {
                 writeln!(f, "{base_indent}}}")
             }
             Expr::While { cond, body, .. } => {
-                writeln!(f, "{}while {cond} {{", base_indent)?;
+                writeln!(f, "{base_indent}while {cond} {{")?;
                 for stmt in body {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
@@ -282,7 +282,7 @@ impl Expr {
             Expr::Iter {
                 ident, expr, body, ..
             } => {
-                writeln!(f, "{}for {ident} in {expr} {{", base_indent)?;
+                writeln!(f, "{base_indent}for {ident} in {expr} {{")?;
                 for stmt in body {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
@@ -299,7 +299,7 @@ impl Expr {
                 for stmt in body {
                     stmt.fmt_with_indent(f, indent_level + 1)?;
                 }
-                write!(f, "{}}}", base_indent)
+                write!(f, "{base_indent}}}")
             }
             Expr::Struct(s, _) => s.fmt_with_indent(f, indent_level),
             Expr::Call { name, args, .. } => {

@@ -19,7 +19,7 @@ pub fn clean_input(input: &str) -> String {
     for (i, captures) in RE_STRINGS.captures_iter(input).enumerate() {
         let matched = captures.get(0).unwrap().as_str();
         strings.push(matched.to_string());
-        template = template.replace(matched, &format!("<<STR{}>>", i));
+        template = template.replace(matched, &format!("<<STR{i}>>"));
     }
 
     // Clean whitespace
@@ -27,7 +27,7 @@ pub fn clean_input(input: &str) -> String {
 
     // Restore strings
     for (i, original_str) in strings.iter().enumerate() {
-        output = output.replace(&format!("<<STR{}>>", i), original_str);
+        output = output.replace(&format!("<<STR{i}>>"), original_str);
     }
 
     output
@@ -41,7 +41,7 @@ pub fn trim_input(input: &str) -> String {
     for (i, captures) in RE_STRINGS.captures_iter(input).enumerate() {
         let matched = captures.get(0).unwrap().as_str();
         strings.push(matched.to_string());
-        template = template.replace(matched, &format!("<<STR{}>>", i));
+        template = template.replace(matched, &format!("<<STR{i}>>"));
     }
 
     // Clean whitespace
@@ -49,7 +49,7 @@ pub fn trim_input(input: &str) -> String {
 
     // Restore strings
     for (i, original_str) in strings.iter().enumerate() {
-        output = output.replace(&format!("<<STR{}>>", i), original_str);
+        output = output.replace(&format!("<<STR{i}>>"), original_str);
     }
 
     output

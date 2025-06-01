@@ -31,7 +31,7 @@ impl Func {
             ..
         } = self;
 
-        write!(f, "{}fn {name}(", base_indent)?;
+        write!(f, "{base_indent}fn {name}(")?;
         let args = args
             .iter()
             .map(|arg| format!("{arg}"))
@@ -45,7 +45,7 @@ impl Func {
         for stmt in body {
             stmt.fmt_with_indent(f, indent_level + 1)?;
         }
-        writeln!(f, "{}}}", base_indent)
+        writeln!(f, "{base_indent}}}")
     }
 }
 
