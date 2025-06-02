@@ -141,6 +141,7 @@ impl Compiler {
             Expr::Literal(l, _) => self.compile_literal(l),
             Expr::Prefix(op, expr, _) => self.compile_prefix(op, expr),
             Expr::Infix(op, lhs, rhs, _) => self.compile_infix(op, lhs, rhs),
+            Expr::Index(lhs, idx, _) => self.compile_index(lhs, idx),
             Expr::If {
                 cond,
                 then,
@@ -233,6 +234,14 @@ impl Compiler {
         self.compile_expr(lhs)?;
         self.compile_expr(rhs)?;
         self.emit(Opcode::from(op), &[]);
+
+        Ok(())
+    }
+
+    fn compile_index(&mut self, lhs: &Expr, idx: &Expr) -> Result<(), CompileError> {
+        self.compile_expr(lhs)?;
+        self.compile_expr(idx)?;
+        self.emit(Opcode::Index, &[]);
 
         Ok(())
     }

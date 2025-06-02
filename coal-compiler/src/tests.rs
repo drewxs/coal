@@ -211,3 +211,67 @@ fn test_compile_conditionals() {
         ),
     ]);
 }
+
+#[test]
+fn test_compile_index() {
+    test(&[
+        (
+            "[1, 2, 3][0]",
+            &[
+                Constant::I32(1),
+                Constant::I32(2),
+                Constant::I32(3),
+                Constant::I32(0),
+            ],
+            Instructions::from(vec![
+                (Opcode::Const, vec![0]),
+                (Opcode::Const, vec![1]),
+                (Opcode::Const, vec![2]),
+                (Opcode::List, vec![3]),
+                (Opcode::Const, vec![3]),
+                (Opcode::Index, vec![]),
+                (Opcode::Pop, vec![]),
+            ]),
+        ),
+        (
+            "[1, 2, 3][1 + 1]",
+            &[
+                Constant::I32(1),
+                Constant::I32(2),
+                Constant::I32(3),
+                Constant::I32(1),
+                Constant::I32(1),
+            ],
+            Instructions::from(vec![
+                (Opcode::Const, vec![0]),
+                (Opcode::Const, vec![1]),
+                (Opcode::Const, vec![2]),
+                (Opcode::List, vec![3]),
+                (Opcode::Const, vec![3]),
+                (Opcode::Const, vec![4]),
+                (Opcode::Add, vec![]),
+                (Opcode::Index, vec![]),
+                (Opcode::Pop, vec![]),
+            ]),
+        ),
+        (
+            "{1: 2}[2 - 1]",
+            &[
+                Constant::I32(1),
+                Constant::I32(2),
+                Constant::I32(2),
+                Constant::I32(1),
+            ],
+            Instructions::from(vec![
+                (Opcode::Const, vec![0]),
+                (Opcode::Const, vec![1]),
+                (Opcode::Hash, vec![2]),
+                (Opcode::Const, vec![2]),
+                (Opcode::Const, vec![3]),
+                (Opcode::Sub, vec![]),
+                (Opcode::Index, vec![]),
+                (Opcode::Pop, vec![]),
+            ]),
+        ),
+    ]);
+}

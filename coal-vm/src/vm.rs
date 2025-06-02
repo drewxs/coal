@@ -204,21 +204,17 @@ impl VM {
                     let lhs = self.pop();
 
                     match (&lhs, &idx) {
-                        (Object::List(l), Object::U64(i)) => {
-                            if *i < l.len() as u64 {
+                        (Object::List(l), Object::I32(i)) => {
+                            if *i < l.len() as i32 {
                                 self.push(Rc::clone(&l[*i as usize]));
                             } else {
                                 self.push(Rc::new(Object::Nil));
                             }
                         }
-                        (Object::Map(m), _) => {
-                            if idx.is_hashable() {
-                                match m.get(&idx) {
-                                    Some(v) => self.push(Rc::clone(v)),
-                                    None => self.push(Rc::new(Object::Nil)),
-                                }
-                            }
-                        }
+                        (Object::Map(m), k) if idx.is_hashable() => match m.get(k) {
+                            Some(v) => self.push(Rc::clone(v)),
+                            None => self.push(Rc::new(Object::Nil)),
+                        },
                         _ => {}
                     }
                 }

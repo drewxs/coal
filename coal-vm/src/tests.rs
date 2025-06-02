@@ -163,3 +163,20 @@ fn test_run_conditionals() {
         ),
     ]);
 }
+
+#[test]
+fn test_run_index_exprs() {
+    test(&[
+        ("[1, 2, 3][0]", Object::I32(1)),
+        ("[1, 2, 3][1 + 1]", Object::I32(3)),
+        ("[[1, 1, 1]][0][0]", Object::I32(1)),
+        ("[][0]", Object::Nil),
+        ("[1, 2, 3][99]", Object::Nil),
+        // TODO: negative indexing
+        // ("[1][-1]", Object::Nil),
+        ("{1: 1, 2: 2}[1]", Object::I32(1)),
+        ("{1: 1, 2: 2}[2]", Object::I32(2)),
+        ("{1: 1}[0]", Object::Nil),
+        ("{}[0]", Object::Nil),
+    ]);
+}
