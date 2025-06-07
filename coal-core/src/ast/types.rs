@@ -1,30 +1,51 @@
-use std::fmt;
+use std::{fmt, iter, vec};
 
 use crate::TokenKind;
 
 use super::{Expr, Func, Literal, Prefix, Stmt, Struct, StructDecl};
 
+#[derive(Copy, Clone, Debug, Hash, PartialEq)]
+pub enum Arity {
+    Fixed(u8),
+    Variable,
+}
+
+/// A base type. Can be modeled as a type-level function with 0 or more arguments.
 #[derive(Clone, Debug, Hash, PartialEq, Default)]
-pub enum Type {
+pub enum BaseType {
     Bool,
     Str,
     Num(Num),
-    List(Box<Type>),
-    Map(Box<(Type, Type)>),
-    Fn {
-        args_t: Vec<Type>,
-        ret_t: Box<Type>,
-        uses_self: bool,
-    },
+    List, // arity 1
+    Map,  // arity 2
+    Fn,   // arity n, first type argument is return type
     Range,
-    UserDefined(String, Box<Type>),
-    StructDecl(String, Vec<(String, Type, bool)>, Vec<(String, Type)>),
-    Struct(String, Vec<(String, Type)>),
+    Aliased(String, Box<ResolvedType>),
+    // for now, we only support arity 0 structs
+    Struct(String, Vec<(String, Box<ResolvedType>)>),
     Nil,
     Any,
     Void,
     #[default]
     Unknown,
+}
+
+/// A fully resolved type for a particular term, including all type arguments.
+/// For example, in list[list[str]], the base type is list, and the only arg is list[str].
+#[derive(Clone, Debug, Hash, PartialEq, Default)]
+pub struct ResolvedType {
+    pub base: BaseType,
+    pub args: Vec<ResolvedType>,
+}
+
+pub type TypeIdentifier = String;
+
+/// A tree of type identifiers. Allows us to represent nested
+/// types like list[map[bool, MyCustomList[i32]]]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TypeIdentifierTree {
+    pub root: TypeIdentifier,
+    pub children: Vec<TypeIdentifierTree>,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -38,23 +59,23 @@ pub enum Num {
     F64,
 }
 
-pub const U32: Type = Type::Num(Num::U32);
-pub const U64: Type = Type::Num(Num::U64);
-pub const I32: Type = Type::Num(Num::I32);
-pub const I64: Type = Type::Num(Num::I64);
-pub const I128: Type = Type::Num(Num::I128);
-pub const F32: Type = Type::Num(Num::F32);
-pub const F64: Type = Type::Num(Num::F64);
+pub const U32: BaseType = BaseType::Num(Num::U32);
+pub const U64: BaseType = BaseType::Num(Num::U64);
+pub const I32: BaseType = BaseType::Num(Num::I32);
+pub const I64: BaseType = BaseType::Num(Num::I64);
+pub const I128: BaseType = BaseType::Num(Num::I128);
+pub const F32: BaseType = BaseType::Num(Num::F32);
+pub const F64: BaseType = BaseType::Num(Num::F64);
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct MethodSignature {
-    pub args_t: Vec<Type>,
-    pub ret_t: Type,
+    pub args_t: Vec<ResolvedType>,
+    pub ret_t: ResolvedType,
     pub uses_self: bool,
 }
 
 impl MethodSignature {
-    pub fn new(args_t: &[Type], ret_t: Type, uses_self: bool) -> Self {
+    pub fn new(args_t: &[ResolvedType], ret_t: ResolvedType, uses_self: bool) -> Self {
         MethodSignature {
             args_t: args_t.to_owned(),
             ret_t,
@@ -71,9 +92,18 @@ impl MethodSignature {
     }
 }
 
-impl Type {
+impl BaseType {
+    pub const fn arity(&self) -> Arity {
+        match self {
+            Self::Fn => Arity::Variable,
+            Self::List => Arity::Fixed(1),
+            Self::Map => Arity::Fixed(2),
+            _ => Arity::Fixed(0),
+        }
+    }
+
     pub fn is_numeric(&self) -> bool {
-        matches!(self, Type::Num(_))
+        matches!(self, BaseType::Num(_))
     }
 
     pub fn is_int(&self) -> bool {
@@ -81,76 +111,37 @@ impl Type {
     }
 
     pub fn is_hashable(&self) -> bool {
-        matches!(self, Type::Bool | Type::Str | Type::Num(_))
-    }
-
-    pub fn is_defined(&self) -> bool {
-        match self {
-            Type::List(t) => t.is_defined(),
-            Type::Map(t) => t.0.is_defined() && t.1.is_defined(),
-            Type::Unknown => false,
-            _ => true,
-        }
+        matches!(self, BaseType::Bool | BaseType::Str | BaseType::Num(_))
     }
 
     pub fn is_composite(&self) -> bool {
-        match self {
-            Type::UserDefined(_, t) => t.is_composite(),
-            Type::List(_)
-            | Type::Map(_)
-            | Type::Fn { .. }
-            | Type::StructDecl(_, _, _)
-            | Type::Struct(_, _) => true,
-            _ => false,
-        }
+        self.arity() != Arity::Fixed(0)
     }
 
     pub fn is_indexable(&self) -> bool {
-        match self {
-            Type::List(_) | Type::Map(_) => true,
-            Type::UserDefined(_, t) => t.is_indexable(),
-            _ => false,
+        match self.arity() {
+            Arity::Fixed(0) | Arity::Variable => false,
+            Arity::Fixed(_) => true,
         }
     }
 
     pub fn name(&self) -> String {
         match self {
-            Type::UserDefined(name, _) => name.to_owned(),
-            Type::StructDecl(name, _, _) => name.to_owned(),
-            Type::Struct(name, _) => name.to_owned(),
+            BaseType::Aliased(name, _) => name.to_owned(),
+            BaseType::Struct(name, _) => name.to_owned(),
             _ => self.to_string(),
         }
     }
 
-    pub fn extract(&self) -> &Self {
-        match self {
-            Type::List(t) => t,
-            t => t,
-        }
-    }
-
-    pub fn into_struct_t(self) -> Option<Type> {
-        if let Type::StructDecl(name, attrs, fns) = self {
-            Some(Type::Struct(
-                name.to_owned(),
-                attrs
-                    .iter()
-                    .map(|(s, t, _)| (s.clone(), t.clone()))
-                    .chain(fns)
-                    .collect(),
-            ))
-        } else {
-            None
-        }
-    }
-
-    pub fn partial_eq(&self, other: &Type) -> bool {
-        if let (Type::Struct(a_name, a_attrs), Type::Struct(b_name, b_attrs)) = (self, other) {
+    pub fn partial_eq(&self, other: &BaseType) -> bool {
+        if let (BaseType::Struct(a_name, a_attrs), BaseType::Struct(b_name, b_attrs)) =
+            (self, other)
+        {
             if a_name != b_name {
                 return false;
             }
             for (_, attr_t) in a_attrs {
-                if !matches!(attr_t, Type::Fn { .. }) && a_name != b_name && a_attrs != b_attrs {
+                if !matches!(attr_t.base, BaseType::Fn) && a_name != b_name && a_attrs != b_attrs {
                     return false;
                 }
             }
@@ -159,135 +150,58 @@ impl Type {
 
         self == other
     }
+}
 
-    pub fn sig(&self, method: &str) -> Option<MethodSignature> {
-        match self {
-            Type::Num(_) => self.num_sig(method),
-            Type::Str => self.str_sig(method),
-            Type::List(t) => self.list_sig(method, t),
-            Type::Map(t) => self.map_sig(method, t),
-            Type::Struct(_, attrs) => self.struct_sig(method, attrs),
-            Type::StructDecl(_, _, funcs) => self.struct_sig(method, funcs),
-            _ => self.global_sig(method),
+impl TryFrom<BaseType> for ResolvedType {
+    type Error = String;
+
+    fn try_from(base: BaseType) -> Result<Self, Self::Error> {
+        match base.arity() {
+            Arity::Fixed(0) => Ok(ResolvedType { base, args: vec![] }),
+            Arity::Fixed(_) => Err("Cannot auto-convert fixed arity type".to_string()),
+            Arity::Variable => Err("Cannot auto-convert variable arity type".to_string()),
         }
-    }
-
-    fn global_sig(&self, method: &str) -> Option<MethodSignature> {
-        match method {
-            "to_s" => Some(MethodSignature::new(&[], Type::Str, false)),
-            _ => None,
-        }
-    }
-
-    fn num_sig(&self, method: &str) -> Option<MethodSignature> {
-        self.global_sig(method)
-    }
-
-    fn str_sig(&self, method: &str) -> Option<MethodSignature> {
-        match method {
-            "len" => Some(MethodSignature::new(&[], U64, false)),
-            "split" => Some(MethodSignature::new(
-                &[Type::Str],
-                Type::List(Box::new(Type::Str)),
-                false,
-            )),
-            _ => None,
-        }
-    }
-
-    fn list_sig(&self, method: &str, t: &Type) -> Option<MethodSignature> {
-        match method {
-            "len" => Some(MethodSignature::new(&[], U64, false)),
-            "push" => Some(MethodSignature::new(
-                std::slice::from_ref(t),
-                Type::Void,
-                false,
-            )),
-            "pop" => Some(MethodSignature::new(&[], t.clone(), false)),
-            "get" => Some(MethodSignature::new(&[I64], t.clone(), false)),
-            "first" => Some(MethodSignature::new(&[], t.clone(), false)),
-            "last" => Some(MethodSignature::new(&[], t.clone(), false)),
-            "join" => Some(MethodSignature::new(&[Type::Str], Type::Str, false)),
-            "map" => Some(MethodSignature::new(
-                &[Type::Fn {
-                    args_t: vec![t.clone()],
-                    ret_t: Box::new(t.clone()),
-                    uses_self: false,
-                }],
-                Type::List(Box::new(Type::Unknown)),
-                false,
-            )),
-            "clear" => Some(MethodSignature::new(&[], Type::Void, false)),
-            _ => None,
-        }
-    }
-
-    fn map_sig(&self, method: &str, (kt, vt): &(Type, Type)) -> Option<MethodSignature> {
-        match method {
-            "len" => Some(MethodSignature::new(&[], U64, false)),
-            "get" => Some(MethodSignature::new(
-                std::slice::from_ref(kt),
-                vt.clone(),
-                false,
-            )),
-            "remove" => Some(MethodSignature::new(
-                std::slice::from_ref(kt),
-                Type::Void,
-                false,
-            )),
-            "clear" => Some(MethodSignature::new(&[], Type::Void, false)),
-            _ => None,
-        }
-    }
-
-    fn struct_sig(&self, method: &str, attrs: &Vec<(String, Type)>) -> Option<MethodSignature> {
-        for (name, t) in attrs {
-            if name == method
-                && let Type::Fn {
-                    args_t,
-                    ret_t,
-                    uses_self,
-                } = t
-            {
-                return Some(MethodSignature::new(args_t, *ret_t.clone(), *uses_self));
-            }
-        }
-        None
     }
 }
 
-impl From<&Literal> for Type {
+impl From<&Literal> for ResolvedType {
     fn from(literal: &Literal) -> Self {
         match literal {
-            Literal::Str(_) => Type::Str,
-            Literal::U32(_) => U32,
-            Literal::U64(_) => U64,
-            Literal::I32(_) => I32,
-            Literal::I64(_) => I64,
-            Literal::I128(_) => I128,
-            Literal::F32(_) => F32,
-            Literal::F64(_) => F64,
-            Literal::Bool(_) => Type::Bool,
-            Literal::List(l) => Type::List(Box::new(l.t.to_owned())),
-            Literal::Map(m) => Type::Map(Box::new(m.t.to_owned())),
-            Literal::Nil => Type::Nil,
+            Literal::Str(_) => BaseType::Str.try_into().unwrap(),
+            Literal::U32(_) => U32.try_into().unwrap(),
+            Literal::U64(_) => U64.try_into().unwrap(),
+            Literal::I32(_) => I32.try_into().unwrap(),
+            Literal::I64(_) => I64.try_into().unwrap(),
+            Literal::I128(_) => I128.try_into().unwrap(),
+            Literal::F32(_) => F32.try_into().unwrap(),
+            Literal::F64(_) => F64.try_into().unwrap(),
+            Literal::Bool(_) => BaseType::Bool.try_into().unwrap(),
+            Literal::List(l) => ResolvedType {
+                base: BaseType::List,
+                args: vec![l.t.to_owned()],
+            },
+            Literal::Map(m) => ResolvedType {
+                base: BaseType::Map,
+                args: vec![m.t.0.to_owned(), m.t.1.to_owned()],
+            },
+            Literal::Nil => BaseType::Nil.try_into().unwrap(),
         }
     }
 }
 
-impl From<&Vec<Stmt>> for Type {
+impl From<&Vec<Stmt>> for ResolvedType {
     fn from(stmts: &Vec<Stmt>) -> Self {
-        let mut ret_t = Type::Void;
+        let mut ret_t: ResolvedType = BaseType::Void.try_into().unwrap();
 
         for stmt in stmts {
             match stmt {
                 Stmt::Return(expr) => {
-                    if let Ok(t) = Type::try_from(expr) {
+                    if let Ok(t) = ResolvedType::try_from(expr) {
                         ret_t = t;
                     }
                 }
                 Stmt::Expr(expr) if matches!(expr, Expr::If { .. }) => {
-                    if let Ok(t) = Type::try_from(expr) {
+                    if let Ok(t) = ResolvedType::try_from(expr) {
                         ret_t = t;
                     }
                 }
@@ -299,8 +213,8 @@ impl From<&Vec<Stmt>> for Type {
     }
 }
 
-impl TryFrom<&TokenKind> for Type {
-    type Error = Type;
+impl TryFrom<&TokenKind> for BaseType {
+    type Error = BaseType;
 
     fn try_from(token: &TokenKind) -> Result<Self, Self::Error> {
         match token {
@@ -312,13 +226,13 @@ impl TryFrom<&TokenKind> for Type {
                 "i128" => Ok(I128),
                 "f32" => Ok(F32),
                 "f64" => Ok(F64),
-                "str" => Ok(Type::Str),
-                "bool" => Ok(Type::Bool),
-                "range" => Ok(Type::Range),
-                "nil" => Ok(Type::Nil),
-                "any" => Ok(Type::Any),
-                "void" => Ok(Type::Void),
-                _ => Err(Type::Unknown),
+                "str" => Ok(BaseType::Str),
+                "bool" => Ok(BaseType::Bool),
+                "range" => Ok(BaseType::Range),
+                "nil" => Ok(BaseType::Nil),
+                "any" => Ok(BaseType::Any),
+                "void" => Ok(BaseType::Void),
+                _ => Err(BaseType::Unknown),
             },
             TokenKind::U32(_) => Ok(U32),
             TokenKind::U64(_) => Ok(U64),
@@ -327,109 +241,118 @@ impl TryFrom<&TokenKind> for Type {
             TokenKind::I128(_) => Ok(I128),
             TokenKind::F32(_) => Ok(F32),
             TokenKind::F64(_) => Ok(F64),
-            _ => Err(Type::Unknown),
+            _ => Err(BaseType::Unknown),
         }
     }
 }
 
-impl TryFrom<&Expr> for Type {
-    type Error = Type;
+impl TryFrom<&Expr> for ResolvedType {
+    type Error = ResolvedType;
 
     fn try_from(expr: &Expr) -> Result<Self, Self::Error> {
         match expr {
             Expr::Ident(_, t, _) => Ok(t.to_owned()),
-            Expr::Literal(l, _) => Ok(Type::from(l)),
+            Expr::Literal(l, _) => Ok(ResolvedType::from(l)),
             Expr::Prefix(prefix, rhs, _) => match prefix {
-                Prefix::Not => Ok(Type::Bool),
-                _ => Type::try_from(&**rhs),
+                Prefix::Not => Ok(BaseType::Bool.try_into().unwrap()),
+                _ => ResolvedType::try_from(&**rhs),
             },
             Expr::Infix(_, lhs, rhs, _) => infer_infix_type(lhs, rhs),
-            Expr::Index(expr, idx, _) => match Type::try_from(&**expr) {
-                Ok(Type::List(t)) => match &**idx {
-                    Expr::Index(i, _, _) => Type::try_from(&*i.clone()),
-                    _ => Ok(*t.clone()),
+            Expr::Index(expr, idx, _) => match ResolvedType::try_from(&**expr) {
+                Ok(ResolvedType {
+                    base: BaseType::List,
+                    args,
+                }) => match &**idx {
+                    Expr::Index(i, _, _) => ResolvedType::try_from(&*i.clone()),
+                    _ => Ok(args[0].clone()),
                 },
-                Ok(Type::Map(t)) => Ok((*t).1),
+                Ok(ResolvedType {
+                    base: BaseType::Map,
+                    args,
+                }) => Ok(args[1].clone()),
                 Ok(t) | Err(t) => Err(t),
             },
-            Expr::Range(_, _, _) => Ok(U64),
+            Expr::Range(_, _, _) => Ok(U64.try_into().unwrap()),
             Expr::Fn(f @ Func { .. }) => Ok(f.into()),
-            Expr::Closure { args, ret_t, .. } => Ok(Type::Fn {
-                args_t: args.iter().map(|arg| arg.t.to_owned()).collect(),
-                ret_t: Box::new(ret_t.to_owned()),
-                uses_self: false,
+            Expr::Closure { args, ret_t, .. } => Ok(ResolvedType {
+                base: BaseType::Fn,
+                args: iter::once(ret_t.clone())
+                    .chain(args.iter().map(|arg| arg.t.to_owned()))
+                    .collect(),
             }),
             Expr::Struct(s, _) => Ok(s.into()),
             Expr::Call { ret_t, .. } => Ok(ret_t.to_owned()),
             Expr::MethodCall { ret_t, .. } => Ok(ret_t.to_owned()),
             Expr::AttrAccess { t, .. } => Ok(t.to_owned()),
-            _ => Err(Type::Unknown),
+            _ => Err(ResolvedType::default()),
         }
     }
 }
 
-fn infer_infix_type(lhs: &Expr, rhs: &Expr) -> Result<Type, Type> {
-    let lhs_t = Type::try_from(lhs)?;
-    let rhs_t = Type::try_from(rhs)?;
+fn infer_infix_type(lhs: &Expr, rhs: &Expr) -> Result<ResolvedType, ResolvedType> {
+    let lhs_t = ResolvedType::try_from(lhs)?;
+    let rhs_t = ResolvedType::try_from(rhs)?;
 
-    if let Type::Num(lhs_num) = &lhs_t
-        && let Type::Num(rhs_num) = &rhs_t
+    if let BaseType::Num(lhs_num) = &lhs_t.base
+        && let BaseType::Num(rhs_num) = &rhs_t.base
     {
-        if lhs_t == I32 && rhs_t == U64 || lhs_t == U64 && rhs_t == I32 {
-            return Ok(I64);
+        if lhs_t.base == I32 && rhs_t.base == U64 || lhs_t.base == U64 && rhs_t.base == I32 {
+            return Ok(I64.try_into().unwrap());
         }
-        return Ok(Type::Num(lhs_num.max(rhs_num).clone()));
+        return Ok(BaseType::Num(lhs_num.max(rhs_num).clone())
+            .try_into()
+            .unwrap());
     }
 
-    Err(Type::Unknown)
+    Err(ResolvedType::default())
 }
 
-impl From<&Func> for Type {
+impl From<&Func> for ResolvedType {
     fn from(f: &Func) -> Self {
-        Type::Fn {
-            args_t: f.args.iter().map(|arg| arg.t.to_owned()).collect(),
-            ret_t: Box::new(f.ret_t.to_owned()),
-            uses_self: f.uses_self(),
+        ResolvedType {
+            base: BaseType::Fn,
+            args: iter::once(f.ret_t.clone())
+                .chain(f.args.iter().map(|arg| arg.t.to_owned()))
+                .collect(),
         }
     }
 }
 
-impl From<&StructDecl> for Type {
+impl From<&StructDecl> for BaseType {
     fn from(s: &StructDecl) -> Self {
         let attrs = s
             .attrs
             .iter()
-            .map(|(p, v)| (p.name.clone(), p.t.clone(), v.is_some()))
+            .map(|(p, _)| (p.name.clone(), Box::new(p.t.clone())))
             .collect();
-        let fns = s
-            .funcs
-            .iter()
-            .map(|f| (f.name.clone(), Type::from(f)))
-            .collect();
-        Type::StructDecl(s.name.to_owned(), attrs, fns)
+        BaseType::Struct(s.name.to_owned(), attrs)
     }
 }
 
-impl From<&Struct> for Type {
+impl From<&Struct> for ResolvedType {
     fn from(s: &Struct) -> Self {
-        Type::Struct(
-            s.name.to_owned(),
-            s.state
-                .iter()
-                .map(|(k, v)| {
-                    let v_t = Type::try_from(v).unwrap_or_default();
-                    (k.clone(), v_t)
-                })
-                .collect(),
-        )
+        ResolvedType {
+            base: BaseType::Struct(
+                s.name.to_owned(),
+                s.state
+                    .iter()
+                    .map(|(k, v)| {
+                        let v_t = ResolvedType::try_from(v).unwrap_or_default();
+                        (k.clone(), Box::new(v_t))
+                    })
+                    .collect(),
+            ),
+            // We only support arity 0 structs for now
+            args: vec![],
+        }
     }
 }
 
-impl fmt::Display for Type {
+impl fmt::Display for BaseType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Type::Bool => write!(f, "bool"),
-            Type::Str => write!(f, "str"),
+            BaseType::Bool => write!(f, "bool"),
+            BaseType::Str => write!(f, "str"),
             &U32 => write!(f, "u32"),
             &U64 => write!(f, "u64"),
             &I32 => write!(f, "i32"),
@@ -437,24 +360,211 @@ impl fmt::Display for Type {
             &I128 => write!(f, "i128"),
             &F32 => write!(f, "f32"),
             &F64 => write!(f, "f64"),
-            Type::List(t) => write!(f, "list[{t}]"),
-            Type::Map(t) => write!(f, "map[{}, {}]", t.0, t.1),
-            Type::Fn { args_t, ret_t, .. } => {
-                let args_str = args_t
+            BaseType::List => write!(f, "list"),
+            BaseType::Map => write!(f, "map"),
+            BaseType::Fn => write!(f, "Fn"),
+            BaseType::Range => write!(f, "range"),
+            BaseType::Aliased(name, _) => write!(f, "{name}"),
+            BaseType::Struct(name, _) => write!(f, "{name}"),
+            BaseType::Nil => write!(f, "nil"),
+            BaseType::Any => write!(f, "any"),
+            BaseType::Void => write!(f, "void"),
+            BaseType::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
+impl fmt::Display for ResolvedType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self.base {
+            base if self.args.is_empty() => write!(f, "{base}"),
+            BaseType::Fn => {
+                let args_str = self
+                    .args
+                    .iter()
+                    .skip(1)
+                    .map(|arg| format!("{arg}"))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                let ret_t = self.args[0].to_string();
+                write!(f, "({args_str}) -> {ret_t}")
+            }
+            // format the rest like list[str] or map[str, i32]
+            base => {
+                let args_str = self
+                    .args
                     .iter()
                     .map(|arg| format!("{arg}"))
                     .collect::<Vec<String>>()
                     .join(", ");
-                write!(f, "Fn({args_str}) -> {ret_t}")
+                write!(f, "{base}[{args_str}]")
             }
-            Type::Range => write!(f, "range"),
-            Type::UserDefined(name, _) => write!(f, "{name}"),
-            Type::StructDecl(name, _, _) => write!(f, "{name}"),
-            Type::Struct(name, _) => write!(f, "{name}"),
-            Type::Nil => write!(f, "nil"),
-            Type::Any => write!(f, "any"),
-            Type::Void => write!(f, "void"),
-            Type::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
+impl ResolvedType {
+    pub fn is_defined(&self) -> bool {
+        match self.base {
+            BaseType::List => self.args[0].is_defined(),
+            BaseType::Map => self.args[0].is_defined() && self.args[1].is_defined(),
+            BaseType::Unknown => false,
+            _ => true,
+        }
+    }
+
+    pub fn extract(&self) -> &Self {
+        match &self.base {
+            BaseType::List => self.args[0].extract(),
+            _ => self,
+        }
+    }
+
+    pub fn sig(&self, method: &str) -> Option<MethodSignature> {
+        match self.base {
+            BaseType::Num(_) => self.num_sig(method),
+            BaseType::Str => self.str_sig(method),
+            BaseType::List => self.list_sig(method, &self.args[0]),
+            BaseType::Map => self.map_sig(method, &(self.args[0].clone(), self.args[1].clone())),
+            BaseType::Struct(_, ref attrs) => self.struct_sig(method, attrs),
+            _ => self.global_sig(method),
+        }
+    }
+
+    fn global_sig(&self, method: &str) -> Option<MethodSignature> {
+        match method {
+            "to_s" => Some(MethodSignature::new(
+                &[],
+                BaseType::Str.try_into().unwrap(),
+                false,
+            )),
+            _ => None,
+        }
+    }
+
+    fn num_sig(&self, method: &str) -> Option<MethodSignature> {
+        self.global_sig(method)
+    }
+
+    fn str_sig(&self, method: &str) -> Option<MethodSignature> {
+        match method {
+            "len" => Some(MethodSignature::new(&[], U64.try_into().unwrap(), false)),
+            "split" => Some(MethodSignature::new(
+                &[BaseType::Str.try_into().unwrap()],
+                ResolvedType {
+                    base: BaseType::List,
+                    args: vec![BaseType::Str.try_into().unwrap()],
+                },
+                false,
+            )),
+            _ => None,
+        }
+    }
+
+    fn list_sig(&self, method: &str, t: &ResolvedType) -> Option<MethodSignature> {
+        match method {
+            "len" => Some(MethodSignature::new(&[], U64.try_into().unwrap(), false)),
+            "push" => Some(MethodSignature::new(
+                std::slice::from_ref(t),
+                BaseType::Void.try_into().unwrap(),
+                false,
+            )),
+            "pop" => Some(MethodSignature::new(&[], t.clone(), false)),
+            "get" => Some(MethodSignature::new(
+                &[I64.try_into().unwrap()],
+                t.clone(),
+                false,
+            )),
+            "first" => Some(MethodSignature::new(&[], t.clone(), false)),
+            "last" => Some(MethodSignature::new(&[], t.clone(), false)),
+            "join" => Some(MethodSignature::new(
+                &[BaseType::Str.try_into().unwrap()],
+                BaseType::Str.try_into().unwrap(),
+                false,
+            )),
+            "map" => Some(MethodSignature::new(
+                &[ResolvedType {
+                    base: BaseType::Fn,
+                    args: vec![t.clone(), t.clone()],
+                }],
+                ResolvedType {
+                    base: BaseType::List,
+                    args: vec![BaseType::Unknown.try_into().unwrap()],
+                },
+                false,
+            )),
+            "clear" => Some(MethodSignature::new(
+                &[],
+                BaseType::Void.try_into().unwrap(),
+                false,
+            )),
+            _ => None,
+        }
+    }
+
+    fn map_sig(
+        &self,
+        method: &str,
+        (kt, vt): &(ResolvedType, ResolvedType),
+    ) -> Option<MethodSignature> {
+        match method {
+            "len" => Some(MethodSignature::new(&[], U64.try_into().unwrap(), false)),
+            "get" => Some(MethodSignature::new(
+                std::slice::from_ref(kt),
+                vt.clone(),
+                false,
+            )),
+            "remove" => Some(MethodSignature::new(
+                std::slice::from_ref(kt),
+                BaseType::Void.try_into().unwrap(),
+                false,
+            )),
+            "clear" => Some(MethodSignature::new(
+                &[],
+                BaseType::Void.try_into().unwrap(),
+                false,
+            )),
+            _ => None,
+        }
+    }
+
+    fn struct_sig(
+        &self,
+        method: &str,
+        attrs: &Vec<(String, Box<ResolvedType>)>,
+    ) -> Option<MethodSignature> {
+        for (name, t) in attrs {
+            if name == method && BaseType::Fn == t.base {
+                return Some(MethodSignature::new(
+                    &t.args[1..],
+                    t.args[0].clone(),
+                    // TODO: store uses_self in the Fn BaseType
+                    false,
+                ));
+            }
+        }
+        None
+    }
+}
+
+impl From<ResolvedType> for TypeIdentifierTree {
+    fn from(resolved: ResolvedType) -> Self {
+        TypeIdentifierTree {
+            root: resolved.base.to_string(),
+            children: resolved
+                .args
+                .into_iter()
+                .map(TypeIdentifierTree::from)
+                .collect(),
+        }
+    }
+}
+
+impl From<&str> for TypeIdentifierTree {
+    fn from(root: &str) -> Self {
+        TypeIdentifierTree {
+            root: root.into(),
+            children: vec![],
         }
     }
 }

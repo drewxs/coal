@@ -2,7 +2,7 @@ use std::fmt;
 
 use thiserror::Error;
 
-use crate::{Span, TokenKind, Type};
+use crate::{ResolvedType, Span, TokenKind};
 
 #[derive(Clone, Debug)]
 pub struct ParserError {
@@ -38,7 +38,7 @@ pub enum ParserErrorKind {
     InvalidArgumentsLength(usize, usize),
 
     #[error("the type `{0}` cannot be indexed by `{1}`")]
-    InvalidIndex(Box<Type>, Box<Type>),
+    InvalidIndex(Box<ResolvedType>, Box<ResolvedType>),
 
     #[error("`self` is reserved for the first argument in a method argument list")]
     InvalidSelfPlacement,
@@ -47,7 +47,7 @@ pub enum ParserErrorKind {
     InvalidStructAttr(String),
 
     #[error("method not found: `{0}.{1}()`")]
-    MethodNotFound(Box<Type>, String),
+    MethodNotFound(Box<ResolvedType>, String),
 
     #[error("`if` may be missing an `else` clause")]
     MissingElseClause,
@@ -56,7 +56,7 @@ pub enum ParserErrorKind {
     NotFound(String),
 
     #[error("type `{0}` is not indexable")]
-    NonIndexableType(Box<Type>),
+    NonIndexableType(Box<ResolvedType>),
 
     #[error("syntax error: `{0}`")]
     SyntaxError(TokenKind),
@@ -65,11 +65,11 @@ pub enum ParserErrorKind {
     TypeAnnotationsNeeded,
 
     #[error("type mismatch. expected: `{0}`, got: `{1}`")]
-    TypeMismatch(Box<Type>, Box<Type>),
+    TypeMismatch(Box<ResolvedType>, Box<ResolvedType>),
 
     #[error("unexpected token: `{0}`, expected: `{1}`")]
     UnexpectedToken(TokenKind, TokenKind),
 
     #[error("map key not hashable: type `{0}`")]
-    UnhashableMapKey(Box<Type>),
+    UnhashableMapKey(Box<ResolvedType>),
 }

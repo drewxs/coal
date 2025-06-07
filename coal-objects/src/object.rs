@@ -7,7 +7,7 @@ use std::{
     rc::Rc,
 };
 
-use coal_core::{Expr, F32, F64, I32, I64, I128, Literal, Type, U32, U64, ast, indent};
+use coal_core::{BaseType, Expr, F32, F64, I32, I64, I128, Literal, U32, U64, ast, indent};
 
 use crate::{Builtin, Closure, CompiledFunc, Constant, Func, Struct};
 
@@ -31,7 +31,7 @@ pub enum Object {
     Closure(Closure),
     Struct(Struct),
     Return(Rc<Object>),
-    Type(Type),
+    Type(BaseType),
     Nil,
     Void,
 }
@@ -168,7 +168,7 @@ impl Object {
         format!("0x{hash:x?}")
     }
 
-    pub fn cast(&self, to: &Type) -> Option<Object> {
+    pub fn cast(&self, to: &BaseType) -> Option<Object> {
         match (self, to) {
             // u32
             (Object::U32(from), &U64) => Some(Object::U64(*from as u64)),

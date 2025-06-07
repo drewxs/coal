@@ -91,7 +91,7 @@ fn test_parse_let_statements_inference() {
         ),
         Stmt::Let(
             Ident(String::from("z")),
-            Type::Str,
+            BaseType::Str,
             Expr::Literal(Literal::Str(String::from("hello")), ((3, 9), (3, 15))),
         ),
     ];
@@ -132,11 +132,11 @@ fn test_parse_assign_statements() {
     let expected = vec![
         Stmt::Let(
             Ident::from("y"),
-            Type::Str,
+            BaseType::Str,
             Expr::Literal(Literal::Str(String::from("")), ((1, 9), (1, 10))),
         ),
         Stmt::Assign(
-            Expr::Ident(Ident::from("y"), Type::Str, ((2, 1), (2, 1))),
+            Expr::Ident(Ident::from("y"), BaseType::Str, ((2, 1), (2, 1))),
             Expr::Literal(Literal::from("foo"), ((2, 5), (2, 9))),
         ),
     ];
@@ -149,11 +149,11 @@ fn test_parse_assign_statements() {
     let expected = vec![
         Stmt::Let(
             Ident::from("z"),
-            Type::Bool,
+            BaseType::Bool,
             Expr::Literal(Literal::Bool(false), ((1, 9), (1, 13))),
         ),
         Stmt::Assign(
-            Expr::Ident(Ident::from("z"), Type::Bool, ((2, 1), (2, 1))),
+            Expr::Ident(Ident::from("z"), BaseType::Bool, ((2, 1), (2, 1))),
             Expr::Literal(Literal::Bool(true), ((2, 5), (2, 8))),
         ),
     ];
@@ -167,7 +167,7 @@ fn test_parse_assign_statements() {
         Expr::Index(
             Box::new(Expr::Ident(
                 Ident::from("x"),
-                Type::List(Box::new(I32)),
+                BaseType::List(Box::new(I32)),
                 ((2, 1), (2, 1)),
             )),
             Box::new(Expr::Literal(Literal::I32(1), ((2, 3), (2, 3)))),
@@ -207,17 +207,17 @@ fn test_parse_identifier_expressions() {
     let expected = vec![
         Stmt::Expr(Expr::Ident(
             Ident::from("foo"),
-            Type::Unknown,
+            BaseType::Unknown,
             ((1, 1), (1, 3)),
         )),
         Stmt::Expr(Expr::Ident(
             Ident::from("bar"),
-            Type::Unknown,
+            BaseType::Unknown,
             ((1, 6), (1, 8)),
         )),
         Stmt::Expr(Expr::Ident(
             Ident::from("foobar"),
-            Type::Unknown,
+            BaseType::Unknown,
             ((1, 11), (1, 16)),
         )),
     ];
@@ -679,19 +679,19 @@ fn test_parse_if_expression() {
             Infix::LT,
             Box::new(Expr::Ident(
                 Ident::from("x"),
-                Type::Unknown,
+                BaseType::Unknown,
                 ((1, 4), (1, 4)),
             )),
             Box::new(Expr::Ident(
                 Ident::from("y"),
-                Type::Unknown,
+                BaseType::Unknown,
                 ((1, 8), (1, 8)),
             )),
             ((1, 4), (1, 8)),
         )),
         then: vec![Stmt::Return(Expr::Ident(
             Ident::from("x"),
-            Type::Unknown,
+            BaseType::Unknown,
             ((1, 19), (1, 19)),
         ))],
         elifs: vec![],
@@ -719,12 +719,12 @@ fn test_parse_nested_if_expression() {
             Infix::LT,
             Box::new(Expr::Ident(
                 Ident::from("x"),
-                Type::Unknown,
+                BaseType::Unknown,
                 ((1, 4), (1, 4)),
             )),
             Box::new(Expr::Ident(
                 Ident::from("y"),
-                Type::Unknown,
+                BaseType::Unknown,
                 ((1, 8), (1, 8)),
             )),
             ((1, 4), (1, 8)),
@@ -735,7 +735,7 @@ fn test_parse_nested_if_expression() {
                     Infix::GT,
                     Box::new(Expr::Ident(
                         Ident::from("x"),
-                        Type::Unknown,
+                        BaseType::Unknown,
                         ((2, 4), (2, 4)),
                     )),
                     Box::new(Expr::Literal(Literal::I32(1), ((2, 8), (2, 8)))),
@@ -743,7 +743,7 @@ fn test_parse_nested_if_expression() {
                 )),
                 then: vec![Stmt::Return(Expr::Ident(
                     Ident::from("x"),
-                    Type::Unknown,
+                    BaseType::Unknown,
                     ((3, 8), (3, 8)),
                 ))],
                 elifs: vec![],
@@ -752,14 +752,14 @@ fn test_parse_nested_if_expression() {
             }),
             Stmt::Return(Expr::Ident(
                 Ident::from("y"),
-                Type::Unknown,
+                BaseType::Unknown,
                 ((5, 8), (5, 8)),
             )),
         ],
         elifs: vec![],
         alt: Some(vec![Stmt::Return(Expr::Ident(
             Ident::from("z"),
-            Type::Unknown,
+            BaseType::Unknown,
             ((7, 8), (7, 8)),
         ))]),
         span: ((1, 1), (8, 1)),
@@ -786,19 +786,19 @@ fn test_parse_elif_expression() {
             Infix::LT,
             Box::new(Expr::Ident(
                 Ident::from("x"),
-                Type::Unknown,
+                BaseType::Unknown,
                 ((1, 4), (1, 4)),
             )),
             Box::new(Expr::Ident(
                 Ident::from("y"),
-                Type::Unknown,
+                BaseType::Unknown,
                 ((1, 8), (1, 8)),
             )),
             ((1, 4), (1, 8)),
         )),
         then: vec![Stmt::Return(Expr::Ident(
             Ident::from("x"),
-            Type::Unknown,
+            BaseType::Unknown,
             ((2, 8), (2, 8)),
         ))],
         elifs: vec![
@@ -807,19 +807,19 @@ fn test_parse_elif_expression() {
                     Infix::GT,
                     Box::new(Expr::Ident(
                         Ident::from("x"),
-                        Type::Unknown,
+                        BaseType::Unknown,
                         ((3, 8), (3, 8)),
                     )),
                     Box::new(Expr::Ident(
                         Ident::from("y"),
-                        Type::Unknown,
+                        BaseType::Unknown,
                         ((3, 12), (3, 12)),
                     )),
                     ((3, 8), (3, 12)),
                 )),
                 then: vec![Stmt::Return(Expr::Ident(
                     Ident::from("y"),
-                    Type::Unknown,
+                    BaseType::Unknown,
                     ((4, 8), (4, 8)),
                 ))],
             },
@@ -828,7 +828,7 @@ fn test_parse_elif_expression() {
                     Infix::GT,
                     Box::new(Expr::Ident(
                         Ident::from("x"),
-                        Type::Unknown,
+                        BaseType::Unknown,
                         ((5, 8), (5, 8)),
                     )),
                     Box::new(Expr::Literal(Literal::I32(1), ((5, 12), (5, 12)))),
@@ -842,7 +842,7 @@ fn test_parse_elif_expression() {
         ],
         alt: Some(vec![Stmt::Return(Expr::Ident(
             Ident::from("z"),
-            Type::Unknown,
+            BaseType::Unknown,
             ((8, 8), (8, 8)),
         ))]),
         span: ((1, 1), (9, 1)),
@@ -860,12 +860,12 @@ fn test_parse_while_expression() {
             Infix::LT,
             Box::new(Expr::Ident(
                 Ident::from("x"),
-                Type::Unknown,
+                BaseType::Unknown,
                 ((1, 7), (1, 7)),
             )),
             Box::new(Expr::Ident(
                 Ident::from("y"),
-                Type::Unknown,
+                BaseType::Unknown,
                 ((1, 11), (1, 11)),
             )),
             ((1, 7), (1, 11)),
@@ -889,7 +889,7 @@ fn test_parse_function_expressions() {
             Stmt::Expr(Expr::Fn(Func {
                 name: String::from("foo"),
                 args: vec![],
-                ret_t: Type::Void,
+                ret_t: BaseType::Void,
                 body: vec![],
                 span: ((1, 1), (1, 11)),
             })),
@@ -951,7 +951,7 @@ fn test_parse_function_expressions() {
                     Param::new("x", U32),
                     Param::new(
                         "f",
-                        Type::Fn {
+                        BaseType::Fn {
                             args_t: vec![U32, U32],
                             ret_t: Box::new(U32),
                             uses_self: false,
@@ -991,7 +991,7 @@ fn test_parse_closure_expressions() {
             Stmt::Expr(Expr::Closure {
                 args: vec![],
                 body: vec![],
-                ret_t: Type::Void,
+                ret_t: BaseType::Void,
                 span: ((1, 1), (1, 5)),
             }),
         ),
@@ -1000,7 +1000,7 @@ fn test_parse_closure_expressions() {
             Stmt::Expr(Expr::Closure {
                 args: vec![Param::new("x", I32)],
                 body: vec![],
-                ret_t: Type::Void,
+                ret_t: BaseType::Void,
                 span: ((1, 1), (1, 11)),
             }),
         ),
@@ -1056,7 +1056,7 @@ fn test_parse_closure_expressions() {
                     ret_t: I32,
                     span: ((1, 12), (3, 1)),
                 }],
-                ret_t: Type::List(Box::new(Type::Unknown)),
+                ret_t: BaseType::List(Box::new(BaseType::Unknown)),
                 span: ((1, 1), (3, 2)),
             }),
         ),
@@ -1070,7 +1070,7 @@ fn test_parse_closure_expressions() {
             Stmt::Expr(Expr::MethodCall {
                 lhs: Box::new(Expr::Ident(
                     Ident::from("x"),
-                    Type::List(Box::new(I32)),
+                    BaseType::List(Box::new(I32)),
                     ((2, 1), (2, 1)),
                 )),
                 name: String::from("map"),
@@ -1083,7 +1083,7 @@ fn test_parse_closure_expressions() {
                     ret_t: I32,
                     span: ((2, 7), (4, 1)),
                 }],
-                ret_t: Type::List(Box::new(Type::Unknown)),
+                ret_t: BaseType::List(Box::new(BaseType::Unknown)),
                 span: ((2, 1), (4, 2)),
             }),
         ),
@@ -1110,7 +1110,7 @@ fn test_parse_call_expression() {
                 ((1, 15), (1, 19)),
             ),
         ],
-        ret_t: Type::Unknown,
+        ret_t: BaseType::Unknown,
         span: ((1, 1), (1, 20)),
     });
     let actual = Parser::from(input).parse();
@@ -1136,14 +1136,14 @@ fn test_parse_infer_type_from_fn() {
     let input = "fn foo() -> u32 { return 0 }; let x = foo;";
     let expected = Stmt::Let(
         Ident(String::from("x")),
-        Type::Fn {
+        BaseType::Fn {
             args_t: vec![],
             ret_t: Box::new(U32),
             uses_self: false,
         },
         Expr::Ident(
             Ident::from("foo"),
-            Type::Fn {
+            BaseType::Fn {
                 args_t: vec![],
                 ret_t: Box::new(U32),
                 uses_self: false,
@@ -1255,10 +1255,10 @@ fn test_parse_lists() {
                     &[Expr::Call {
                         name: String::from("foo"),
                         args: vec![],
-                        ret_t: Type::Unknown,
+                        ret_t: BaseType::Unknown,
                         span: ((1, 2), (1, 6)),
                     }],
-                    Type::Unknown,
+                    BaseType::Unknown,
                 )),
                 ((1, 1), (1, 7)),
             )),
@@ -1275,10 +1275,10 @@ fn test_parse_lists() {
                     &[Expr::Call {
                         name: String::from("foo"),
                         args: vec![],
-                        ret_t: Type::Str,
+                        ret_t: BaseType::Str,
                         span: ((4, 2), (4, 6)),
                     }],
-                    Type::Str,
+                    BaseType::Str,
                 )),
                 ((4, 1), (4, 7)),
             )),
@@ -1309,7 +1309,7 @@ fn test_parse_lists() {
                         Expr::Index(
                             Box::new(Expr::Ident(
                                 Ident::from("x"),
-                                Type::List(Box::new(I32)),
+                                BaseType::List(Box::new(I32)),
                                 ((1, 21), (1, 21)),
                             )),
                             Box::new(Expr::Literal(Literal::I32(1), ((1, 23), (1, 23)))),
@@ -1326,7 +1326,7 @@ fn test_parse_lists() {
             "let x: list[i32] = []",
             Stmt::Let(
                 Ident(String::from("x")),
-                Type::List(Box::new(I32)),
+                BaseType::List(Box::new(I32)),
                 Expr::Literal(Literal::List(List::new(&[], I32)), ((1, 20), (1, 21))),
             ),
         ),
@@ -1372,7 +1372,7 @@ fn test_parse_maps() {
                             Expr::Literal(Literal::I32(2), ((1, 19), (1, 19))),
                         ),
                     ],
-                    (Type::Str, I32),
+                    (BaseType::Str, I32),
                 )),
                 ((1, 1), (1, 20)),
             )),
@@ -1424,7 +1424,7 @@ fn test_parse_iter() {
                 ident: Ident::from("item"),
                 expr: Box::new(Expr::Ident(
                     Ident::from("list"),
-                    Type::List(Box::new(I32)),
+                    BaseType::List(Box::new(I32)),
                     ((2, 13), (2, 16)),
                 )),
                 body: vec![Stmt::Let(
@@ -1446,7 +1446,7 @@ fn test_parse_iter() {
                 ident: Ident::from("item"),
                 expr: Box::new(Expr::Ident(
                     Ident::from("list"),
-                    Type::List(Box::new(I64)),
+                    BaseType::List(Box::new(I64)),
                     ((2, 13), (2, 16)),
                 )),
                 body: vec![Stmt::Let(
@@ -1516,7 +1516,7 @@ fn test_parse_struct_decls() {
                         (
                             Param {
                                 name: String::from("y"),
-                                t: Type::Str,
+                                t: BaseType::Str,
                             },
                             None,
                         ),
@@ -1541,7 +1541,7 @@ fn test_parse_struct_decls() {
                     funcs: vec![Func {
                         name: String::from("f"),
                         args: vec![],
-                        ret_t: Type::Str,
+                        ret_t: BaseType::Str,
                         body: vec![Stmt::Return(Expr::Literal(
                             Literal::Str(String::from("foo")),
                             ((3, 8), (3, 12)),
@@ -1577,7 +1577,7 @@ fn test_parse_struct_decls() {
                         (
                             Param {
                                 name: String::from("y"),
-                                t: Type::Str,
+                                t: BaseType::Str,
                             },
                             Some(Expr::Literal(
                                 Literal::Str(String::from("foo")),
@@ -1588,7 +1588,7 @@ fn test_parse_struct_decls() {
                     funcs: vec![Func {
                         name: String::from("f"),
                         args: vec![],
-                        ret_t: Type::Str,
+                        ret_t: BaseType::Str,
                         body: vec![Stmt::Return(Expr::Literal(
                             Literal::Str(String::from("foo")),
                             ((6, 8), (6, 12)),
@@ -1597,6 +1597,51 @@ fn test_parse_struct_decls() {
                     }],
                 },
                 ((1, 1), (8, 1)),
+            ),
+        ),
+        (
+            r#"
+            struct Foo6 {
+                y: str,
+                fn f(self) -> str {
+                    return self.y;
+                }
+            }
+            "#,
+            Stmt::StructDecl(
+                StructDecl {
+                    name: String::from("Foo6"),
+                    attrs: vec![(
+                        Param {
+                            name: String::from("y"),
+                            t: BaseType::Str,
+                        },
+                        None,
+                    )],
+                    funcs: vec![Func {
+                        name: String::from("f"),
+                        args: vec![Param {
+                            name: "self".to_string(),
+                            t: BaseType::Struct("Foo6".to_string(), vec![("y".to_string(), BaseType::Str)]),
+                        }],
+                        ret_t: BaseType::Str,
+                        body: vec![Stmt::Return(Expr::AttrAccess {
+                            lhs: Box::new(Expr::Ident(
+                                Ident::from("self"),
+                                BaseType::Struct(
+                                    "Foo6".to_string(),
+                                    vec![("y".to_string(), BaseType::Str)],
+                                ),
+                                ((4, 16), (4, 19)),
+                            )),
+                            name: "y".to_string(),
+                            t: BaseType::Str,
+                            span: ((4, 16), (4, 21)),
+                        })],
+                        span: ((3, 1), (5, 1)),
+                    }],
+                },
+                ((1, 1), (6, 1)),
             ),
         ),
     ]);
@@ -1677,7 +1722,7 @@ fn test_parse_struct_attrs() {
             Stmt::Expr(Expr::AttrAccess {
                 lhs: Box::new(Expr::Ident(
                     Ident::from("foo"),
-                    Type::Struct(String::from("Foo"), vec![(String::from("x"), I32)]),
+                    BaseType::Struct(String::from("Foo"), vec![(String::from("x"), I32)]),
                     ((5, 1), (5, 3)),
                 )),
                 name: String::from("x"),
@@ -1697,11 +1742,11 @@ fn test_parse_struct_attrs() {
             Stmt::Expr(Expr::AttrAccess {
                 lhs: Box::new(Expr::Ident(
                     Ident::from("foo"),
-                    Type::Struct(String::from("Foo"), vec![(String::from("x"), I32)]),
+                    BaseType::Struct(String::from("Foo"), vec![(String::from("x"), I32)]),
                     ((6, 1), (6, 3)),
                 )),
                 name: String::from("y"),
-                t: Type::Str,
+                t: BaseType::Str,
                 span: ((6, 1), (6, 5)),
             }),
         ),
@@ -1724,12 +1769,12 @@ fn test_parse_struct_methods() {
             Stmt::Expr(Expr::MethodCall {
                 lhs: Box::new(Expr::Ident(
                     Ident::from("foo"),
-                    Type::Struct(String::from("Foo"), vec![]),
+                    BaseType::Struct(String::from("Foo"), vec![]),
                     ((7, 1), (7, 3)),
                 )),
                 name: String::from("hello"),
                 args: vec![],
-                ret_t: Type::Void,
+                ret_t: BaseType::Void,
                 span: ((7, 1), (7, 11)),
             }),
         ),
@@ -1747,12 +1792,12 @@ fn test_parse_struct_methods() {
             Stmt::Expr(Expr::MethodCall {
                 lhs: Box::new(Expr::Ident(
                     Ident::from("foo"),
-                    Type::Struct(String::from("Foo"), vec![]),
+                    BaseType::Struct(String::from("Foo"), vec![]),
                     ((8, 1), (8, 3)),
                 )),
                 name: String::from("hello"),
                 args: vec![],
-                ret_t: Type::Void,
+                ret_t: BaseType::Void,
                 span: ((8, 1), (8, 11)),
             }),
         ),
@@ -1770,7 +1815,7 @@ fn test_parse_struct_methods() {
             Stmt::Expr(Expr::MethodCall {
                 lhs: Box::new(Expr::Ident(
                     Ident::from("foo"),
-                    Type::Struct(String::from("Foo"), vec![(String::from("x"), I32)]),
+                    BaseType::Struct(String::from("Foo"), vec![(String::from("x"), I32)]),
                     ((8, 1), (8, 3)),
                 )),
                 name: String::from("hello"),
@@ -1778,7 +1823,7 @@ fn test_parse_struct_methods() {
                     Literal::Str(String::from("world")),
                     ((8, 11), (8, 17)),
                 )],
-                ret_t: Type::Void,
+                ret_t: BaseType::Void,
                 span: ((8, 1), (8, 18)),
             }),
         ),
@@ -1796,7 +1841,7 @@ fn test_parse_struct_methods() {
             Stmt::Expr(Expr::MethodCall {
                 lhs: Box::new(Expr::Ident(
                     Ident::from("foo"),
-                    Type::Struct(String::from("Foo"), vec![]),
+                    BaseType::Struct(String::from("Foo"), vec![]),
                     ((8, 1), (8, 3)),
                 )),
                 name: String::from("hello"),
@@ -1804,7 +1849,7 @@ fn test_parse_struct_methods() {
                     Literal::Str(String::from("world")),
                     ((8, 11), (8, 17)),
                 )],
-                ret_t: Type::Void,
+                ret_t: BaseType::Void,
                 span: ((8, 1), (8, 18)),
             }),
         ),
