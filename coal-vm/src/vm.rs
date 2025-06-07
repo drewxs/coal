@@ -205,10 +205,13 @@ impl VM {
 
                     match (&lhs, &idx) {
                         (Object::List(l), Object::I32(i)) => {
-                            if *i < l.len() as i32 {
+                            let len = l.len() as i32;
+                            if len == 0 || i.abs() > len {
+                                self.push(Rc::new(Object::Nil));
+                            } else if *i >= 0 {
                                 self.push(Rc::clone(&l[*i as usize]));
                             } else {
-                                self.push(Rc::new(Object::Nil));
+                                self.push(Rc::clone(&l[(len + *i) as usize]));
                             }
                         }
                         (Object::Map(m), k) if idx.is_hashable() => match m.get(k) {
