@@ -250,22 +250,40 @@ impl Compiler {
         &mut self,
         cond: &Expr,
         then: &[Stmt],
-        _elifs: &[ElifExpr],
+        elifs: &[ElifExpr],
         alt: &Option<Vec<Stmt>>,
     ) -> Result<(), CompileError> {
+        let mut exit_jumps = vec![];
+
+        // if
         self.compile_expr(cond)?;
-        let jump_not_truthy = self.emit(Opcode::JumpFalse, &[9999]);
+        let mut jump_not_truthy = self.emit(Opcode::JumpFalse, &[9999]);
 
         self.compile_stmts(then)?;
-        if self.last_instruction_mut().opcode == Opcode::Pop {
+        if self.last_instruction().opcode == Opcode::Pop {
             self.remove_last_pop();
         }
 
-        let jump_pos = self.emit(Opcode::Jump, &[9999]);
-        let after_then_pos = self.instructions().len();
+        exit_jumps.push(self.emit(Opcode::Jump, &[9999]));
+        let mut next_cond_pos = self.instructions().len();
+        self.change_operand(jump_not_truthy, next_cond_pos);
 
-        self.change_operand(jump_not_truthy, after_then_pos);
+        // elifs
+        for elif in elifs {
+            self.compile_expr(&elif.cond)?;
+            jump_not_truthy = self.emit(Opcode::JumpFalse, &[9999]);
 
+            self.compile_stmts(&elif.then)?;
+            if self.last_instruction().opcode == Opcode::Pop {
+                self.remove_last_pop();
+            }
+
+            exit_jumps.push(self.emit(Opcode::Jump, &[9999]));
+            next_cond_pos = self.instructions().len();
+            self.change_operand(jump_not_truthy, next_cond_pos);
+        }
+
+        // else
         if let Some(alt) = alt {
             self.compile_stmts(alt)?;
             if self.last_instruction().opcode == Opcode::Pop {
@@ -275,8 +293,10 @@ impl Compiler {
             self.emit(Opcode::Nil, &[]);
         }
 
-        let after_alt_pos = self.instructions().len();
-        self.change_operand(jump_pos, after_alt_pos);
+        let end_pos = self.instructions().len();
+        for pos in exit_jumps {
+            self.change_operand(pos, end_pos);
+        }
 
         Ok(())
     }

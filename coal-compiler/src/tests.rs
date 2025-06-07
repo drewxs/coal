@@ -10,16 +10,23 @@ fn test(tests: &[(&str, &[Constant], Instructions)]) {
         compiler.compile(input).unwrap();
         let bytecode = compiler.bytecode();
 
-        assert_eq!(
-            *constants,
-            bytecode
-                .constants
-                .into_iter()
-                .map(|rc| (*rc).clone())
-                .collect::<Vec<Constant>>()
-        );
+        for (expected, actual) in constants.iter().zip(bytecode.constants.iter()) {
+            if *expected != **actual {
+                panic!(
+                    "input: {input}\nexpected: {constants:?}\nactual: {:?}",
+                    bytecode.constants
+                );
+            }
+        }
 
-        assert_eq!(instructions, &bytecode.instructions);
+        for (expected, actual) in instructions.iter().zip(bytecode.instructions.iter()) {
+            if expected != actual {
+                panic!(
+                    "input: {input}\nexpected: {instructions:?}\nactual: {:?}",
+                    bytecode.instructions
+                );
+            }
+        }
     }
 }
 
@@ -192,6 +199,24 @@ fn test_compile_conditionals() {
             ]),
         ),
         (
+            "if false { 1 }",
+            &[Constant::I32(1)],
+            Instructions::from(vec![
+                // 0000
+                (Opcode::False, vec![]),
+                // 0001
+                (Opcode::JumpFalse, vec![10]),
+                // 0004
+                (Opcode::Const, vec![0]),
+                // 0007
+                (Opcode::Jump, vec![11]),
+                // 0010
+                (Opcode::Nil, vec![]),
+                // 0011
+                (Opcode::Pop, vec![]),
+            ]),
+        ),
+        (
             "if true { 1 } else { 2 }",
             &[Constant::I32(1), Constant::I32(2)],
             Instructions::from(vec![
@@ -206,6 +231,62 @@ fn test_compile_conditionals() {
                 // 0010
                 (Opcode::Const, vec![1]),
                 // 0013
+                (Opcode::Pop, vec![]),
+            ]),
+        ),
+        (
+            "if false { 1 } elif true { 2 }",
+            &[Constant::I32(1), Constant::I32(2)],
+            Instructions::from(vec![
+                // 0000
+                (Opcode::False, vec![]),
+                // 0001
+                (Opcode::JumpFalse, vec![10]),
+                // 0004
+                (Opcode::Const, vec![0]),
+                // 0007
+                (Opcode::Jump, vec![21]),
+                // 0010
+                (Opcode::True, vec![]),
+                // 0011
+                (Opcode::JumpFalse, vec![20]),
+                // 0014
+                (Opcode::Const, vec![1]),
+                // 0017
+                (Opcode::Jump, vec![21]),
+                // 0020
+                (Opcode::Nil, vec![]),
+                // 0021
+                (Opcode::Pop, vec![]),
+            ]),
+        ),
+        (
+            r#"
+            if false { 1 }
+            elif true { 2 }
+            else { 3 }
+            "#,
+            &[Constant::I32(1), Constant::I32(2), Constant::I32(3)],
+            Instructions::from(vec![
+                // 0000
+                (Opcode::False, vec![]),
+                // 0001
+                (Opcode::JumpFalse, vec![10]),
+                // 0004
+                (Opcode::Const, vec![0]),
+                // 0007
+                (Opcode::Jump, vec![23]),
+                // 0010
+                (Opcode::True, vec![]),
+                // 0011
+                (Opcode::JumpFalse, vec![20]),
+                // 0014
+                (Opcode::Const, vec![1]),
+                // 0017
+                (Opcode::Jump, vec![23]),
+                // 0020
+                (Opcode::Const, vec![2]),
+                // 0023
                 (Opcode::Pop, vec![]),
             ]),
         ),
