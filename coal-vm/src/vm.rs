@@ -108,32 +108,32 @@ impl VM {
                 Opcode::EQ => {
                     let rhs = self.pop();
                     let lhs = self.pop();
-                    self.push(Rc::new(Object::Bool(lhs == rhs)));
+                    self.push(Rc::new(Object::from(lhs == rhs)));
                 }
                 Opcode::NEQ => {
                     let rhs = self.pop();
                     let lhs = self.pop();
-                    self.push(Rc::new(Object::Bool(lhs != rhs)));
+                    self.push(Rc::new(Object::from(lhs != rhs)));
                 }
                 Opcode::LT => {
                     let rhs = self.pop();
                     let lhs = self.pop();
-                    self.push(Rc::new(Object::Bool(lhs < rhs)));
+                    self.push(Rc::new(Object::from(lhs < rhs)));
                 }
                 Opcode::LTE => {
                     let rhs = self.pop();
                     let lhs = self.pop();
-                    self.push(Rc::new(Object::Bool(lhs <= rhs)));
+                    self.push(Rc::new(Object::from(lhs <= rhs)));
                 }
                 Opcode::GT => {
                     let rhs = self.pop();
                     let lhs = self.pop();
-                    self.push(Rc::new(Object::Bool(lhs > rhs)));
+                    self.push(Rc::new(Object::from(lhs > rhs)));
                 }
                 Opcode::GTE => {
                     let rhs = self.pop();
                     let lhs = self.pop();
-                    self.push(Rc::new(Object::Bool(lhs >= rhs)));
+                    self.push(Rc::new(Object::from(lhs >= rhs)));
                 }
                 Opcode::Minus => {
                     let result = match self.pop() {
