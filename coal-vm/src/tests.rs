@@ -11,7 +11,10 @@ fn test(tests: &[(&str, Object)]) {
         let mut vm = VM::from(bytecode);
         vm.run().unwrap();
 
-        assert_eq!(*expected, *vm.last_stack_obj());
+        let actual = vm.last_stack_obj();
+        if *expected != *actual {
+            panic!("input: {input}\nexpected: {expected}\nactual: {actual}");
+        }
     }
 }
 
@@ -160,6 +163,39 @@ fn test_run_conditionals() {
             x != y
             "#,
             TRUE,
+        ),
+        (
+            r#"
+            if true { 1 }
+            elif 1 < 2 { 2 }
+            else { 3 }
+            "#,
+            Object::I32(1),
+        ),
+        (
+            r#"
+            if false { 1 }
+            elif 1 < 2 { 2 }
+            else { 3 }
+            "#,
+            Object::I32(2),
+        ),
+        (
+            r#"
+            if false { 1 }
+            elif 1 > 2 { 2 }
+            else { 3 }
+            "#,
+            Object::I32(3),
+        ),
+        (
+            r#"
+            if false { 1 }
+            elif 1 > 2 { 2 }
+            elif 1 < 2 { 3 }
+            else { 4 }
+            "#,
+            Object::I32(3),
         ),
     ]);
 }
