@@ -1346,7 +1346,7 @@ impl Parser {
                         name: "self".into(),
                         t: ResolvedType {
                             base: BaseType::from(struct_decl),
-                            // NOTE: We do not support currently support generic structs
+                            // NOTE: We do not currently support generic structs
                             args: vec![],
                         },
                     }),

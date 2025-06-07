@@ -11,14 +11,8 @@ pub fn builtin_types() -> HashMap<String, TypeIdentifierTree> {
             root: "fn".into(),
             children: vec![
                 // return value comes first for functions in type identifier trees
-                TypeIdentifierTree {
-                    root: "void".into(),
-                    children: vec![],
-                },
-                TypeIdentifierTree {
-                    root: "bool".into(),
-                    children: vec![],
-                },
+                "void".into(),
+                "bool".into(),
             ],
         },
     );
@@ -26,64 +20,28 @@ pub fn builtin_types() -> HashMap<String, TypeIdentifierTree> {
         "assert_eq".to_owned(),
         TypeIdentifierTree {
             root: "fn".into(),
-            children: vec![
-                TypeIdentifierTree {
-                    root: "any".into(),
-                    children: vec![],
-                },
-                TypeIdentifierTree {
-                    root: "any".into(),
-                    children: vec![],
-                },
-            ],
+            children: vec!["any".into(), "any".into()],
         },
     );
     builtins.insert(
         "dbg".to_owned(),
         TypeIdentifierTree {
             root: "fn".into(),
-            children: vec![
-                TypeIdentifierTree {
-                    root: "void".into(),
-                    children: vec![],
-                },
-                TypeIdentifierTree {
-                    root: "any".into(),
-                    children: vec![],
-                },
-            ],
+            children: vec!["void".into(), "any".into()],
         },
     );
     builtins.insert(
         "print".to_owned(),
         TypeIdentifierTree {
             root: "fn".into(),
-            children: vec![
-                TypeIdentifierTree {
-                    root: "void".into(),
-                    children: vec![],
-                },
-                TypeIdentifierTree {
-                    root: "any".into(),
-                    children: vec![],
-                },
-            ],
+            children: vec!["void".into(), "any".into()],
         },
     );
     builtins.insert(
         "println".to_owned(),
         TypeIdentifierTree {
             root: "fn".into(),
-            children: vec![
-                TypeIdentifierTree {
-                    root: "void".into(),
-                    children: vec![],
-                },
-                TypeIdentifierTree {
-                    root: "any".into(),
-                    children: vec![],
-                },
-            ],
+            children: vec!["void".into(), "any".into()],
         },
     );
 

@@ -559,3 +559,12 @@ impl From<ResolvedType> for TypeIdentifierTree {
         }
     }
 }
+
+impl From<&str> for TypeIdentifierTree {
+    fn from(root: &str) -> Self {
+        TypeIdentifierTree {
+            root: root.into(),
+            children: vec![],
+        }
+    }
+}
