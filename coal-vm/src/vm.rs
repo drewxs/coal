@@ -204,14 +204,23 @@ impl VM {
                     let lhs = self.pop();
 
                     match (&lhs, &idx) {
+                        (Object::Str(s), Object::I32(i)) => {
+                            let len = s.len() as i32;
+                            if len == 0 || *i > 0 && *i >= len || *i < 0 && *i < -len {
+                                self.push(Rc::new(Object::Nil));
+                            } else {
+                                let i = if *i < 0 { len + *i } else { *i };
+                                let s = s.chars().nth(i as usize).unwrap().to_string();
+                                self.push(Rc::new(Object::Str(s)));
+                            }
+                        }
                         (Object::List(l), Object::I32(i)) => {
                             let len = l.len() as i32;
-                            if len == 0 || i.abs() > len {
+                            if len == 0 || *i > 0 && *i >= len || *i < 0 && *i < -len {
                                 self.push(Rc::new(Object::Nil));
-                            } else if *i >= 0 {
-                                self.push(Rc::clone(&l[*i as usize]));
                             } else {
-                                self.push(Rc::clone(&l[(len + *i) as usize]));
+                                let i = if *i < 0 { len + *i } else { *i };
+                                self.push(Rc::clone(&l[i as usize]));
                             }
                         }
                         (Object::Map(m), k) if idx.is_hashable() => match m.get(k) {

@@ -215,5 +215,9 @@ fn test_run_index_exprs() {
         ("{1: 1, 2: 2}[2]", Object::I32(2)),
         ("{1: 1}[0]", Object::Nil),
         ("{}[0]", Object::Nil),
+        (r#""asdf"[0]"#, Object::Str(String::from("a"))),
+        (r#""asdf"[2]"#, Object::Str(String::from("d"))),
+        (r#""asdf"[4]"#, Object::Nil),
+        (r#""asdf"[-1]"#, Object::Str(String::from("f"))),
     ]);
 }
