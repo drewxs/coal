@@ -1,15 +1,15 @@
 use std::fmt;
 
-use crate::{ParserError, ParserErrorKind, Span, indent};
+use crate::{ParserError, ParserErrorKind, ResolvedType, Span, indent};
 
-use super::{Comment, Expr, Ident, Infix, StructDecl, Type};
+use super::{BaseType, Comment, Expr, Ident, Infix, StructDecl};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
     Void,
     Newline,
     Comment(Comment),
-    Let(Ident, Type, Expr),
+    Let(Ident, ResolvedType, Expr),
     Assign(Expr, Expr),
     OpAssign(Infix, Expr, Expr),
     Return(Expr),
@@ -30,16 +30,19 @@ impl Stmt {
         }
     }
 
-    pub fn ret_t(&self, expected: &Type, last: bool) -> Result<Type, ParserError> {
+    pub fn ret_t(&self, expected: &ResolvedType, last: bool) -> Result<ResolvedType, ParserError> {
         match self {
-            Stmt::Return(e) => Type::try_from(e).map_err(|_| {
+            Stmt::Return(e) => ResolvedType::try_from(e).map_err(|_| {
                 ParserError::new(
-                    ParserErrorKind::TypeMismatch(expected.clone().into(), Type::Void.into()),
+                    ParserErrorKind::TypeMismatch(
+                        expected.clone().into(),
+                        ResolvedType::try_from(BaseType::Void).unwrap().into(),
+                    ),
                     e.span(),
                 )
             }),
             Stmt::Expr(e) => e.ret_t(expected, last),
-            _ => Ok(Type::Void),
+            _ => Ok(BaseType::Void.try_into().unwrap()),
         }
     }
 

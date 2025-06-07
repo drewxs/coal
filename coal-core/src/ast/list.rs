@@ -5,17 +5,17 @@ use std::{
 
 use crate::indent;
 
-use super::{Expr, Type};
+use super::{Expr, ResolvedType};
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct List {
     pub data: Vec<Expr>,
-    pub t: Type,
+    pub t: ResolvedType,
     pub repeat: Option<Box<Expr>>,
 }
 
 impl List {
-    pub fn new(data: &[Expr], t: Type) -> Self {
+    pub fn new(data: &[Expr], t: ResolvedType) -> Self {
         List {
             data: data.to_owned(),
             t,
@@ -23,7 +23,7 @@ impl List {
         }
     }
 
-    pub fn new_repeat(data: &[Expr], t: Type, repeat: Box<Expr>) -> Self {
+    pub fn new_repeat(data: &[Expr], t: ResolvedType, repeat: Box<Expr>) -> Self {
         List {
             data: data.to_owned(),
             t,

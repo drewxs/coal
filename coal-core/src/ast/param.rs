@@ -3,16 +3,16 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use crate::{Type, indent};
+use crate::{ResolvedType, indent};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Param {
     pub name: String,
-    pub t: Type,
+    pub t: ResolvedType,
 }
 
 impl Param {
-    pub fn new(name: &str, t: Type) -> Param {
+    pub fn new(name: &str, t: ResolvedType) -> Param {
         Param {
             name: name.to_string(),
             t,
