@@ -6,52 +6,52 @@ pub enum Opcode {
     #[default]
     Nil = 0,
 
-    Const,
-    Pop,
+    Const, // 1
+    Pop,   // 2
 
-    True,
-    False,
+    True,  // 3
+    False, // 4
 
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Rem,
+    Add, // 5
+    Sub, // 6
+    Mul, // 7
+    Div, // 8
+    Rem, // 9
 
-    EQ,
-    NEQ,
-    LT,
-    LTE,
-    GT,
-    GTE,
+    EQ,  // 10
+    NEQ, // 11
+    LT,  // 12
+    LTE, // 13
+    GT,  // 14
+    GTE, // 15
 
-    Minus,
-    Bang,
+    Minus, // 16
+    Bang,  // 17
 
-    Jump,
-    JumpFalse,
+    Jump,      // 18
+    JumpFalse, // 19
 
-    GetGlobal,
-    SetGlobal,
+    GetGlobal, // 20
+    SetGlobal, // 21
 
-    List,
-    Hash,
-    Index,
+    List,  // 22
+    Hash,  // 23
+    Index, // 24
 
-    Call,
+    Call, // 25
 
-    RetVal,
-    Ret,
+    RetVal, // 26
+    Ret,    // 27
 
-    GetLocal,
-    SetLocal,
+    GetLocal, // 28
+    SetLocal, // 29
 
-    GetBuiltin,
+    GetBuiltin, // 30
 
-    Closure,
-    CurrClosure,
+    Closure,     // 31
+    CurrClosure, // 32
 
-    GetFree,
+    GetFree, // 33
 }
 
 impl Opcode {
