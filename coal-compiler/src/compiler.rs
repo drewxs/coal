@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
-use coal_core::{ElifExpr, Expr, Func, Ident, Infix, Literal, Parser, Prefix, Stmt};
+use coal_core::{ElifExpr, Expr, Func, Ident, Infix, Literal, Parser, ParserError, Prefix, Stmt};
 use coal_objects::{CompiledFunc, Constant, Object};
 
-use crate::{Bytecode, CompileError, Instructions, Opcode, Symbol, SymbolScope, SymbolTable, make};
+use crate::{Bytecode, Instructions, Opcode, Symbol, SymbolScope, SymbolTable, make};
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct EmittedInstruction {
@@ -48,19 +48,17 @@ impl Compiler {
         }
     }
 
-    pub fn compile(&mut self, input: &str) -> Result<Bytecode, Vec<CompileError>> {
+    pub fn compile(&mut self, input: &str) -> Result<Bytecode, Vec<ParserError>> {
         self.parser.extend(input);
         let stmts = self.parser.parse();
 
-        let mut errors = vec![];
-        for stmt in stmts {
-            if let Err(e) = self.compile_stmt(&stmt) {
-                errors.push(e);
-            }
-        }
-
+        let errors = self.parser.errors.clone();
         if !errors.is_empty() {
             return Err(errors);
+        }
+
+        for stmt in stmts {
+            self.compile_stmt(&stmt);
         }
 
         Ok(self.bytecode())
@@ -104,11 +102,11 @@ impl Compiler {
         instructions
     }
 
-    fn compile_stmt(&mut self, stmt: &Stmt) -> Result<(), CompileError> {
+    fn compile_stmt(&mut self, stmt: &Stmt) {
         match stmt {
             Stmt::Let(ident, _, expr) => {
                 let symbol = self.symbol_table.set(ident.name());
-                self.compile_expr(expr)?;
+                self.compile_expr(expr);
                 if symbol.scope == SymbolScope::Global {
                     self.emit(Opcode::SetGlobal, &[symbol.idx]);
                 } else {
@@ -121,7 +119,7 @@ impl Compiler {
                     // TODO: handle index/attr access
                     _ => unreachable!(),
                 };
-                self.compile_expr(rhs)?;
+                self.compile_expr(rhs);
                 if symbol.scope == SymbolScope::Global {
                     self.emit(Opcode::SetGlobal, &[symbol.idx]);
                 } else {
@@ -134,7 +132,7 @@ impl Compiler {
                     // TODO: handle index/attr access
                     _ => unreachable!(),
                 };
-                self.compile_infix(op, lhs, rhs)?;
+                self.compile_infix(op, lhs, rhs);
                 if symbol.scope == SymbolScope::Global {
                     self.emit(Opcode::SetGlobal, &[symbol.idx]);
                 } else {
@@ -142,28 +140,24 @@ impl Compiler {
                 }
             }
             Stmt::Return(expr) => {
-                self.compile_expr(expr)?;
+                self.compile_expr(expr);
                 self.emit(Opcode::RetVal, &[]);
             }
             Stmt::Expr(expr) => {
-                self.compile_expr(expr)?;
+                self.compile_expr(expr);
                 self.emit(Opcode::Pop, &[]);
             }
             _ => {}
         }
-
-        Ok(())
     }
 
-    fn compile_stmts(&mut self, stmts: &[Stmt]) -> Result<(), CompileError> {
+    fn compile_stmts(&mut self, stmts: &[Stmt]) {
         for stmt in stmts {
-            self.compile_stmt(stmt)?;
+            self.compile_stmt(stmt);
         }
-
-        Ok(())
     }
 
-    fn compile_expr(&mut self, expr: &Expr) -> Result<(), CompileError> {
+    fn compile_expr(&mut self, expr: &Expr) {
         match expr {
             Expr::Ident(ident, _, _) => self.compile_ident(ident),
             Expr::Literal(l, _) => self.compile_literal(l),
@@ -179,17 +173,16 @@ impl Compiler {
             } => self.compile_if(cond, then, elifs, alt),
             Expr::Fn(f) => self.compile_fn(f),
             Expr::Call { args, .. } => self.compile_call(args),
-            _ => Ok(()),
+            _ => {}
         }
     }
 
-    fn compile_ident(&mut self, ident: &Ident) -> Result<(), CompileError> {
+    fn compile_ident(&mut self, ident: &Ident) {
         let s = self.symbol_table.get(&ident.0).unwrap();
         self.load_symbol(&s);
-        Ok(())
     }
 
-    fn compile_literal(&mut self, literal: &Literal) -> Result<(), CompileError> {
+    fn compile_literal(&mut self, literal: &Literal) {
         match literal {
             Literal::Bool(b) => {
                 self.emit(Opcode::from(*b), &[]);
@@ -228,14 +221,14 @@ impl Compiler {
             }
             Literal::List(l) => {
                 for e in &l.data {
-                    self.compile_expr(e)?;
+                    self.compile_expr(e);
                 }
                 self.emit(Opcode::List, &[l.data.len()]);
             }
             Literal::Map(m) => {
                 for (k, v) in &m.data {
-                    self.compile_expr(k)?;
-                    self.compile_expr(v)?;
+                    self.compile_expr(k);
+                    self.compile_expr(v);
                 }
                 self.emit(Opcode::Hash, &[m.data.len() * 2]);
             }
@@ -243,31 +236,23 @@ impl Compiler {
                 self.emit(Opcode::Nil, &[]);
             }
         }
-
-        Ok(())
     }
 
-    fn compile_prefix(&mut self, op: &Prefix, expr: &Expr) -> Result<(), CompileError> {
-        self.compile_expr(expr)?;
+    fn compile_prefix(&mut self, op: &Prefix, expr: &Expr) {
+        self.compile_expr(expr);
         self.emit(Opcode::from(op), &[]);
-
-        Ok(())
     }
 
-    fn compile_infix(&mut self, op: &Infix, lhs: &Expr, rhs: &Expr) -> Result<(), CompileError> {
-        self.compile_expr(lhs)?;
-        self.compile_expr(rhs)?;
+    fn compile_infix(&mut self, op: &Infix, lhs: &Expr, rhs: &Expr) {
+        self.compile_expr(lhs);
+        self.compile_expr(rhs);
         self.emit(Opcode::from(op), &[]);
-
-        Ok(())
     }
 
-    fn compile_index(&mut self, lhs: &Expr, idx: &Expr) -> Result<(), CompileError> {
-        self.compile_expr(lhs)?;
-        self.compile_expr(idx)?;
+    fn compile_index(&mut self, lhs: &Expr, idx: &Expr) {
+        self.compile_expr(lhs);
+        self.compile_expr(idx);
         self.emit(Opcode::Index, &[]);
-
-        Ok(())
     }
 
     fn compile_if(
@@ -276,14 +261,14 @@ impl Compiler {
         then: &[Stmt],
         elifs: &[ElifExpr],
         alt: &Option<Vec<Stmt>>,
-    ) -> Result<(), CompileError> {
+    ) {
         let mut exit_jumps = vec![];
 
         // if
-        self.compile_expr(cond)?;
+        self.compile_expr(cond);
         let mut jump_not_truthy = self.emit(Opcode::JumpFalse, &[9999]);
 
-        self.compile_stmts(then)?;
+        self.compile_stmts(then);
         if self.last_instruction().opcode == Opcode::Pop {
             self.remove_last_pop();
         }
@@ -294,10 +279,10 @@ impl Compiler {
 
         // elifs
         for elif in elifs {
-            self.compile_expr(&elif.cond)?;
+            self.compile_expr(&elif.cond);
             jump_not_truthy = self.emit(Opcode::JumpFalse, &[9999]);
 
-            self.compile_stmts(&elif.then)?;
+            self.compile_stmts(&elif.then);
             if self.last_instruction().opcode == Opcode::Pop {
                 self.remove_last_pop();
             }
@@ -309,7 +294,7 @@ impl Compiler {
 
         // else
         if let Some(alt) = alt {
-            self.compile_stmts(alt)?;
+            self.compile_stmts(alt);
             if self.last_instruction().opcode == Opcode::Pop {
                 self.remove_last_pop();
             }
@@ -321,18 +306,16 @@ impl Compiler {
         for pos in exit_jumps {
             self.change_operand(pos, end_pos);
         }
-
-        Ok(())
     }
 
-    fn compile_fn(&mut self, f: &Func) -> Result<(), CompileError> {
+    fn compile_fn(&mut self, f: &Func) {
         self.enter_scope();
 
         for arg in &f.args {
             self.symbol_table.set(arg.name.clone());
         }
 
-        self.compile_stmts(&f.body)?;
+        self.compile_stmts(&f.body);
         if self.last_instruction().opcode == Opcode::Pop {
             self.replace_last_pop_with_return();
         }
@@ -355,17 +338,13 @@ impl Compiler {
         };
         let operands = vec![self.add_constant(Object::CompiledFunc(func)), free.len()];
         self.emit(Opcode::Closure, &operands);
-
-        Ok(())
     }
 
-    fn compile_call(&mut self, args: &[Expr]) -> Result<(), CompileError> {
+    fn compile_call(&mut self, args: &[Expr]) {
         for arg in args {
-            self.compile_expr(arg)?;
+            self.compile_expr(arg);
         }
         self.emit(Opcode::Call, &[args.len()]);
-
-        Ok(())
     }
 
     fn scope(&self) -> &CompilationScope {
