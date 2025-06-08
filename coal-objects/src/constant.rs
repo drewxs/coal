@@ -26,6 +26,7 @@ impl From<Object> for Constant {
             Object::F32(f) => Constant::F32(f),
             Object::F64(f) => Constant::F64(f),
             Object::Str(s) => Constant::Str(s),
+            Object::CompiledFunc(f) => Constant::Func(f),
             _ => panic!("invalid constant"),
         }
     }

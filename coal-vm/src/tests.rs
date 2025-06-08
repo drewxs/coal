@@ -9,11 +9,11 @@ fn test(tests: &[(&str, Object)]) {
         let bytecode = compiler.compile(input).unwrap();
 
         let mut vm = VM::from(bytecode);
-        vm.run().unwrap();
+        vm.run();
 
         let actual = vm.last_stack_obj();
         if *expected != *actual {
-            panic!("input: {input}\nexpected: {expected}\nactual: {actual}");
+            panic!("input: {input}\nexpected: {expected}\nactual: {actual}",);
         }
     }
 }
@@ -219,5 +219,38 @@ fn test_run_index_exprs() {
         (r#""asdf"[2]"#, Object::Str(String::from("d"))),
         (r#""asdf"[4]"#, Object::Nil),
         (r#""asdf"[-1]"#, Object::Str(String::from("f"))),
+    ]);
+}
+
+#[test]
+fn test_run_closure() {
+    test(&[
+        (
+            r#"
+            fn f() -> i32 {
+                return 1;
+            }
+            f()
+            "#,
+            Object::I32(1),
+        ),
+        (
+            r#"
+            fn f(i: i32) -> i32 {
+                return i
+            }
+            f(1)
+            "#,
+            Object::I32(1),
+        ),
+        (
+            r#"
+            fn f(i: i32) -> i32 {
+                return i + 1
+            }
+            f(2)
+            "#,
+            Object::I32(2),
+        ),
     ]);
 }

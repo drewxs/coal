@@ -356,3 +356,27 @@ fn test_compile_index() {
         ),
     ]);
 }
+
+#[test]
+fn test_compiler_scopes() {
+    let mut c = Compiler::new();
+    assert_eq!(c.scope_idx, 0);
+
+    c.emit(Opcode::Mul, &[]);
+    c.enter_scope();
+    assert_eq!(c.scope_idx, 1);
+
+    c.emit(Opcode::Sub, &[]);
+    assert_eq!(c.scopes[c.scope_idx].instructions.len(), 1);
+    let last = &c.scopes[c.scope_idx].last_instruction;
+    assert_eq!(last.opcode, Opcode::Sub);
+    c.leave_scope();
+    assert_eq!(c.scope_idx, 0);
+
+    c.emit(Opcode::Add, &[]);
+    assert_eq!(c.scopes[c.scope_idx].instructions.len(), 2);
+    let last = &c.scopes[c.scope_idx].last_instruction;
+    assert_eq!(last.opcode, Opcode::Add);
+    let prev = &c.scopes[c.scope_idx].prev_instruction;
+    assert_eq!(prev.opcode, Opcode::Mul);
+}

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, rc::Rc};
 
-use coal_compiler::{Bytecode, CompileError, Opcode, read_u16};
+use coal_compiler::{Bytecode, Opcode, read_u16};
 use coal_objects::{Closure, CompiledFunc, Constant, FALSE, Object, TRUE};
 
 use crate::Frame;
@@ -39,7 +39,7 @@ impl VM {
     }
 
     pub fn push_frame(&mut self, frame: Frame) {
-        self.frames.push(frame);
+        self.frames[self.frame_idx] = frame;
         self.frame_idx += 1;
     }
 
@@ -52,7 +52,7 @@ impl VM {
         self.stack[self.sp].clone()
     }
 
-    pub fn run(&mut self) -> Result<(), CompileError> {
+    pub fn run(&mut self) {
         while self.curr_frame().ip < self.curr_frame().instructions().len() as i32 - 1 {
             self.curr_frame().ip += 1;
 
@@ -230,11 +230,79 @@ impl VM {
                         _ => {}
                     }
                 }
+                Opcode::Call => {
+                    let n_args = ins[ip + 1] as usize;
+                    self.curr_frame().ip += 1;
+
+                    let callee = &*self.stack[self.sp.saturating_sub(1).saturating_sub(n_args)];
+                    match callee {
+                        Object::Closure(cl) => {
+                            let frame = Frame::new(cl.clone(), self.sp - n_args);
+                            self.sp = frame.base_ptr + cl.func.n_locals;
+                            self.push_frame(frame);
+                        }
+                        Object::Builtin(_) => {}
+                        _ => {}
+                    }
+                }
+                Opcode::RetVal => {
+                    let val = self.pop();
+                    let frame = self.pop_frame();
+                    self.sp = frame.base_ptr.saturating_sub(1);
+                    self.push(Rc::new(val));
+                }
+                Opcode::Ret => {
+                    let frame = self.pop_frame();
+                    self.sp = frame.base_ptr.saturating_sub(1);
+                    self.push(Rc::new(Object::Nil));
+                }
+                Opcode::GetLocal => {
+                    let idx = ins[ip + 1] as usize;
+                    self.curr_frame().ip += 1;
+                    let base = self.curr_frame().base_ptr;
+                    self.push(Rc::clone(&self.stack[base + idx]));
+                }
+                Opcode::SetLocal => {
+                    let idx = ins[ip + 1] as usize;
+                    self.curr_frame().ip += 1;
+                    let base = self.curr_frame().base_ptr;
+                    self.stack[base + idx] = Rc::new(self.pop());
+                }
+                Opcode::Closure => {
+                    let idx = read_u16(&ins[ip + 1..ip + 3]) as usize;
+                    let n_free = read_u16(&ins[ip + 3..ip + 5]) as usize;
+
+                    self.curr_frame().ip += 3;
+
+                    match self.constants[idx].as_ref() {
+                        Constant::Func(f) => {
+                            let mut free: Vec<Rc<Object>> = Vec::with_capacity(n_free);
+                            for var in &mut free {
+                                *var = self.stack[self.sp - n_free + 1].clone();
+                            }
+                            self.sp = self.sp.saturating_sub(n_free);
+                            let cl = Closure {
+                                func: Rc::new(f.clone()),
+                                free,
+                            };
+                            self.push(Rc::new(Object::Closure(cl)));
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                Opcode::GetFree => {
+                    let idx = ins[ip + 1] as usize;
+                    self.curr_frame().ip += 1;
+                    let cl = self.curr_frame().cl.clone();
+                    self.push(Rc::clone(&cl.free[idx]));
+                }
+                Opcode::CurrClosure => {
+                    let cl = self.curr_frame().cl.clone();
+                    self.push(Rc::new(Object::Closure(cl)));
+                }
                 _ => {}
             }
         }
-
-        Ok(())
     }
 }
 

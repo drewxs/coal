@@ -24,7 +24,7 @@ pub fn run(path: &str) {
     let bytecode: Bytecode = decode_from_std_read(&mut reader, config).unwrap();
     let mut vm = VM::from(bytecode);
 
-    vm.run().unwrap();
+    vm.run();
 
     println!("{}", vm.last_stack_obj());
 }
@@ -39,7 +39,7 @@ pub fn compile_and_exec(input: &str, c: &mut Compiler) {
     match c.compile(input) {
         Ok(bytecode) => {
             let mut vm = VM::from(bytecode);
-            vm.run().unwrap();
+            vm.run();
             println!("{}", vm.last_stack_obj());
         }
         Err(errs) => errs.iter().for_each(|e| {
