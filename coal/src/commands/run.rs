@@ -4,7 +4,7 @@ use bincode::decode_from_std_read;
 use terminal_size::{Width, terminal_size};
 
 use coal_compiler::{Bytecode, Compiler};
-use coal_core::{Lexer, Parser, clean_input};
+use coal_core::clean_input;
 use coal_vm::VM;
 
 use crate::{compile, path::resolve_bin, read_file_to_str};
@@ -66,22 +66,4 @@ pub fn compile_and_exec(input: &str, c: &mut Compiler) {
             }
         }),
     }
-}
-
-pub fn print_tokens(input: &str) {
-    Lexer::new(input).print_tokens();
-}
-
-pub fn print_ast(input: &str) {
-    for stmt in Parser::from(input).parse() {
-        println!("{stmt:?}");
-    }
-}
-
-pub fn print_file_tokens(path: &str) {
-    print_tokens(&read_file_to_str(path));
-}
-
-pub fn print_file_ast(path: &str) {
-    print_ast(&read_file_to_str(path));
 }

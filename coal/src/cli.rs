@@ -32,7 +32,10 @@ pub enum Command {
     #[command(about = "Parse a given program")]
     #[command(visible_alias = "p")]
     Parse {
-        path: String,
+        input: Option<String>,
+
+        #[arg(short = 'p', long, help = "Parse a given path")]
+        path: Option<String>,
 
         #[arg(short = 't', long, action)]
         tokens: bool,

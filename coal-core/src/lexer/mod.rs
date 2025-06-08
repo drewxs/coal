@@ -47,12 +47,6 @@ impl Lexer {
         tokens
     }
 
-    pub fn print_tokens(&mut self) {
-        for token in self {
-            println!("{token:?}");
-        }
-    }
-
     fn next_ch(&mut self) -> char {
         if self.next_pos < self.input.len() {
             self.chars[self.next_pos]

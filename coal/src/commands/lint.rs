@@ -1,7 +1,4 @@
-use std::{
-    fs,
-    io::{self, IsTerminal, Read},
-};
+use std::fs;
 
 use terminal_size::{Width, terminal_size};
 
@@ -73,18 +70,4 @@ pub fn lint_path(path: &str) {
         let input = fs::read_to_string(path).unwrap_or(String::from("failed to read file"));
         lint(&input);
     }
-}
-
-pub fn lint_stdin() {
-    let mut input = io::stdin();
-    if input.is_terminal() {
-        return;
-    }
-
-    let mut buf = String::new();
-    let _ = input
-        .read_to_string(&mut buf)
-        .map_err(|_| String::from("Failed to read from stdin"));
-
-    lint(&buf);
 }

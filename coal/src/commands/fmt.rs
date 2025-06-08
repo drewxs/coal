@@ -1,9 +1,4 @@
-use std::{
-    fmt::Write,
-    fs,
-    io::{self, IsTerminal, Read},
-    time::Instant,
-};
+use std::{fmt::Write, fs, time::Instant};
 
 use coal_core::{Parser, trim_input};
 
@@ -64,21 +59,6 @@ pub fn fmt_path(path: &str, dry_run: bool) -> Result<String, String> {
             out.push_str(&format!("{path} {ms}ms\n"));
         }
     }
-
-    Ok(out)
-}
-
-pub fn fmt_stdin() -> Result<String, String> {
-    let mut input = io::stdin();
-    if input.is_terminal() {
-        return Err(String::from("No input from stdin"));
-    }
-
-    let mut buf = String::new();
-    input
-        .read_to_string(&mut buf)
-        .map_err(|_| String::from("Failed to read from stdin"))?;
-    let out = fmt(&buf);
 
     Ok(out)
 }
