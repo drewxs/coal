@@ -20,36 +20,15 @@ pub struct VM {
 }
 
 impl VM {
-    pub fn push(&mut self, o: Rc<Object>) {
-        if self.sp >= STACK_SIZE {
-            panic!("stack overflow");
+    pub fn new() -> Self {
+        VM {
+            globals: (0..GLOBALS_SIZE).map(|_| Rc::new(Object::Nil)).collect(),
+            constants: vec![],
+            stack: (0..STACK_SIZE).map(|_| Rc::new(Object::Nil)).collect(),
+            sp: 0,
+            frames: vec![Frame::default(); MAX_FRAMES],
+            frame_idx: 1,
         }
-        self.stack[self.sp] = o;
-        self.sp += 1;
-    }
-
-    pub fn pop(&mut self) -> Object {
-        let o = (*self.stack[self.sp.saturating_sub(1)]).clone();
-        self.sp = self.sp.saturating_sub(1);
-        o
-    }
-
-    pub fn curr_frame(&mut self) -> &mut Frame {
-        &mut self.frames[self.frame_idx - 1]
-    }
-
-    pub fn push_frame(&mut self, frame: Frame) {
-        self.frames[self.frame_idx] = frame;
-        self.frame_idx += 1;
-    }
-
-    pub fn pop_frame(&mut self) -> Frame {
-        self.frame_idx -= 1;
-        self.frames[self.frame_idx].clone()
-    }
-
-    pub fn last_stack_obj(&mut self) -> Rc<Object> {
-        self.stack[self.sp].clone()
     }
 
     pub fn run(&mut self) {
@@ -304,12 +283,45 @@ impl VM {
             }
         }
     }
+
+    pub fn push(&mut self, o: Rc<Object>) {
+        if self.sp >= STACK_SIZE {
+            panic!("stack overflow");
+        }
+        self.stack[self.sp] = o;
+        self.sp += 1;
+    }
+
+    pub fn pop(&mut self) -> Object {
+        let o = (*self.stack[self.sp.saturating_sub(1)]).clone();
+        self.sp = self.sp.saturating_sub(1);
+        o
+    }
+
+    pub fn curr_frame(&mut self) -> &mut Frame {
+        &mut self.frames[self.frame_idx - 1]
+    }
+
+    pub fn push_frame(&mut self, frame: Frame) {
+        self.frames[self.frame_idx] = frame;
+        self.frame_idx += 1;
+    }
+
+    pub fn pop_frame(&mut self) -> Frame {
+        self.frame_idx -= 1;
+        self.frames[self.frame_idx].clone()
+    }
+
+    pub fn last_stack_obj(&mut self) -> Rc<Object> {
+        self.stack[self.sp].clone()
+    }
 }
 
 impl From<Bytecode> for VM {
     fn from(bytecode: Bytecode) -> Self {
-        let mut frames = vec![Frame::default(); MAX_FRAMES];
-        frames[0] = Frame::new(
+        let mut vm = VM::new();
+        vm.constants = bytecode.constants;
+        vm.frames[0] = Frame::new(
             Closure {
                 func: Rc::new(CompiledFunc {
                     instructions: bytecode.instructions.0,
@@ -320,15 +332,7 @@ impl From<Bytecode> for VM {
             },
             0,
         );
-
-        VM {
-            globals: (0..GLOBALS_SIZE).map(|_| Rc::new(Object::Nil)).collect(),
-            constants: bytecode.constants,
-            stack: (0..STACK_SIZE).map(|_| Rc::new(Object::Nil)).collect(),
-            sp: 0,
-            frames,
-            frame_idx: 1,
-        }
+        vm
     }
 }
 
