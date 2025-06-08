@@ -35,18 +35,6 @@ impl Lexer {
         lexer
     }
 
-    pub fn lexical_tokens(&mut self) -> Vec<Token> {
-        self.collect()
-    }
-
-    pub fn tokens(&mut self) -> Vec<TokenKind> {
-        let mut tokens = vec![];
-        for node in self {
-            tokens.push(node.kind)
-        }
-        tokens
-    }
-
     fn next_ch(&mut self) -> char {
         if self.next_pos < self.input.len() {
             self.chars[self.next_pos]

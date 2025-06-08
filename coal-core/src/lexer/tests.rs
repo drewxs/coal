@@ -13,7 +13,7 @@ fn test_lex_whitespace() {
         "hello"
         "#;
 
-    let mut lexer = Lexer::new(input);
+    let lexer = Lexer::new(input);
 
     let expected = vec![
         Token::new(TokenKind::I32(1), ((1, 1), (1, 1))),
@@ -25,8 +25,9 @@ fn test_lex_whitespace() {
         Token::new(TokenKind::NewLine, ((5, 1), (5, 1))),
         Token::new(TokenKind::Str(String::from("hello")), ((6, 1), (6, 7))),
     ];
+    let actual = lexer.collect::<Vec<Token>>();
 
-    assert_eq!(expected, lexer.lexical_tokens());
+    assert_eq!(expected, actual);
 }
 
 #[test]
@@ -39,7 +40,7 @@ fn test_lex_comments() {
         2;
         "#;
 
-    let mut lexer = Lexer::new(input);
+    let lexer = Lexer::new(input);
 
     let expected = vec![
         TokenKind::Comment(String::from("foo")),
@@ -53,17 +54,18 @@ fn test_lex_comments() {
         TokenKind::I32(2),
         TokenKind::Semicolon,
     ];
+    let actual: Vec<TokenKind> = lexer.map(|node| node.kind).collect();
 
-    assert_eq!(expected, lexer.tokens());
+    assert_eq!(expected, actual);
 }
 
 #[test]
 fn test_lex_string() {
     let input = r#""hello""#;
     let expected = Token::new(TokenKind::Str(String::from("hello")), ((1, 1), (1, 7)));
-    let actual = Lexer::new(input).lexical_tokens();
+    let mut lexer = Lexer::new(input);
 
-    assert_eq!(expected, actual[0]);
+    assert_eq!(expected, lexer.next().unwrap());
 }
 
 #[test]
