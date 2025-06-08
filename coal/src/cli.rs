@@ -42,6 +42,7 @@ pub enum Command {
     },
 
     #[command(about = "Check for parsing errors")]
+    #[command(visible_alias = "l")]
     Lint {
         input: Option<String>,
 
@@ -51,6 +52,7 @@ pub enum Command {
 
     #[command(about = "Format files")]
     #[command(long_about = "Format all files in the current project or from a given path")]
+    #[command(visible_alias = "f")]
     Fmt {
         input: Option<String>,
 
