@@ -1,8 +1,6 @@
 #![feature(test)]
 #![feature(assert_matches)]
 
-extern crate test;
-
 pub mod ast;
 mod lexer;
 mod parser;
