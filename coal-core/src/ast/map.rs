@@ -2,16 +2,16 @@ use std::fmt;
 
 use crate::indent;
 
-use super::{Expr, Type};
+use super::{BaseType, Expr, ResolvedType};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Map {
     pub data: Vec<(Expr, Expr)>,
-    pub t: (Type, Type),
+    pub t: (ResolvedType, ResolvedType),
 }
 
 impl Map {
-    pub fn new(data: &[(Expr, Expr)], t: (Type, Type)) -> Self {
+    pub fn new(data: &[(Expr, Expr)], t: (ResolvedType, ResolvedType)) -> Self {
         Map {
             data: data.to_owned(),
             t,
@@ -66,7 +66,10 @@ impl Default for Map {
     fn default() -> Self {
         Map {
             data: vec![],
-            t: (Type::Unknown, Type::Unknown),
+            t: (
+                BaseType::Unknown.try_into().unwrap(),
+                BaseType::Unknown.try_into().unwrap(),
+            ),
         }
     }
 }

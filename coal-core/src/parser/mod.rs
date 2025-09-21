@@ -7,11 +7,11 @@ mod warning;
 #[cfg(test)]
 mod tests;
 
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
+use std::{cell::RefCell, collections::HashSet, iter, rc::Rc};
 
 use crate::{
-    Comment, ElifExpr, Expr, Func, Ident, Infix, Lexer, List, Literal, Map, Param, Prefix, Stmt,
-    Struct, StructDecl, Token, TokenKind, Type, U32,
+    BaseType, Comment, ElifExpr, Expr, Func, Ident, Infix, Lexer, List, Literal, Map, Param,
+    Prefix, ResolvedType, Stmt, Struct, StructDecl, Token, TokenKind, U32,
 };
 
 pub use error::{ParserError, ParserErrorKind};
@@ -176,15 +176,14 @@ impl Parser {
         ));
     }
 
-    fn lookup_expr_type(&mut self, expr: &Expr) -> Option<Type> {
-        if let Expr::Ident(Ident(name), _, _) = &expr {
-            if let Some(t) = self.symbol_table.borrow().get(name) {
-                return Some(t.clone());
-            } else if let Some(t) = self.symbol_table.borrow().get_ret_t(name) {
-                return Some(t.clone());
-            }
+    fn lookup_expr_type(&mut self, expr: &Expr) -> Option<ResolvedType> {
+        if let Expr::Ident(Ident(name), _, _) = &expr
+            && let Some(t) = self.symbol_table.borrow().get(name)
+        {
+            return Some(t);
         }
-        Type::try_from(expr).ok()
+
+        ResolvedType::try_from(expr).ok()
     }
 
     fn parse_block(&mut self) -> Vec<Stmt> {
@@ -281,7 +280,7 @@ impl Parser {
         self.advance();
 
         let mut expr = self.parse_expr(Precedence::Lowest)?;
-        let inf_t = Type::try_from(&expr);
+        let inf_t = ResolvedType::try_from(&expr);
 
         match &mut expr {
             Expr::Ident(Ident(name), _, _) => {
@@ -295,11 +294,17 @@ impl Parser {
                 // Empty composite literals are unknown when they're parsed, and need type annotations
                 // Update their types using the declared type, or err
                 match &declared_t {
-                    Some(Type::List(t)) => {
-                        l.set_type(*t.clone(), None);
+                    Some(ResolvedType {
+                        base: BaseType::List,
+                        args,
+                    }) if args.len() == 1 => {
+                        l.set_type(args[0].clone(), None);
                     }
-                    Some(Type::Map(t)) => {
-                        l.set_type(t.0.clone(), Some(t.1.clone()));
+                    Some(ResolvedType {
+                        base: BaseType::Map,
+                        args,
+                    }) if args.len() == 2 => {
+                        l.set_type(args[0].clone(), Some(args[1].clone()));
                     }
                     _ => self.errors.push(ParserError::new(
                         ParserErrorKind::TypeAnnotationsNeeded,
@@ -315,14 +320,17 @@ impl Parser {
                         let decl_tx = dt.extract();
                         let inf_tx = inf_t.extract();
 
-                        if !decl_tx.is_numeric() || !inf_tx.is_numeric() {
-                            if inf_tx.is_composite() {
+                        if !decl_tx.base.is_numeric() || !inf_tx.base.is_numeric() {
+                            if inf_tx.base.is_composite() {
                                 declared_t = Some(dt.clone());
                             } else {
                                 expr = expr.cast(dt);
                                 declared_t = Some(inf_tx.clone());
                             }
-                        } else if decl_tx.is_numeric() && inf_tx.is_numeric() && decl_tx != inf_tx {
+                        } else if decl_tx.base.is_numeric()
+                            && inf_tx.base.is_numeric()
+                            && decl_tx != inf_tx
+                        {
                             expr = expr.cast(decl_tx);
                         }
                     } else {
@@ -337,15 +345,10 @@ impl Parser {
                 ParserErrorKind::TypeAnnotationsNeeded,
                 ident_span,
             ));
-            Type::Unknown
+            ResolvedType::default()
         });
 
         self.symbol_table.borrow().set(ident.name(), t.clone());
-        if let Type::Fn { ret_t, .. } = &t {
-            self.symbol_table
-                .borrow()
-                .set_ret_t(ident.name(), *ret_t.clone());
-        }
 
         self.consume_next(TokenKind::Semicolon);
 
@@ -376,7 +379,7 @@ impl Parser {
         let rhs = self.parse_expr(Precedence::Lowest)?;
         let rhs_t = self.lookup_expr_type(&rhs)?;
 
-        if lhs_t != rhs_t && !(lhs_t.is_numeric() && rhs_t.is_numeric()) {
+        if lhs_t != rhs_t && !(lhs_t.base.is_numeric() && rhs_t.base.is_numeric()) {
             self.errors.push(ParserError::new(
                 ParserErrorKind::TypeMismatch(lhs_t.into(), rhs_t.into()),
                 rhs.span(),
@@ -447,7 +450,7 @@ impl Parser {
                 };
 
                 if let Some(v) = &default_val {
-                    let val_t = Type::try_from(v).ok()?;
+                    let val_t = ResolvedType::try_from(v).ok()?;
                     if val_t != t {
                         self.errors.push(ParserError::new(
                             ParserErrorKind::TypeMismatch(t.clone().into(), val_t.into()),
@@ -491,7 +494,14 @@ impl Parser {
             self.consume_newlines();
         }
 
-        self.symbol_table.borrow().set(ident.name(), Type::from(&s));
+        self.symbol_table.borrow().set(
+            ident.name(),
+            ResolvedType {
+                base: BaseType::from(&s),
+                // NOTE: We don't currently support generic structs
+                args: vec![],
+            },
+        );
 
         Some(Stmt::StructDecl(s, (start, self.curr_tok.span.1)))
     }
@@ -503,7 +513,10 @@ impl Parser {
             TokenKind::Ident(name) => {
                 let ident_t = self.symbol_table.borrow().get(name);
                 match ident_t {
-                    Some(Type::StructDecl(name, attrs, _)) => self.parse_struct_expr(&name, &attrs),
+                    Some(ResolvedType {
+                        base: BaseType::Struct(name, attrs),
+                        args: _,
+                    }) => self.parse_struct_expr(&name, &attrs),
                     Some(t) => Some(Expr::Ident(Ident::from(name.as_str()), t, *span)),
                     None => {
                         self.errors.push(ParserError::new(
@@ -656,7 +669,7 @@ impl Parser {
         let (start, _) = lhs.span();
         self.advance(); // '['
 
-        let lhs_t = Type::try_from(lhs).ok()?;
+        let lhs_t = ResolvedType::try_from(lhs).ok()?;
 
         if !lhs.is_indexable() {
             let (_, end) = self.curr_tok.span;
@@ -667,16 +680,16 @@ impl Parser {
         }
 
         let idx = self.parse_expr(Precedence::Lowest)?;
-        let idx_t = Type::try_from(&idx).ok()?;
+        let idx_t = ResolvedType::try_from(&idx).ok()?;
 
-        match lhs_t {
-            Type::List(_) if !idx_t.is_int() => {
+        match lhs_t.base {
+            BaseType::List if !idx_t.base.is_int() => {
                 self.errors.push(ParserError::new(
                     ParserErrorKind::InvalidIndex(lhs_t.into(), idx_t.into()),
                     idx.span(),
                 ));
             }
-            Type::Map(ref t) if !idx_t.is_hashable() || t.0 != idx_t => {
+            BaseType::Map if !idx_t.base.is_hashable() || lhs_t.args[0] != idx_t => {
                 self.errors.push(ParserError::new(
                     ParserErrorKind::InvalidIndex(lhs_t.into(), idx_t.into()),
                     idx.span(),
@@ -720,13 +733,13 @@ impl Parser {
 
         if self.next_tok.kind == end_tok {
             self.advance();
-            return Some(List::new(&data, Type::Unknown));
+            return Some(List::new(&data, BaseType::Unknown.try_into().unwrap()));
         }
 
         self.advance();
 
         let expr = self.parse_expr(Precedence::Lowest)?;
-        let t = Type::try_from(&expr).unwrap_or_default();
+        let t = ResolvedType::try_from(&expr).unwrap_or_default();
         data.push(expr.clone());
 
         if self.next_tok.kind == TokenKind::Semicolon {
@@ -749,7 +762,7 @@ impl Parser {
             let (start, _) = self.curr_tok.span;
             let expr = self.parse_expr(Precedence::Lowest)?;
 
-            match Type::try_from(&expr) {
+            match ResolvedType::try_from(&expr) {
                 Ok(curr_t) => {
                     if curr_t != t {
                         self.errors.push(ParserError::new(
@@ -777,7 +790,7 @@ impl Parser {
         Some(List::new(&data, t))
     }
 
-    fn parse_repeat_expr_list(&mut self, expr: &Expr, t: &Type) -> Option<List> {
+    fn parse_repeat_expr_list(&mut self, expr: &Expr, t: &ResolvedType) -> Option<List> {
         let rhs = self.parse_expr(Precedence::Lowest)?;
         let (data, repeat) = match &rhs {
             Expr::Literal(Literal::U32(i), _) => {
@@ -793,9 +806,12 @@ impl Parser {
                 (vec![expr.clone(); *i as usize], Some(Box::new(rhs.clone())))
             }
             Expr::Call { ret_t, .. } | Expr::MethodCall { ret_t, .. } => {
-                if !ret_t.is_numeric() {
+                if !ret_t.base.is_numeric() {
                     self.errors.push(ParserError::new(
-                        ParserErrorKind::TypeMismatch(U32.into(), t.clone().into()),
+                        ParserErrorKind::TypeMismatch(
+                            ResolvedType::try_from(U32).unwrap().into(),
+                            t.clone().into(),
+                        ),
                         self.next_tok.span,
                     ));
                     (vec![], None)
@@ -805,7 +821,10 @@ impl Parser {
             }
             _ => {
                 self.errors.push(ParserError::new(
-                    ParserErrorKind::TypeMismatch(U32.into(), t.clone().into()),
+                    ParserErrorKind::TypeMismatch(
+                        ResolvedType::try_from(U32).unwrap().into(),
+                        t.clone().into(),
+                    ),
                     self.next_tok.span,
                 ));
                 (vec![], None)
@@ -826,7 +845,10 @@ impl Parser {
             self.advance();
             return Some(Map {
                 data,
-                t: (Type::Unknown, Type::Unknown),
+                t: (
+                    BaseType::Unknown.try_into().unwrap(),
+                    BaseType::Unknown.try_into().unwrap(),
+                ),
             });
         }
 
@@ -835,13 +857,13 @@ impl Parser {
         let mut keys = HashSet::new();
 
         let k = self.parse_expr(Precedence::Lowest)?;
-        let kt = Type::try_from(&k).unwrap_or_default();
+        let kt = ResolvedType::try_from(&k).unwrap_or_default();
 
         self.expect_next(TokenKind::Colon)?;
         self.advance();
 
         let v = self.parse_expr(Precedence::Lowest)?;
-        let vt = Type::try_from(&v).unwrap_or_default();
+        let vt = ResolvedType::try_from(&v).unwrap_or_default();
 
         keys.insert(k.to_string());
         data.push((k, v));
@@ -863,11 +885,11 @@ impl Parser {
                 ));
             }
 
-            if kt != Type::try_from(&k).unwrap_or_default() {
+            if kt != ResolvedType::try_from(&k).unwrap_or_default() {
                 self.errors.push(ParserError::new(
                     ParserErrorKind::TypeMismatch(
                         kt.into(),
-                        Type::try_from(&k).unwrap_or_default().into(),
+                        ResolvedType::try_from(&k).unwrap_or_default().into(),
                     ),
                     (start, self.curr_tok.span.1),
                 ));
@@ -879,11 +901,11 @@ impl Parser {
             self.advance();
 
             let v = self.parse_expr(Precedence::Lowest)?;
-            if vt != Type::try_from(&v).unwrap_or_default() {
+            if vt != ResolvedType::try_from(&v).unwrap_or_default() {
                 self.errors.push(ParserError::new(
                     ParserErrorKind::TypeMismatch(
                         vt.into(),
-                        Type::try_from(&v).unwrap_or_default().into(),
+                        ResolvedType::try_from(&v).unwrap_or_default().into(),
                     ),
                     (start, self.curr_tok.span.1),
                 ));
@@ -916,8 +938,8 @@ impl Parser {
             args = self.parse_expr_list(TokenKind::Rparen)?;
         }
 
-        let mut lhs_t = Type::try_from(&lhs).unwrap_or_default();
-        if let Type::Struct(name, _) = &lhs_t
+        let mut lhs_t = ResolvedType::try_from(&lhs).unwrap_or_default();
+        if let BaseType::Struct(name, _) = &lhs_t.base
             && let Some(t) = self.symbol_table.borrow().get(name)
         {
             lhs_t = t.clone();
@@ -962,10 +984,23 @@ impl Parser {
         let attr = self.curr_tok.kind.to_string();
 
         match &lhs {
-            Expr::Ident(s, Type::Struct(sname, _), _) => {
-                if let Some(Type::StructDecl(_, attrs, _)) = self.symbol_table.borrow().get(sname) {
-                    let t = match attrs.iter().find(|(n, _, _)| *n == attr) {
-                        Some((_, t, _)) => t.clone(),
+            Expr::Ident(
+                s,
+                ResolvedType {
+                    base: BaseType::Struct(sname, _),
+                    ..
+                },
+                _,
+            ) => {
+                if let Some(BaseType::Struct(_, attrs)) = self
+                    .symbol_table
+                    .borrow()
+                    .type_symbol_table
+                    .borrow()
+                    .get(sname)
+                {
+                    let t = match attrs.iter().find(|(n, _)| *n == attr) {
+                        Some((_, t)) => t.clone(),
                         None => {
                             self.errors.push(ParserError::new(
                                 ParserErrorKind::InvalidStructAttr(attr.to_owned()),
@@ -979,7 +1014,7 @@ impl Parser {
                     return Some(Expr::AttrAccess {
                         lhs: Box::new(lhs),
                         name: attr,
-                        t,
+                        t: *t,
                         span,
                     });
                 } else {
@@ -990,12 +1025,17 @@ impl Parser {
                 }
             }
             Expr::AttrAccess { .. } => {
-                if let Type::Struct(sname, _) = Type::try_from(&lhs).unwrap_or_default()
-                    && let Some(Type::StructDecl(_, attrs, _)) =
-                        self.symbol_table.borrow().get(&sname)
+                if let BaseType::Struct(sname, _) =
+                    ResolvedType::try_from(&lhs).unwrap_or_default().base
+                    && let Some(BaseType::Struct(_, attrs)) = self
+                        .symbol_table
+                        .borrow()
+                        .type_symbol_table
+                        .borrow()
+                        .get(&sname)
                 {
-                    let t = match attrs.iter().find(|(n, _, _)| *n == attr) {
-                        Some((_, t, _)) => t.clone(),
+                    let t = match attrs.iter().find(|(n, _)| *n == attr) {
+                        Some((_, t)) => t.clone(),
                         None => {
                             self.errors.push(ParserError::new(
                                 ParserErrorKind::InvalidStructAttr(attr.to_owned()),
@@ -1009,7 +1049,7 @@ impl Parser {
                     return Some(Expr::AttrAccess {
                         lhs: Box::new(lhs),
                         name: attr,
-                        t,
+                        t: *t,
                         span,
                     });
                 }
@@ -1128,7 +1168,7 @@ impl Parser {
         self.expect_next(TokenKind::Lbrace)?;
         self.advance();
 
-        let iter_t = Type::try_from(&expr)
+        let iter_t = ResolvedType::try_from(&expr)
             .map(|t| t.extract().to_owned())
             .unwrap_or_default();
 
@@ -1166,9 +1206,6 @@ impl Parser {
         let st = SymbolTable::from(Rc::clone(&self.symbol_table));
         for arg in args.iter() {
             st.set(arg.name.clone(), arg.t.clone());
-            if let Type::Fn { ret_t, .. } = &arg.t {
-                st.set_ret_t(arg.name.clone(), *ret_t.clone());
-            }
         }
 
         let (body, ret_stmts) = self.parse_fn_block(Rc::new(RefCell::new(st)));
@@ -1177,7 +1214,10 @@ impl Parser {
         let ret_t = if let Some(dt) = declared_ret_t {
             if ret_stmts.is_empty() {
                 self.errors.push(ParserError::new(
-                    ParserErrorKind::TypeMismatch(dt.clone().into(), Type::Void.into()),
+                    ParserErrorKind::TypeMismatch(
+                        dt.clone().into(),
+                        ResolvedType::try_from(BaseType::Void).unwrap().into(),
+                    ),
                     (start, self.curr_tok.span.1),
                 ));
             }
@@ -1190,12 +1230,8 @@ impl Parser {
 
             dt
         } else {
-            Type::from(&body)
+            ResolvedType::from(&body)
         };
-
-        self.symbol_table
-            .borrow()
-            .set_ret_t(ident.name(), ret_t.clone());
 
         let func = Func {
             name: ident.name(),
@@ -1221,14 +1257,11 @@ impl Parser {
         let st = SymbolTable::from(Rc::clone(&self.symbol_table));
         for arg in args.iter() {
             st.set(arg.name.clone(), arg.t.clone());
-            if let Type::Fn { ret_t, .. } = &arg.t {
-                st.set_ret_t(arg.name.clone(), *ret_t.clone());
-            }
         }
 
         let (body, _) = self.parse_fn_block(Rc::new(RefCell::new(st)));
         self.check_unreachable(&body);
-        let ret_t = Type::from(&body);
+        let ret_t = ResolvedType::from(&body);
 
         Some(Expr::Closure {
             args,
@@ -1238,7 +1271,11 @@ impl Parser {
         })
     }
 
-    fn parse_struct_expr(&mut self, name: &str, attrs: &[(String, Type, bool)]) -> Option<Expr> {
+    fn parse_struct_expr(
+        &mut self,
+        name: &str,
+        attrs: &[(String, Box<ResolvedType>)],
+    ) -> Option<Expr> {
         let (start, _) = self.curr_tok.span;
         self.advance();
         self.consume(TokenKind::Lbrace);
@@ -1247,18 +1284,18 @@ impl Parser {
         while !matches!(self.curr_tok.kind, TokenKind::Rbrace | TokenKind::EOF) {
             if let TokenKind::Ident(ident) = &self.curr_tok.kind {
                 let ident = ident.clone();
-                if let Some((_, expected_t, _)) =
-                    attrs.iter().find(|(attr_name, _, _)| *attr_name == ident)
+                if let Some((_, expected_t)) =
+                    attrs.iter().find(|(attr_name, _)| *attr_name == ident)
                 {
                     self.expect_next(TokenKind::Colon)?;
                     self.advance();
 
                     let val = self.parse_expr(Precedence::Lowest)?.cast(expected_t);
-                    let val_t = Type::try_from(&val).ok()?;
+                    let val_t = ResolvedType::try_from(&val).ok()?;
 
-                    if !val_t.partial_eq(expected_t) {
+                    if val_t != **expected_t {
                         self.errors.push(ParserError::new(
-                            ParserErrorKind::TypeMismatch(expected_t.clone().into(), val_t.into()),
+                            ParserErrorKind::TypeMismatch(expected_t.clone(), val_t.into()),
                             val.span(),
                         ));
                     }
@@ -1276,8 +1313,8 @@ impl Parser {
             self.advance();
         }
 
-        for (attr, _, default_val) in attrs {
-            if !state.iter().any(|(name, _)| name == attr) && !default_val {
+        for (attr, _) in attrs {
+            if !state.iter().any(|(name, _)| name == attr) {
                 self.errors.push(ParserError::new(
                     ParserErrorKind::AttrMissing(attr.to_owned()),
                     (start, self.curr_tok.span.1),
@@ -1308,7 +1345,11 @@ impl Parser {
                 match ctx {
                     FunctionContext::Struct(struct_decl) => args.push(Param {
                         name: "self".into(),
-                        t: Type::from(struct_decl).into_struct_t().unwrap(),
+                        t: ResolvedType {
+                            base: BaseType::from(struct_decl),
+                            // NOTE: We do not currently support generic structs
+                            args: vec![],
+                        },
                     }),
                     FunctionContext::Standard => unreachable!(),
                 }
@@ -1333,7 +1374,7 @@ impl Parser {
         Some(args)
     }
 
-    fn parse_ret_type(&mut self) -> Option<Type> {
+    fn parse_ret_type(&mut self) -> Option<ResolvedType> {
         match self.curr_tok.kind {
             TokenKind::Lbrace | TokenKind::EQ => None,
             _ => {
@@ -1345,22 +1386,24 @@ impl Parser {
         }
     }
 
-    fn parse_type(&mut self) -> Option<Type> {
+    fn parse_type(&mut self) -> Option<ResolvedType> {
         match &self.curr_tok.kind {
             TokenKind::Ident(s) => match s.as_str() {
                 "Fn" => self.parse_fn_type(),
                 "list" => self.parse_list_type(),
                 "map" => self.parse_map_type(),
-                _ => match self.symbol_table.borrow().get(s) {
-                    Some(t) if matches!(t, Type::StructDecl(_, _, _)) => t.into_struct_t(),
-                    _ => Type::try_from(&self.curr_tok.kind).ok(),
+                _ => match self.symbol_table.borrow().type_symbol_table.borrow().get(s) {
+                    Some(t) => Some(t.try_into().unwrap()),
+                    _ => BaseType::try_from(&self.curr_tok.kind)
+                        .ok()
+                        .and_then(|t| t.try_into().ok()),
                 },
             },
             _ => None,
         }
     }
 
-    fn parse_fn_type(&mut self) -> Option<Type> {
+    fn parse_fn_type(&mut self) -> Option<ResolvedType> {
         self.advance(); // 'Fn'
         self.consume(TokenKind::Lparen);
 
@@ -1379,28 +1422,29 @@ impl Parser {
                 self.advance();
                 self.parse_ret_type().unwrap_or_default()
             }
-            _ => Type::Void,
+            _ => BaseType::Void.try_into().unwrap(),
         };
 
-        Some(Type::Fn {
-            args_t: args,
-            ret_t: Box::new(ret_t),
-            // There is no way to indicate a method in a function type signature.
-            uses_self: false,
+        Some(ResolvedType {
+            base: BaseType::Fn,
+            args: iter::once(ret_t).chain(args).collect(),
         })
     }
 
-    fn parse_list_type(&mut self) -> Option<Type> {
+    fn parse_list_type(&mut self) -> Option<ResolvedType> {
         self.advance(); // 'list'
         self.consume(TokenKind::Lbracket);
 
         let t = self.parse_type().unwrap_or_default();
         self.consume_next(TokenKind::Rbracket);
 
-        Some(Type::List(Box::new(t)))
+        Some(ResolvedType {
+            base: BaseType::List,
+            args: vec![t],
+        })
     }
 
-    fn parse_map_type(&mut self) -> Option<Type> {
+    fn parse_map_type(&mut self) -> Option<ResolvedType> {
         self.advance(); // 'map'
         self.consume(TokenKind::Lbracket);
 
@@ -1411,7 +1455,10 @@ impl Parser {
         let vt = self.parse_type().unwrap_or_default();
         self.consume_next(TokenKind::Rbracket);
 
-        Some(Type::Map(Box::new((kt, vt))))
+        Some(ResolvedType {
+            base: BaseType::Map,
+            args: vec![kt, vt],
+        })
     }
 
     fn check_unreachable(&mut self, stmts: &[Stmt]) {

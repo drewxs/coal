@@ -5,13 +5,13 @@ use std::{
 
 use crate::{Span, indent};
 
-use super::{Param, Stmt, Type};
+use super::{BaseType, Param, ResolvedType, Stmt};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Func {
     pub name: String,
     pub args: Vec<Param>,
-    pub ret_t: Type,
+    pub ret_t: ResolvedType,
     pub body: Vec<Stmt>,
     pub span: Span,
 }
@@ -37,7 +37,7 @@ impl Func {
             .map(|arg| format!("{arg}"))
             .collect::<Vec<String>>()
             .join(", ");
-        if *ret_t == Type::Void {
+        if ret_t.base == BaseType::Void {
             writeln!(f, "{args}) {{")?;
         } else {
             writeln!(f, "{args}) -> {ret_t} {{")?;

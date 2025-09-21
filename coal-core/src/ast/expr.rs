@@ -2,11 +2,11 @@ use std::fmt;
 
 use crate::{ParserError, ParserErrorKind, Span, indent};
 
-use super::{Func, Ident, Infix, Literal, Param, Prefix, Stmt, Struct, Type};
+use super::{BaseType, Func, Ident, Infix, Literal, Param, Prefix, ResolvedType, Stmt, Struct};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    Ident(Ident, Type, Span),
+    Ident(Ident, ResolvedType, Span),
     Literal(Literal, Span),
     Prefix(Prefix, Box<Expr>, Span),
     Infix(Infix, Box<Expr>, Box<Expr>, Span),
@@ -33,7 +33,7 @@ pub enum Expr {
     Fn(Func),
     Closure {
         args: Vec<Param>,
-        ret_t: Type,
+        ret_t: ResolvedType,
         body: Vec<Stmt>,
         span: Span,
     },
@@ -41,20 +41,20 @@ pub enum Expr {
     Call {
         name: String,
         args: Vec<Expr>,
-        ret_t: Type,
+        ret_t: ResolvedType,
         span: Span,
     },
     MethodCall {
         lhs: Box<Expr>,
         name: String,
         args: Vec<Expr>,
-        ret_t: Type,
+        ret_t: ResolvedType,
         span: Span,
     },
     AttrAccess {
         lhs: Box<Expr>,
         name: String,
-        t: Type,
+        t: ResolvedType,
         span: Span,
     },
 }
@@ -88,12 +88,12 @@ impl Expr {
 
     pub fn is_indexable(&self) -> bool {
         match self {
-            Expr::Ident(_, t, _) => t.is_indexable(),
+            Expr::Ident(_, t, _) => t.base.is_indexable(),
             Expr::Literal(l, _) => l.is_indexable(),
             Expr::Prefix(_, rhs, _) => rhs.is_indexable(),
             Expr::Infix(_, lhs, rhs, _) => lhs.is_indexable() && rhs.is_indexable(),
             Expr::Index(lhs, _, _) => lhs.is_indexable(),
-            Expr::Call { ret_t, .. } => ret_t.is_indexable(),
+            Expr::Call { ret_t, .. } => ret_t.base.is_indexable(),
             _ => false,
         }
     }
@@ -102,7 +102,7 @@ impl Expr {
         matches!(self, Expr::Fn(_) | Expr::Closure { .. })
     }
 
-    pub fn ret_t(&self, expected: &Type, last: bool) -> Result<Type, ParserError> {
+    pub fn ret_t(&self, expected: &ResolvedType, last: bool) -> Result<ResolvedType, ParserError> {
         match self {
             Expr::If {
                 then, elifs, alt, ..
@@ -110,7 +110,7 @@ impl Expr {
                 let mut returning = None;
                 for stmt in then {
                     let t = stmt.ret_t(expected, last)?;
-                    if t != Type::Void && t != *expected {
+                    if t.base != BaseType::Void && t != *expected {
                         return Err(ParserError::new(
                             ParserErrorKind::TypeMismatch(
                                 expected.clone().into(),
@@ -159,18 +159,18 @@ impl Expr {
                             ));
                         }
                     }
-                } else if last && *expected != Type::Void {
+                } else if last && expected.base != BaseType::Void {
                     return Err(ParserError::new(
                         ParserErrorKind::MissingElseClause,
                         self.span(),
                     ));
                 }
-                Ok(Type::Void)
+                Ok(BaseType::Void.try_into().unwrap())
             }
             Expr::While { body, .. } => {
                 for stmt in body {
                     let t = stmt.ret_t(expected, last)?;
-                    if t != Type::Void && t != *expected {
+                    if t.base != BaseType::Void && t != *expected {
                         return Err(ParserError::new(
                             ParserErrorKind::TypeMismatch(
                                 expected.clone().into(),
@@ -180,9 +180,9 @@ impl Expr {
                         ));
                     }
                 }
-                Ok(Type::Void)
+                Ok(BaseType::Void.try_into().unwrap())
             }
-            _ => Ok(Type::Void),
+            _ => Ok(BaseType::Void.try_into().unwrap()),
         }
     }
 
@@ -219,7 +219,7 @@ impl Expr {
         rets
     }
 
-    pub fn cast(&self, to: &Type) -> Expr {
+    pub fn cast(&self, to: &ResolvedType) -> Expr {
         match self {
             Expr::Literal(l, _) => Expr::Literal(l.cast(to), self.span()),
             _ => self.clone(),

@@ -1,8 +1,8 @@
 use std::fmt;
 
-use crate::indent;
+use crate::{ResolvedType, indent};
 
-use super::{F32, F64, I32, I64, I128, List, Map, Type, U32, U64};
+use super::{F32, F64, I32, I64, I128, List, Map, U32, U64};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
@@ -49,7 +49,7 @@ impl Literal {
         }
     }
 
-    pub fn set_type(&mut self, t1: Type, t2: Option<Type>) {
+    pub fn set_type(&mut self, t1: ResolvedType, t2: Option<ResolvedType>) {
         match self {
             Literal::List(l) => l.t = t1,
             Literal::Map(m) => {
@@ -62,8 +62,8 @@ impl Literal {
         }
     }
 
-    pub fn cast(&self, to: &Type) -> Literal {
-        match (self, to) {
+    pub fn cast(&self, to: &ResolvedType) -> Literal {
+        match (self, &to.base) {
             (Literal::U32(from), &U64) => Literal::U64(*from as u64),
             (Literal::U32(from), &I32) => Literal::I32(*from as i32),
             (Literal::U32(from), &I64) => Literal::I64(*from as i64),
