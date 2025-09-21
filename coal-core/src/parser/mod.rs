@@ -519,11 +519,14 @@ impl Parser {
                     .get(name);
                 match ident_t {
                     Some(BaseType::Struct(name, attrs)) => self.parse_struct_expr(&name, &attrs),
-                    t => Some(Expr::Ident(
-                        Ident::from(name.as_str()),
-                        t.unwrap_or_default().try_into().unwrap(),
-                        *span,
-                    )),
+                    Some(t) => Some(Expr::Ident(Ident::from(name.as_str()), t, *span)),
+                    None => {
+                        self.errors.push(ParserError::new(
+                            ParserErrorKind::NotFound(name.to_owned()),
+                            *span,
+                        ));
+                        None
+                    }
                 }
             }
             TokenKind::U32(i) => Some(Expr::Literal(Literal::U32(*i), *span)),

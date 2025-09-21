@@ -32,7 +32,10 @@ pub enum Command {
     #[command(about = "Parse a given program")]
     #[command(visible_alias = "p")]
     Parse {
-        path: String,
+        input: Option<String>,
+
+        #[arg(short = 'p', long, help = "Parse a given path")]
+        path: Option<String>,
 
         #[arg(short = 't', long, action)]
         tokens: bool,
@@ -42,6 +45,7 @@ pub enum Command {
     },
 
     #[command(about = "Check for parsing errors")]
+    #[command(visible_alias = "l")]
     Lint {
         input: Option<String>,
 
@@ -51,6 +55,7 @@ pub enum Command {
 
     #[command(about = "Format files")]
     #[command(long_about = "Format all files in the current project or from a given path")]
+    #[command(visible_alias = "f")]
     Fmt {
         input: Option<String>,
 

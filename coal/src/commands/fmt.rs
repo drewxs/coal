@@ -1,9 +1,4 @@
-use std::{
-    fmt::Write,
-    fs,
-    io::{self, IsTerminal, Read},
-    time::Instant,
-};
+use std::{fmt::Write, fs, time::Instant};
 
 use coal_core::{Parser, trim_input};
 
@@ -68,29 +63,14 @@ pub fn fmt_path(path: &str, dry_run: bool) -> Result<String, String> {
     Ok(out)
 }
 
-pub fn fmt_stdin() -> Result<String, String> {
-    let mut input = io::stdin();
-    if input.is_terminal() {
-        return Err(String::from("No input from stdin"));
-    }
-
-    let mut buf = String::new();
-    input
-        .read_to_string(&mut buf)
-        .map_err(|_| String::from("Failed to read from stdin"))?;
-    let out = fmt(&buf);
-
-    Ok(out)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_fmt_call_expr() {
-        let input = r#"   hello  ( "hello, world!"   )  ; "#;
-        let expected = "hello(\"hello, world!\");\n";
+        let input = r#"   println  ( "hello, world!"   )  ; "#;
+        let expected = "println(\"hello, world!\");\n";
 
         assert_eq!(expected, fmt(input));
     }
@@ -116,6 +96,8 @@ let x: u32 = 2;
     #[test]
     fn test_fmt_nested_ifs() {
         let input = "
+let x = 1;
+    let y = 2;
                if x  > y {
         if x > 1 {        let z = 1.;
                 return z;  } else {
@@ -125,7 +107,9 @@ let x: u32 = 2;
                          }
             ";
 
-        let expected = "if x > y {
+        let expected = "let x: i32 = 1;
+let y: i32 = 2;
+if x > y {
     if x > 1 {
         let z: f64 = 1.0;
         return z;
@@ -145,32 +129,24 @@ let x: u32 = 2;
     #[test]
     fn test_fmt_functions() {
         let input = "
-  fn  adder (x :  u32 ) ->  Fn ( u32  ) ->    u32  {
       fn add(n: u32) -> u32 {
 let i = 0
-  while  1 < n  { i   +=  1  }
-return
-x + n;
+  while  i < n  { i   +=  1  }
+return i;
         }
- return  add; }
 
-  let  add_two :   Fn ( u32  )  ->    u32  =   adder( x )
-add_two( 2 )
+add(2)
             ";
 
-        let expected = "fn adder(x: u32) -> Fn(u32) -> u32 {
-    fn add(n: u32) -> u32 {
-        let i: i32 = 0;
-        while 1 < n {
-            i += 1;
-        }
-        return x + n;
+        let expected = "fn add(n: u32) -> u32 {
+    let i: i32 = 0;
+    while i < n {
+        i += 1;
     }
-    return add;
+    return i;
 }
 
-let add_two: Fn(u32) -> u32 = adder(x);
-add_two(2);
+add(2);
 ";
 
         assert_eq!(expected, fmt(input));

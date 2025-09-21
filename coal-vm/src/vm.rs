@@ -1,6 +1,6 @@
 use std::{collections::HashMap, rc::Rc};
 
-use coal_compiler::{Bytecode, CompileError, Opcode, read_u16};
+use coal_compiler::{Bytecode, Opcode, read_u16};
 use coal_objects::{Closure, CompiledFunc, Constant, FALSE, Object, TRUE};
 
 use crate::Frame;
@@ -20,39 +20,18 @@ pub struct VM {
 }
 
 impl VM {
-    pub fn push(&mut self, o: Rc<Object>) {
-        if self.sp >= STACK_SIZE {
-            panic!("stack overflow");
+    pub fn new() -> Self {
+        VM {
+            globals: (0..GLOBALS_SIZE).map(|_| Rc::new(Object::Nil)).collect(),
+            constants: vec![],
+            stack: (0..STACK_SIZE).map(|_| Rc::new(Object::Nil)).collect(),
+            sp: 0,
+            frames: vec![Frame::default(); MAX_FRAMES],
+            frame_idx: 1,
         }
-        self.stack[self.sp] = o;
-        self.sp += 1;
     }
 
-    pub fn pop(&mut self) -> Object {
-        let o = (*self.stack[self.sp.saturating_sub(1)]).clone();
-        self.sp = self.sp.saturating_sub(1);
-        o
-    }
-
-    pub fn curr_frame(&mut self) -> &mut Frame {
-        &mut self.frames[self.frame_idx - 1]
-    }
-
-    pub fn push_frame(&mut self, frame: Frame) {
-        self.frames.push(frame);
-        self.frame_idx += 1;
-    }
-
-    pub fn pop_frame(&mut self) -> Frame {
-        self.frame_idx -= 1;
-        self.frames[self.frame_idx].clone()
-    }
-
-    pub fn last_stack_obj(&mut self) -> Rc<Object> {
-        self.stack[self.sp].clone()
-    }
-
-    pub fn run(&mut self) -> Result<(), CompileError> {
+    pub fn run(&mut self) {
         while self.curr_frame().ip < self.curr_frame().instructions().len() as i32 - 1 {
             self.curr_frame().ip += 1;
 
@@ -81,28 +60,28 @@ impl VM {
                     self.push(Rc::new(FALSE));
                 }
                 Opcode::Add => {
-                    let rhs = self.pop();
-                    let lhs = self.pop();
+                    let rhs = self.popv();
+                    let lhs = self.popv();
                     self.push(Rc::new(lhs + rhs));
                 }
                 Opcode::Sub => {
-                    let rhs = self.pop();
-                    let lhs = self.pop();
+                    let rhs = self.popv();
+                    let lhs = self.popv();
                     self.push(Rc::new(lhs - rhs));
                 }
                 Opcode::Mul => {
-                    let rhs = self.pop();
-                    let lhs = self.pop();
+                    let rhs = self.popv();
+                    let lhs = self.popv();
                     self.push(Rc::new(lhs * rhs));
                 }
                 Opcode::Div => {
-                    let rhs = self.pop();
-                    let lhs = self.pop();
+                    let rhs = self.popv();
+                    let lhs = self.popv();
                     self.push(Rc::new(lhs / rhs));
                 }
                 Opcode::Rem => {
-                    let rhs = self.pop();
-                    let lhs = self.pop();
+                    let rhs = self.popv();
+                    let lhs = self.popv();
                     self.push(Rc::new(lhs % rhs));
                 }
                 Opcode::EQ => {
@@ -136,7 +115,7 @@ impl VM {
                     self.push(Rc::new(Object::from(lhs >= rhs)));
                 }
                 Opcode::Minus => {
-                    let result = match self.pop() {
+                    let result = match self.popv() {
                         Object::I32(i) => Object::I32(-i),
                         Object::I64(i) => Object::I64(-i),
                         Object::I128(i) => Object::I128(-i),
@@ -146,7 +125,7 @@ impl VM {
                     };
                     self.push(Rc::new(result));
                 }
-                Opcode::Bang => match self.pop() {
+                Opcode::Bang => match *self.pop() {
                     Object::Nil | FALSE => self.push(Rc::new(TRUE)),
                     _ => self.push(Rc::new(FALSE)),
                 },
@@ -171,7 +150,7 @@ impl VM {
                 Opcode::SetGlobal => {
                     let idx = read_u16(&ins[ip + 1..ip + 3]) as usize;
                     self.curr_frame().ip += 2;
-                    self.globals[idx] = Rc::new(self.pop());
+                    self.globals[idx] = self.pop();
                 }
                 Opcode::List => {
                     let count = read_u16(&ins[ip + 1..ip + 3]) as usize;
@@ -200,8 +179,8 @@ impl VM {
                     self.push(Rc::new(Object::Map(data)));
                 }
                 Opcode::Index => {
-                    let idx = self.pop();
-                    let lhs = self.pop();
+                    let idx = self.popv();
+                    let lhs = self.popv();
 
                     match (&lhs, &idx) {
                         (Object::Str(s), Object::I32(i)) => {
@@ -230,18 +209,125 @@ impl VM {
                         _ => {}
                     }
                 }
+                Opcode::Call => {
+                    let n_args = ins[ip + 1] as usize;
+                    self.curr_frame().ip += 1;
+
+                    let callee = &*self.stack[self.sp.saturating_sub(1).saturating_sub(n_args)];
+                    match callee {
+                        Object::Closure(cl) => {
+                            let frame = Frame::new(cl.clone(), self.sp - n_args);
+                            self.sp = frame.base_ptr + cl.func.n_locals;
+                            self.push_frame(frame);
+                        }
+                        Object::Builtin(_) => {}
+                        _ => {}
+                    }
+                }
+                Opcode::RetVal => {
+                    let val = self.pop();
+                    let frame = self.pop_frame();
+                    self.sp = frame.base_ptr.saturating_sub(1);
+                    self.push(val);
+                }
+                Opcode::Ret => {
+                    let frame = self.pop_frame();
+                    self.sp = frame.base_ptr.saturating_sub(1);
+                    self.push(Rc::new(Object::Nil));
+                }
+                Opcode::GetLocal => {
+                    let idx = ins[ip + 1] as usize;
+                    self.curr_frame().ip += 1;
+                    let base = self.curr_frame().base_ptr;
+                    self.push(Rc::clone(&self.stack[base + idx]));
+                }
+                Opcode::SetLocal => {
+                    let idx = ins[ip + 1] as usize;
+                    self.curr_frame().ip += 1;
+                    let base = self.curr_frame().base_ptr;
+                    self.stack[base + idx] = self.pop();
+                }
+                Opcode::Closure => {
+                    let idx = read_u16(&ins[ip + 1..ip + 3]) as usize;
+                    let n_free = read_u16(&ins[ip + 3..ip + 5]) as usize;
+
+                    self.curr_frame().ip += 3;
+
+                    match self.constants[idx].as_ref() {
+                        Constant::Func(f) => {
+                            let mut free: Vec<Rc<Object>> = Vec::with_capacity(n_free);
+                            for var in &mut free {
+                                *var = self.stack[self.sp - n_free + 1].clone();
+                            }
+                            self.sp = self.sp.saturating_sub(n_free);
+                            let cl = Closure {
+                                func: Rc::new(f.clone()),
+                                free,
+                            };
+                            self.push(Rc::new(Object::Closure(cl)));
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                Opcode::GetFree => {
+                    let idx = ins[ip + 1] as usize;
+                    self.curr_frame().ip += 1;
+                    let cl = self.curr_frame().cl.clone();
+                    self.push(Rc::clone(&cl.free[idx]));
+                }
+                Opcode::CurrClosure => {
+                    let cl = self.curr_frame().cl.clone();
+                    self.push(Rc::new(Object::Closure(cl)));
+                }
                 _ => {}
             }
         }
+    }
 
-        Ok(())
+    pub fn push(&mut self, o: Rc<Object>) {
+        if self.sp >= STACK_SIZE {
+            panic!("stack overflow");
+        }
+        self.stack[self.sp] = o;
+        self.sp += 1;
+    }
+
+    pub fn pop(&mut self) -> Rc<Object> {
+        let o = Rc::clone(&self.stack[self.sp.saturating_sub(1)]);
+        self.sp = self.sp.saturating_sub(1);
+        o
+    }
+
+    pub fn popv(&mut self) -> Object {
+        let o = Rc::clone(&self.stack[self.sp.saturating_sub(1)]);
+        self.sp = self.sp.saturating_sub(1);
+        (*o).clone()
+    }
+
+    pub fn curr_frame(&mut self) -> &mut Frame {
+        &mut self.frames[self.frame_idx - 1]
+    }
+
+    pub fn push_frame(&mut self, frame: Frame) {
+        self.frames[self.frame_idx] = frame;
+        self.frame_idx += 1;
+    }
+
+    pub fn pop_frame(&mut self) -> Frame {
+        self.frame_idx -= 1;
+        self.frames[self.frame_idx].clone()
+    }
+
+    pub fn last_stack_obj(&mut self) -> Rc<Object> {
+        self.stack[self.sp].clone()
     }
 }
 
 impl From<Bytecode> for VM {
     fn from(bytecode: Bytecode) -> Self {
-        let mut frames = vec![Frame::default(); MAX_FRAMES];
-        frames[0] = Frame::new(
+        let mut vm = VM::new();
+        vm.constants = bytecode.constants;
+        vm.frames[0] = Frame::new(
             Closure {
                 func: Rc::new(CompiledFunc {
                     instructions: bytecode.instructions.0,
@@ -252,15 +338,7 @@ impl From<Bytecode> for VM {
             },
             0,
         );
-
-        VM {
-            globals: (0..GLOBALS_SIZE).map(|_| Rc::new(Object::Nil)).collect(),
-            constants: bytecode.constants,
-            stack: (0..STACK_SIZE).map(|_| Rc::new(Object::Nil)).collect(),
-            sp: 0,
-            frames,
-            frame_idx: 1,
-        }
+        vm
     }
 }
 

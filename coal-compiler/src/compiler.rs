@@ -1,21 +1,18 @@
 use std::rc::Rc;
 
-use coal_core::{ElifExpr, Expr, Ident, Infix, Literal, Parser, Prefix, Span, Stmt};
-use coal_objects::{Constant, Object};
+use coal_core::{ElifExpr, Expr, Func, Ident, Infix, Literal, Parser, ParserError, Prefix, Stmt};
+use coal_objects::{CompiledFunc, Constant, Object};
 
-use crate::{
-    Bytecode, CompileError, CompileErrorKind, Instructions, Opcode, Symbol, SymbolScope,
-    SymbolTable, make,
-};
+use crate::{Bytecode, Instructions, Opcode, Symbol, SymbolScope, SymbolTable, make};
 
 #[derive(Clone, Debug, PartialEq, Default)]
-struct EmittedInstruction {
+pub struct EmittedInstruction {
     pub opcode: Opcode,
     pub pos: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]
-struct CompilationScope {
+pub struct CompilationScope {
     pub instructions: Instructions,
     pub last_instruction: EmittedInstruction,
     pub prev_instruction: EmittedInstruction,
@@ -26,8 +23,8 @@ pub struct Compiler {
     pub parser: Parser,
     pub constants: Vec<Rc<Constant>>,
     pub symbol_table: SymbolTable,
-    scopes: Vec<CompilationScope>,
-    scope_idx: usize,
+    pub scopes: Vec<CompilationScope>,
+    pub scope_idx: usize,
 }
 
 impl Compiler {
@@ -51,19 +48,17 @@ impl Compiler {
         }
     }
 
-    pub fn compile(&mut self, input: &str) -> Result<Bytecode, Vec<CompileError>> {
+    pub fn compile(&mut self, input: &str) -> Result<Bytecode, Vec<ParserError>> {
         self.parser.extend(input);
         let stmts = self.parser.parse();
 
-        let mut errors = vec![];
-        for stmt in stmts {
-            if let Err(e) = self.compile_stmt(&stmt) {
-                errors.push(e);
-            }
-        }
-
+        let errors = self.parser.errors.clone();
         if !errors.is_empty() {
             return Err(errors);
+        }
+
+        for stmt in stmts {
+            self.compile_stmt(&stmt);
         }
 
         Ok(self.bytecode())
@@ -76,11 +71,42 @@ impl Compiler {
         }
     }
 
-    fn compile_stmt(&mut self, stmt: &Stmt) -> Result<(), CompileError> {
+    pub fn emit(&mut self, opcode: Opcode, operands: &[usize]) -> usize {
+        let ins = make(opcode, operands);
+        let pos = self.instructions_mut().len();
+
+        self.instructions_mut().extend_from_slice(&ins);
+
+        *self.prev_instruction_mut() = self.last_instruction_mut().clone();
+        *self.last_instruction_mut() = EmittedInstruction { opcode, pos };
+
+        pos
+    }
+
+    pub fn enter_scope(&mut self) {
+        self.scopes.push(CompilationScope::default());
+        self.scope_idx += 1;
+        self.symbol_table = SymbolTable::new_enclosed(&self.symbol_table);
+    }
+
+    pub fn leave_scope(&mut self) -> Instructions {
+        let instructions = self.instructions().clone();
+
+        self.scopes.pop();
+        self.scope_idx -= 1;
+
+        if let Some(outer) = &self.symbol_table.outer {
+            self.symbol_table = outer.as_ref().clone();
+        }
+
+        instructions
+    }
+
+    fn compile_stmt(&mut self, stmt: &Stmt) {
         match stmt {
             Stmt::Let(ident, _, expr) => {
                 let symbol = self.symbol_table.set(ident.name());
-                self.compile_expr(expr)?;
+                self.compile_expr(expr);
                 if symbol.scope == SymbolScope::Global {
                     self.emit(Opcode::SetGlobal, &[symbol.idx]);
                 } else {
@@ -93,7 +119,7 @@ impl Compiler {
                     // TODO: handle index/attr access
                     _ => unreachable!(),
                 };
-                self.compile_expr(rhs)?;
+                self.compile_expr(rhs);
                 if symbol.scope == SymbolScope::Global {
                     self.emit(Opcode::SetGlobal, &[symbol.idx]);
                 } else {
@@ -106,7 +132,7 @@ impl Compiler {
                     // TODO: handle index/attr access
                     _ => unreachable!(),
                 };
-                self.compile_infix(op, lhs, rhs)?;
+                self.compile_infix(op, lhs, rhs);
                 if symbol.scope == SymbolScope::Global {
                     self.emit(Opcode::SetGlobal, &[symbol.idx]);
                 } else {
@@ -114,30 +140,26 @@ impl Compiler {
                 }
             }
             Stmt::Return(expr) => {
-                self.compile_expr(expr)?;
-                self.emit(Opcode::Ret, &[]);
+                self.compile_expr(expr);
+                self.emit(Opcode::RetVal, &[]);
             }
             Stmt::Expr(expr) => {
-                self.compile_expr(expr)?;
+                self.compile_expr(expr);
                 self.emit(Opcode::Pop, &[]);
             }
             _ => {}
         }
-
-        Ok(())
     }
 
-    fn compile_stmts(&mut self, stmts: &[Stmt]) -> Result<(), CompileError> {
+    fn compile_stmts(&mut self, stmts: &[Stmt]) {
         for stmt in stmts {
-            self.compile_stmt(stmt)?;
+            self.compile_stmt(stmt);
         }
-
-        Ok(())
     }
 
-    fn compile_expr(&mut self, expr: &Expr) -> Result<(), CompileError> {
+    fn compile_expr(&mut self, expr: &Expr) {
         match expr {
-            Expr::Ident(ident, _, span) => self.compile_ident(ident, span),
+            Expr::Ident(ident, _, _) => self.compile_ident(ident),
             Expr::Literal(l, _) => self.compile_literal(l),
             Expr::Prefix(op, expr, _) => self.compile_prefix(op, expr),
             Expr::Infix(op, lhs, rhs, _) => self.compile_infix(op, lhs, rhs),
@@ -149,23 +171,18 @@ impl Compiler {
                 alt,
                 ..
             } => self.compile_if(cond, then, elifs, alt),
-            _ => Ok(()),
+            Expr::Fn(f) => self.compile_fn(f),
+            Expr::Call { args, .. } => self.compile_call(args),
+            _ => {}
         }
     }
 
-    fn compile_ident(&mut self, ident: &Ident, span: &Span) -> Result<(), CompileError> {
-        if let Some(s) = self.symbol_table.get(&ident.0) {
-            self.load_symbol(&s);
-            Ok(())
-        } else {
-            Err(CompileError::new(
-                CompileErrorKind::NotFound(ident.name()),
-                *span,
-            ))
-        }
+    fn compile_ident(&mut self, ident: &Ident) {
+        let s = self.symbol_table.get(&ident.0).unwrap();
+        self.load_symbol(&s);
     }
 
-    fn compile_literal(&mut self, literal: &Literal) -> Result<(), CompileError> {
+    fn compile_literal(&mut self, literal: &Literal) {
         match literal {
             Literal::Bool(b) => {
                 self.emit(Opcode::from(*b), &[]);
@@ -204,14 +221,14 @@ impl Compiler {
             }
             Literal::List(l) => {
                 for e in &l.data {
-                    self.compile_expr(e)?;
+                    self.compile_expr(e);
                 }
                 self.emit(Opcode::List, &[l.data.len()]);
             }
             Literal::Map(m) => {
                 for (k, v) in &m.data {
-                    self.compile_expr(k)?;
-                    self.compile_expr(v)?;
+                    self.compile_expr(k);
+                    self.compile_expr(v);
                 }
                 self.emit(Opcode::Hash, &[m.data.len() * 2]);
             }
@@ -219,31 +236,23 @@ impl Compiler {
                 self.emit(Opcode::Nil, &[]);
             }
         }
-
-        Ok(())
     }
 
-    fn compile_prefix(&mut self, op: &Prefix, expr: &Expr) -> Result<(), CompileError> {
-        self.compile_expr(expr)?;
+    fn compile_prefix(&mut self, op: &Prefix, expr: &Expr) {
+        self.compile_expr(expr);
         self.emit(Opcode::from(op), &[]);
-
-        Ok(())
     }
 
-    fn compile_infix(&mut self, op: &Infix, lhs: &Expr, rhs: &Expr) -> Result<(), CompileError> {
-        self.compile_expr(lhs)?;
-        self.compile_expr(rhs)?;
+    fn compile_infix(&mut self, op: &Infix, lhs: &Expr, rhs: &Expr) {
+        self.compile_expr(lhs);
+        self.compile_expr(rhs);
         self.emit(Opcode::from(op), &[]);
-
-        Ok(())
     }
 
-    fn compile_index(&mut self, lhs: &Expr, idx: &Expr) -> Result<(), CompileError> {
-        self.compile_expr(lhs)?;
-        self.compile_expr(idx)?;
+    fn compile_index(&mut self, lhs: &Expr, idx: &Expr) {
+        self.compile_expr(lhs);
+        self.compile_expr(idx);
         self.emit(Opcode::Index, &[]);
-
-        Ok(())
     }
 
     fn compile_if(
@@ -252,14 +261,14 @@ impl Compiler {
         then: &[Stmt],
         elifs: &[ElifExpr],
         alt: &Option<Vec<Stmt>>,
-    ) -> Result<(), CompileError> {
+    ) {
         let mut exit_jumps = vec![];
 
         // if
-        self.compile_expr(cond)?;
+        self.compile_expr(cond);
         let mut jump_not_truthy = self.emit(Opcode::JumpFalse, &[9999]);
 
-        self.compile_stmts(then)?;
+        self.compile_stmts(then);
         if self.last_instruction().opcode == Opcode::Pop {
             self.remove_last_pop();
         }
@@ -270,10 +279,10 @@ impl Compiler {
 
         // elifs
         for elif in elifs {
-            self.compile_expr(&elif.cond)?;
+            self.compile_expr(&elif.cond);
             jump_not_truthy = self.emit(Opcode::JumpFalse, &[9999]);
 
-            self.compile_stmts(&elif.then)?;
+            self.compile_stmts(&elif.then);
             if self.last_instruction().opcode == Opcode::Pop {
                 self.remove_last_pop();
             }
@@ -285,7 +294,7 @@ impl Compiler {
 
         // else
         if let Some(alt) = alt {
-            self.compile_stmts(alt)?;
+            self.compile_stmts(alt);
             if self.last_instruction().opcode == Opcode::Pop {
                 self.remove_last_pop();
             }
@@ -297,8 +306,45 @@ impl Compiler {
         for pos in exit_jumps {
             self.change_operand(pos, end_pos);
         }
+    }
 
-        Ok(())
+    fn compile_fn(&mut self, f: &Func) {
+        self.enter_scope();
+
+        for arg in &f.args {
+            self.symbol_table.set(arg.name.clone());
+        }
+
+        self.compile_stmts(&f.body);
+        if self.last_instruction().opcode == Opcode::Pop {
+            self.replace_last_pop_with_return();
+        }
+        if self.last_instruction().opcode != Opcode::RetVal {
+            self.emit(Opcode::Ret, &[]);
+        }
+
+        let free = self.symbol_table.free.clone();
+        let n_locals = self.symbol_table.n_defs;
+        let instructions = self.leave_scope();
+
+        for symbol in &free {
+            self.load_symbol(symbol);
+        }
+
+        let func = CompiledFunc {
+            instructions: instructions.0,
+            n_locals,
+            n_params: f.args.len(),
+        };
+        let operands = vec![self.add_constant(Object::CompiledFunc(func)), free.len()];
+        self.emit(Opcode::Closure, &operands);
+    }
+
+    fn compile_call(&mut self, args: &[Expr]) {
+        for arg in args {
+            self.compile_expr(arg);
+        }
+        self.emit(Opcode::Call, &[args.len()]);
     }
 
     fn scope(&self) -> &CompilationScope {
@@ -333,18 +379,6 @@ impl Compiler {
         &mut self.scope_mut().prev_instruction
     }
 
-    fn emit(&mut self, opcode: Opcode, operands: &[usize]) -> usize {
-        let ins = make(opcode, operands);
-        let pos = self.instructions_mut().len();
-
-        self.instructions_mut().extend_from_slice(&ins);
-
-        *self.prev_instruction_mut() = self.last_instruction_mut().clone();
-        *self.last_instruction_mut() = EmittedInstruction { opcode, pos };
-
-        pos
-    }
-
     fn add_constant(&mut self, obj: Object) -> usize {
         self.constants.push(Rc::new(obj.into()));
         self.constants.len() - 1
@@ -362,7 +396,6 @@ impl Compiler {
 
     fn remove_last_pop(&mut self) {
         let last = self.last_instruction().clone();
-
         self.instructions_mut().truncate(last.pos);
         *self.last_instruction_mut() = self.prev_instruction().clone();
     }
@@ -370,7 +403,6 @@ impl Compiler {
     fn change_operand(&mut self, pos: usize, operand: usize) {
         let op = Opcode::from(self.instructions()[pos]);
         let ins = make(op, &[operand]);
-
         self.replace_instruction(pos, &ins);
     }
 
@@ -378,22 +410,9 @@ impl Compiler {
         self.instructions_mut().0[pos..pos + new_ins.len()].copy_from_slice(new_ins);
     }
 
-    // fn enter_scope(&mut self) {
-    //     self.scopes.push(CompilationScope::default());
-    //     self.scope_idx += 1;
-    //     self.symbol_table = SymbolTable::new_enclosed(&self.symbol_table);
-    // }
-    //
-    // fn leave_scope(&mut self) -> Instructions {
-    //     let instructions = self.instructions().clone();
-    //
-    //     self.scopes.pop();
-    //     self.scope_idx -= 1;
-    //
-    //     if let Some(outer) = &self.symbol_table.outer {
-    //         self.symbol_table = outer.as_ref().clone();
-    //     }
-    //
-    //     instructions
-    // }
+    fn replace_last_pop_with_return(&mut self) {
+        let last_pos = self.last_instruction().pos;
+        self.replace_instruction(last_pos, &make(Opcode::RetVal, &[]));
+        self.last_instruction_mut().opcode = Opcode::RetVal;
+    }
 }

@@ -61,8 +61,8 @@ impl SymbolTable {
             idx: self.n_defs,
         });
 
-        self.n_defs += 1;
         self.store.insert(key, Rc::clone(&symbol));
+        self.n_defs += 1;
 
         symbol
     }
