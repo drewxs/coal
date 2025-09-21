@@ -511,14 +511,12 @@ impl Parser {
 
         let mut lhs = match token {
             TokenKind::Ident(name) => {
-                let ident_t = self
-                    .symbol_table
-                    .borrow()
-                    .type_symbol_table
-                    .borrow()
-                    .get(name);
+                let ident_t = self.symbol_table.borrow().get(name);
                 match ident_t {
-                    Some(BaseType::Struct(name, attrs)) => self.parse_struct_expr(&name, &attrs),
+                    Some(ResolvedType {
+                        base: BaseType::Struct(name, attrs),
+                        args: _,
+                    }) => self.parse_struct_expr(&name, &attrs),
                     Some(t) => Some(Expr::Ident(Ident::from(name.as_str()), t, *span)),
                     None => {
                         self.errors.push(ParserError::new(
