@@ -181,6 +181,10 @@ impl Compiler {
                 alt,
                 ..
             } => self.compile_if(cond, then, elifs, alt),
+            Expr::While { cond, body, .. } => self.compile_while(cond, body),
+            Expr::Iter {
+                ident, expr, body, ..
+            } => self.compile_iter(ident, expr, body),
             Expr::Fn(f) => self.compile_fn(f),
             Expr::Call { name, args, .. } => self.compile_call(name, args),
             _ => {}
@@ -316,6 +320,127 @@ impl Compiler {
         for pos in exit_jumps {
             self.change_operand(pos, end_pos);
         }
+    }
+
+    fn compile_while(&mut self, cond: &Expr, body: &[Stmt]) {
+        let loop_start = self.instructions().len();
+        self.compile_expr(cond);
+
+        let jump_exit = self.emit(Opcode::JumpFalse, &[9999]);
+        self.compile_stmts(body);
+
+        self.emit(Opcode::Jump, &[loop_start]);
+        let exit_pos = self.instructions().len();
+        self.change_operand(jump_exit, exit_pos);
+
+        self.emit(Opcode::Nil, &[]);
+    }
+
+    fn compile_iter(&mut self, ident: &Ident, iterable: &Expr, body: &[Stmt]) {
+        match iterable {
+            Expr::Range(start, end, _) => self.compile_range_loop(ident, start, end, body),
+            _ => self.compile_list_loop(ident, iterable, body),
+        }
+    }
+
+    fn compile_range_loop(&mut self, ident: &Ident, start: &Expr, end: &Expr, body: &[Stmt]) {
+        self.compile_expr(end);
+        let end_symbol = self.symbol_table.define("__range_end__");
+        if end_symbol.scope == SymbolScope::Global {
+            self.emit(Opcode::SetGlobal, &[end_symbol.idx]);
+        } else {
+            self.emit(Opcode::SetLocal, &[end_symbol.idx]);
+        }
+
+        self.compile_expr(start);
+        let loop_var_symbol = self.symbol_table.define(&ident.0);
+        if loop_var_symbol.scope == SymbolScope::Global {
+            self.emit(Opcode::SetGlobal, &[loop_var_symbol.idx]);
+        } else {
+            self.emit(Opcode::SetLocal, &[loop_var_symbol.idx]);
+        }
+
+        let loop_start = self.instructions().len();
+
+        // loop var < end
+        self.load_symbol(&loop_var_symbol);
+        self.load_symbol(&end_symbol);
+        self.emit(Opcode::LT, &[]);
+
+        let jump_exit = self.emit(Opcode::JumpFalse, &[9999]);
+        self.compile_stmts(body);
+
+        self.load_symbol(&loop_var_symbol);
+        let one_idx = self.add_constant(Object::I32(1));
+        self.emit(Opcode::Const, &[one_idx]);
+        self.emit(Opcode::Add, &[]);
+        if loop_var_symbol.scope == SymbolScope::Global {
+            self.emit(Opcode::SetGlobal, &[loop_var_symbol.idx]);
+        } else {
+            self.emit(Opcode::SetLocal, &[loop_var_symbol.idx]);
+        }
+
+        self.emit(Opcode::Jump, &[loop_start]);
+        let exit_pos = self.instructions().len();
+        self.change_operand(jump_exit, exit_pos);
+
+        self.emit(Opcode::Nil, &[]);
+    }
+
+    fn compile_list_loop(&mut self, ident: &Ident, iterable: &Expr, body: &[Stmt]) {
+        self.compile_expr(iterable);
+        let iter_symbol = self.symbol_table.define("__iter_list__");
+        if iter_symbol.scope == SymbolScope::Global {
+            self.emit(Opcode::SetGlobal, &[iter_symbol.idx]);
+        } else {
+            self.emit(Opcode::SetLocal, &[iter_symbol.idx]);
+        }
+
+        let zero_idx = self.add_constant(Object::I32(0));
+        self.emit(Opcode::Const, &[zero_idx]);
+        let index_symbol = self.symbol_table.define("__iter_index__");
+        if index_symbol.scope == SymbolScope::Global {
+            self.emit(Opcode::SetGlobal, &[index_symbol.idx]);
+        } else {
+            self.emit(Opcode::SetLocal, &[index_symbol.idx]);
+        }
+
+        let loop_var_symbol = self.symbol_table.define(&ident.0);
+        let loop_start = self.instructions().len();
+
+        // iterable[index]
+        self.load_symbol(&iter_symbol);
+        self.load_symbol(&index_symbol);
+        self.emit(Opcode::Index, &[]);
+
+        if loop_var_symbol.scope == SymbolScope::Global {
+            self.emit(Opcode::SetGlobal, &[loop_var_symbol.idx]);
+        } else {
+            self.emit(Opcode::SetLocal, &[loop_var_symbol.idx]);
+        }
+
+        self.load_symbol(&loop_var_symbol);
+        self.emit(Opcode::Nil, &[]);
+        self.emit(Opcode::NEQ, &[]);
+
+        let jump_exit = self.emit(Opcode::JumpFalse, &[9999]);
+        self.compile_stmts(body);
+
+        self.load_symbol(&index_symbol);
+        let one_idx = self.add_constant(Object::I32(1));
+        self.emit(Opcode::Const, &[one_idx]);
+        self.emit(Opcode::Add, &[]);
+        if index_symbol.scope == SymbolScope::Global {
+            self.emit(Opcode::SetGlobal, &[index_symbol.idx]);
+        } else {
+            self.emit(Opcode::SetLocal, &[index_symbol.idx]);
+        }
+
+        self.emit(Opcode::Jump, &[loop_start]);
+        let exit_pos = self.instructions().len();
+        self.change_operand(jump_exit, exit_pos);
+
+        self.emit(Opcode::Nil, &[]);
     }
 
     fn compile_fn(&mut self, f: &Func) {

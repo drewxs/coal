@@ -283,3 +283,210 @@ fn test_run_closure() {
         ),
     ]);
 }
+
+#[test]
+fn test_run_while_loops() {
+    test(&[
+        (
+            r#"
+            let x: i32 = 0;
+            while x < 10 {
+                x += 1;
+            }
+            x
+            "#,
+            Object::I32(10),
+        ),
+        (
+            r#"
+            let sum: i32 = 0;
+            let i: i32 = 0;
+            while i < 5 {
+                sum += i;
+                i += 1;
+            }
+            sum
+            "#,
+            Object::I32(10),
+        ),
+        (
+            r#"
+            let x: i32 = 0;
+            while x < 1000 {
+                x += 1;
+            }
+            x
+            "#,
+            Object::I32(1000),
+        ),
+        (
+            r#"
+            let x: i32 = 10;
+            while x > 0 {
+                x -= 1;
+            }
+            x
+            "#,
+            Object::I32(0),
+        ),
+    ]);
+}
+
+#[test]
+fn test_run_for_range_loops() {
+    test(&[
+        (
+            r#"
+            let sum: i32 = 0;
+            for i in 0..5 {
+                sum += i;
+            }
+            sum
+            "#,
+            Object::I32(10),
+        ),
+        (
+            r#"
+            let sum: i32 = 0;
+            for i in 0..10 {
+                sum += i;
+            }
+            sum
+            "#,
+            Object::I32(45),
+        ),
+        (
+            r#"
+            let count: i32 = 0;
+            for i in 0..100 {
+                count += 1;
+            }
+            count
+            "#,
+            Object::I32(100),
+        ),
+        (
+            r#"
+            let last: i32 = 0;
+            for i in 5..10 {
+                last = i;
+            }
+            last
+            "#,
+            Object::I32(9),
+        ),
+    ]);
+}
+
+#[test]
+fn test_run_for_list_loops() {
+    test(&[
+        (
+            r#"
+            let sum: i32 = 0;
+            for x in [1, 2, 3, 4, 5] {
+                sum += x;
+            }
+            sum;
+            "#,
+            Object::I32(15),
+        ),
+        (
+            r#"
+            let sum: i32 = 0;
+            for x in [10, 20, 30] {
+                sum += x;
+            }
+            sum;
+            "#,
+            Object::I32(60),
+        ),
+        (
+            r#"
+            let count: i32 = 0;
+            for x in [1, 2, 3, 4, 5] {
+                count += 1;
+            }
+            count;
+            "#,
+            Object::I32(5),
+        ),
+        (
+            r#"
+            let last: i32 = 0;
+            for x in [5, 10, 15, 20] {
+                last = x;
+            }
+            last;
+            "#,
+            Object::I32(20),
+        ),
+    ]);
+}
+
+#[test]
+fn test_run_loops_in_scope() {
+    test(&[
+        (
+            r#"
+            fn f() {
+                let x: i32 = 0;
+                while x < 10 {
+                    x += 1;
+                }
+                return x;
+            }
+            f();
+            "#,
+            Object::I32(10),
+        ),
+        (
+            r#"
+            fn f() {
+                let sum: i32 = 0;
+                for i in 0..5 {
+                    sum += i;
+                }
+                return sum;
+            }
+            f();
+            "#,
+            Object::I32(10),
+        ),
+        (
+            r#"
+            fn f() {
+                let sum: i32 = 0;
+                for x in [1, 2, 3, 4] {
+                    sum += x;
+                }
+                return sum;
+            }
+            f();
+            "#,
+            Object::I32(10),
+        ),
+    ]);
+}
+
+#[test]
+fn test_run_fib() {
+    test(&[(
+        r#"
+            fn fib(n: u32) -> i128 {
+                let x: i128 = 0;
+                let y: i128 = 1;
+
+                for i in 0..n {
+                    let tmp: i128 = x;
+                    x = y;
+                    y = tmp + y;
+                }
+
+                return x;
+            }
+            fib(10);
+            "#,
+        Object::I128(55),
+    )]);
+}
