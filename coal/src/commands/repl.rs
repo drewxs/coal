@@ -336,10 +336,15 @@ impl ConditionalEventHandler for EnterHandler {
         let line = ctx.line();
         let pos = ctx.pos();
 
+        let ws: String = line[line.rfind('\n').unwrap_or(0) + 1..]
+            .chars()
+            .take_while(|c| c.is_whitespace())
+            .collect();
+
         if let Some('{') = line.chars().nth(pos.saturating_sub(1)) {
-            Some(Cmd::Insert(1, format!("\n{TAB}")))
-        } else if line.len() > pos {
-            Some(Cmd::Insert(1, String::from("\n")))
+            Some(Cmd::Insert(1, format!("\n{ws}{TAB}")))
+        } else if line.len() > pos || !ws.is_empty() {
+            Some(Cmd::Insert(1, format!("\n{ws}")))
         } else {
             None
         }
