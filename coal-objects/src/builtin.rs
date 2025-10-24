@@ -1,9 +1,28 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{
+    hash::{Hash, Hasher},
+    rc::Rc,
+};
 
 use crate::Object;
 
-#[derive(Clone, Debug, PartialEq, Hash)]
-pub struct Builtin(fn(&[Rc<Object>]) -> Option<Rc<Object>>);
+#[derive(Clone, Debug)]
+pub struct Builtin {
+    name: &'static str,
+    func: fn(&[Rc<Object>]) -> Option<Rc<Object>>,
+}
+
+impl PartialEq for Builtin {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Hash for Builtin {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.func.hash(state);
+    }
+}
 
 fn assert(args: &[Rc<Object>]) -> Option<Rc<Object>> {
     assert!(args[0].is_truthy());
@@ -30,14 +49,27 @@ fn println(args: &[Rc<Object>]) -> Option<Rc<Object>> {
     None
 }
 
-pub fn builtin_defs<'s>() -> HashMap<&'s str, Builtin> {
-    let mut builtins = HashMap::new();
-
-    builtins.insert("assert", Builtin(assert));
-    builtins.insert("assert_eq", Builtin(assert_eq));
-    builtins.insert("dbg", Builtin(dbg));
-    builtins.insert("print", Builtin(print));
-    builtins.insert("println", Builtin(println));
-
-    builtins
+pub fn builtin_defs() -> Vec<Builtin> {
+    vec![
+        Builtin {
+            name: "assert",
+            func: assert,
+        },
+        Builtin {
+            name: "assert_eq",
+            func: assert_eq,
+        },
+        Builtin {
+            name: "dbg",
+            func: dbg,
+        },
+        Builtin {
+            name: "print",
+            func: print,
+        },
+        Builtin {
+            name: "println",
+            func: println,
+        },
+    ]
 }
