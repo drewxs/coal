@@ -203,23 +203,23 @@ fn test_parse_return_statements() {
 
 #[test]
 fn test_parse_identifier_expressions() {
-    let input = "foo; bar; foobar;";
+    let input = r#"let foo = 1;
+        let bar = 2;
+        foo;
+        bar;"#;
     let expected = vec![
-        Stmt::Expr(Expr::Ident(
+        Stmt::Let(
             Ident::from("foo"),
-            Type::Unknown,
-            ((1, 1), (1, 3)),
-        )),
-        Stmt::Expr(Expr::Ident(
+            I32,
+            Expr::Literal(Literal::I32(1), ((1, 11), (1, 11))),
+        ),
+        Stmt::Let(
             Ident::from("bar"),
-            Type::Unknown,
-            ((1, 6), (1, 8)),
-        )),
-        Stmt::Expr(Expr::Ident(
-            Ident::from("foobar"),
-            Type::Unknown,
-            ((1, 11), (1, 16)),
-        )),
+            I32,
+            Expr::Literal(Literal::I32(2), ((2, 11), (2, 11))),
+        ),
+        Stmt::Expr(Expr::Ident(Ident::from("foo"), I32, ((3, 1), (3, 3)))),
+        Stmt::Expr(Expr::Ident(Ident::from("bar"), I32, ((4, 1), (4, 3)))),
     ];
 
     assert_eq!(expected, Parser::from(input).parse());
@@ -673,25 +673,16 @@ fn test_parse_operator_precedence() {
 
 #[test]
 fn test_parse_if_expression() {
-    let input = "if x < y { return x }";
+    let input = "if 1 < 2 { return 3 }";
     let expected = Stmt::Expr(Expr::If {
         cond: Box::new(Expr::Infix(
             Infix::LT,
-            Box::new(Expr::Ident(
-                Ident::from("x"),
-                Type::Unknown,
-                ((1, 4), (1, 4)),
-            )),
-            Box::new(Expr::Ident(
-                Ident::from("y"),
-                Type::Unknown,
-                ((1, 8), (1, 8)),
-            )),
+            Box::new(Expr::Literal(Literal::I32(1), ((1, 4), (1, 4)))),
+            Box::new(Expr::Literal(Literal::I32(2), ((1, 8), (1, 8)))),
             ((1, 4), (1, 8)),
         )),
-        then: vec![Stmt::Return(Expr::Ident(
-            Ident::from("x"),
-            Type::Unknown,
+        then: vec![Stmt::Return(Expr::Literal(
+            Literal::I32(3),
             ((1, 19), (1, 19)),
         ))],
         elifs: vec![],
@@ -706,132 +697,95 @@ fn test_parse_if_expression() {
 #[test]
 fn test_parse_nested_if_expression() {
     let input = r#"
+        let x = 1;
+        let y = 2;
         if x < y {
             if x > 1 {
                 return x;
             }
             return y;
         } else {
-            return z;
+            return 0;
         }"#;
     let expected = Stmt::Expr(Expr::If {
         cond: Box::new(Expr::Infix(
             Infix::LT,
-            Box::new(Expr::Ident(
-                Ident::from("x"),
-                Type::Unknown,
-                ((1, 4), (1, 4)),
-            )),
-            Box::new(Expr::Ident(
-                Ident::from("y"),
-                Type::Unknown,
-                ((1, 8), (1, 8)),
-            )),
-            ((1, 4), (1, 8)),
+            Box::new(Expr::Ident(Ident::from("x"), I32, ((3, 4), (3, 4)))),
+            Box::new(Expr::Ident(Ident::from("y"), I32, ((3, 8), (3, 8)))),
+            ((3, 4), (3, 8)),
         )),
         then: vec![
             Stmt::Expr(Expr::If {
                 cond: Box::new(Expr::Infix(
                     Infix::GT,
-                    Box::new(Expr::Ident(
-                        Ident::from("x"),
-                        Type::Unknown,
-                        ((2, 4), (2, 4)),
-                    )),
-                    Box::new(Expr::Literal(Literal::I32(1), ((2, 8), (2, 8)))),
-                    ((2, 4), (2, 8)),
+                    Box::new(Expr::Ident(Ident::from("x"), I32, ((4, 4), (4, 4)))),
+                    Box::new(Expr::Literal(Literal::I32(1), ((4, 8), (4, 8)))),
+                    ((4, 4), (4, 8)),
                 )),
                 then: vec![Stmt::Return(Expr::Ident(
                     Ident::from("x"),
-                    Type::Unknown,
-                    ((3, 8), (3, 8)),
+                    I32,
+                    ((5, 8), (5, 8)),
                 ))],
                 elifs: vec![],
                 alt: None,
-                span: ((2, 1), (4, 1)),
+                span: ((4, 1), (6, 1)),
             }),
-            Stmt::Return(Expr::Ident(
-                Ident::from("y"),
-                Type::Unknown,
-                ((5, 8), (5, 8)),
-            )),
+            Stmt::Return(Expr::Ident(Ident::from("y"), I32, ((7, 8), (7, 8)))),
         ],
         elifs: vec![],
-        alt: Some(vec![Stmt::Return(Expr::Ident(
-            Ident::from("z"),
-            Type::Unknown,
-            ((7, 8), (7, 8)),
+        alt: Some(vec![Stmt::Return(Expr::Literal(
+            Literal::I32(0),
+            ((9, 8), (9, 8)),
         ))]),
-        span: ((1, 1), (8, 1)),
+        span: ((3, 1), (10, 1)),
     });
     let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, actual[0]);
+    assert_eq!(expected, *actual.last().unwrap());
 }
 
 #[test]
 fn test_parse_elif_expression() {
     let input = r#"
-        if x < y {
-            return x;
-        } elif x > y {
-            return y;
-        } elif x > 1 {
+        if 1 < 2 {
+            return 1;
+        } elif 1 > 2 {
+            return 2;
+        } elif 1 > 3 {
             return 1;
         } else {
-            return z;
+            return 3;
         }"#;
     let expected = Stmt::Expr(Expr::If {
         cond: Box::new(Expr::Infix(
             Infix::LT,
-            Box::new(Expr::Ident(
-                Ident::from("x"),
-                Type::Unknown,
-                ((1, 4), (1, 4)),
-            )),
-            Box::new(Expr::Ident(
-                Ident::from("y"),
-                Type::Unknown,
-                ((1, 8), (1, 8)),
-            )),
+            Box::new(Expr::Literal(Literal::I32(1), ((1, 4), (1, 4)))),
+            Box::new(Expr::Literal(Literal::I32(2), ((1, 8), (1, 8)))),
             ((1, 4), (1, 8)),
         )),
-        then: vec![Stmt::Return(Expr::Ident(
-            Ident::from("x"),
-            Type::Unknown,
+        then: vec![Stmt::Return(Expr::Literal(
+            Literal::I32(1),
             ((2, 8), (2, 8)),
         ))],
         elifs: vec![
             ElifExpr {
                 cond: Box::new(Expr::Infix(
                     Infix::GT,
-                    Box::new(Expr::Ident(
-                        Ident::from("x"),
-                        Type::Unknown,
-                        ((3, 8), (3, 8)),
-                    )),
-                    Box::new(Expr::Ident(
-                        Ident::from("y"),
-                        Type::Unknown,
-                        ((3, 12), (3, 12)),
-                    )),
+                    Box::new(Expr::Literal(Literal::I32(1), ((3, 8), (3, 8)))),
+                    Box::new(Expr::Literal(Literal::I32(2), ((3, 12), (3, 12)))),
                     ((3, 8), (3, 12)),
                 )),
-                then: vec![Stmt::Return(Expr::Ident(
-                    Ident::from("y"),
-                    Type::Unknown,
+                then: vec![Stmt::Return(Expr::Literal(
+                    Literal::I32(2),
                     ((4, 8), (4, 8)),
                 ))],
             },
             ElifExpr {
                 cond: Box::new(Expr::Infix(
                     Infix::GT,
-                    Box::new(Expr::Ident(
-                        Ident::from("x"),
-                        Type::Unknown,
-                        ((5, 8), (5, 8)),
-                    )),
-                    Box::new(Expr::Literal(Literal::I32(1), ((5, 12), (5, 12)))),
+                    Box::new(Expr::Literal(Literal::I32(1), ((5, 8), (5, 8)))),
+                    Box::new(Expr::Literal(Literal::I32(3), ((5, 12), (5, 12)))),
                     ((5, 8), (5, 12)),
                 )),
                 then: vec![Stmt::Return(Expr::Literal(
@@ -840,9 +794,8 @@ fn test_parse_elif_expression() {
                 ))],
             },
         ],
-        alt: Some(vec![Stmt::Return(Expr::Ident(
-            Ident::from("z"),
-            Type::Unknown,
+        alt: Some(vec![Stmt::Return(Expr::Literal(
+            Literal::I32(3),
             ((8, 8), (8, 8)),
         ))]),
         span: ((1, 1), (9, 1)),
@@ -854,20 +807,12 @@ fn test_parse_elif_expression() {
 
 #[test]
 fn test_parse_while_expression() {
-    let input = "while x < y { 0; }";
+    let input = "while 1 < 2 { 0; }";
     let expected = Stmt::Expr(Expr::While {
         cond: Box::new(Expr::Infix(
             Infix::LT,
-            Box::new(Expr::Ident(
-                Ident::from("x"),
-                Type::Unknown,
-                ((1, 7), (1, 7)),
-            )),
-            Box::new(Expr::Ident(
-                Ident::from("y"),
-                Type::Unknown,
-                ((1, 11), (1, 11)),
-            )),
+            Box::new(Expr::Literal(Literal::I32(1), ((1, 7), (1, 7)))),
+            Box::new(Expr::Literal(Literal::I32(2), ((1, 11), (1, 11)))),
             ((1, 7), (1, 11)),
         )),
         body: vec![Stmt::Expr(Expr::Literal(
@@ -1092,30 +1037,34 @@ fn test_parse_closure_expressions() {
 
 #[test]
 fn test_parse_call_expression() {
-    let input = "add(1, 2 * 3, 4 + 5);";
+    let input = r#"
+        fn add(x: i32, y: i32, z: i32) -> i32 {
+            return x + y + z;
+        }
+        add(1, 2 * 3, 4 + 5);"#;
     let expected = Stmt::Expr(Expr::Call {
         name: String::from("add"),
         args: vec![
-            Expr::Literal(Literal::I32(1), ((1, 5), (1, 5))),
+            Expr::Literal(Literal::I32(1), ((4, 5), (4, 5))),
             Expr::Infix(
                 Infix::Mul,
-                Box::new(Expr::Literal(Literal::I32(2), ((1, 8), (1, 8)))),
-                Box::new(Expr::Literal(Literal::I32(3), ((1, 12), (1, 12)))),
-                ((1, 8), (1, 12)),
+                Box::new(Expr::Literal(Literal::I32(2), ((4, 8), (4, 8)))),
+                Box::new(Expr::Literal(Literal::I32(3), ((4, 12), (4, 12)))),
+                ((4, 8), (4, 12)),
             ),
             Expr::Infix(
                 Infix::Add,
-                Box::new(Expr::Literal(Literal::I32(4), ((1, 15), (1, 15)))),
-                Box::new(Expr::Literal(Literal::I32(5), ((1, 19), (1, 19)))),
-                ((1, 15), (1, 19)),
+                Box::new(Expr::Literal(Literal::I32(4), ((4, 15), (4, 15)))),
+                Box::new(Expr::Literal(Literal::I32(5), ((4, 19), (4, 19)))),
+                ((4, 15), (4, 19)),
             ),
         ],
-        ret_t: Type::Unknown,
-        span: ((1, 1), (1, 20)),
+        ret_t: I32,
+        span: ((4, 1), (4, 20)),
     });
     let actual = Parser::from(input).parse();
 
-    assert_eq!(expected, actual[0]);
+    assert_eq!(expected, *actual.last().unwrap());
 }
 
 #[test]
@@ -1249,18 +1198,22 @@ fn test_parse_lists() {
             )),
         ),
         (
-            "[foo()]",
+            r#"
+            fn foo() -> i32 {
+                return 1;
+            }
+            [foo()]"#,
             Stmt::Expr(Expr::Literal(
                 Literal::List(List::new(
                     &[Expr::Call {
                         name: String::from("foo"),
                         args: vec![],
-                        ret_t: Type::Unknown,
-                        span: ((1, 2), (1, 6)),
+                        ret_t: I32,
+                        span: ((4, 2), (4, 6)),
                     }],
-                    Type::Unknown,
+                    I32,
                 )),
-                ((1, 1), (1, 7)),
+                ((4, 1), (4, 7)),
             )),
         ),
         (
