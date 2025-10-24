@@ -321,6 +321,26 @@ impl VM {
     pub fn last_stack_obj(&mut self) -> Rc<Object> {
         self.stack[self.sp].clone()
     }
+
+    pub fn print_stack(&self) {
+        let stack = self
+            .stack
+            .iter()
+            .enumerate()
+            .filter(|(_, o)| ***o != Object::Nil)
+            .map(|(i, o)| (i, o.to_string()))
+            .collect::<Vec<_>>();
+        println!("stack: {stack:#?}");
+
+        let globals = self
+            .globals
+            .iter()
+            .enumerate()
+            .filter(|(_, o)| ***o != Object::Nil)
+            .map(|(i, o)| (i, o.to_string()))
+            .collect::<Vec<_>>();
+        println!("globals: {globals:#?}");
+    }
 }
 
 impl From<Bytecode> for VM {
