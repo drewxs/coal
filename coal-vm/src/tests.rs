@@ -6,7 +6,9 @@ use crate::VM;
 fn test(tests: &[(&str, Object)]) {
     for (input, expected) in tests {
         let mut compiler = Compiler::new();
-        let bytecode = compiler.compile(input).unwrap();
+        let bytecode = compiler
+            .compile(input)
+            .unwrap_or_else(|err| panic!("failed to compile:\n{input}\nerrors:\n{err:?}"));
 
         let mut vm = VM::from(bytecode);
         vm.run();
@@ -223,6 +225,33 @@ fn test_run_index_exprs() {
 }
 
 #[test]
+fn test_run_functions_without_args() {
+    test(&[
+        (
+            r#"
+            fn five_plus_ten() -> i32 {
+                return 5 + 10;
+            }
+            five_plus_ten();
+            "#,
+            Object::I32(15),
+        ),
+        (
+            r#"
+            fn one() -> i32 {
+                return 1;
+            }
+            fn two() -> i32 {
+                return 2;
+            }
+            one() + two();
+            "#,
+            Object::I32(3),
+        ),
+    ]);
+}
+
+#[test]
 fn test_run_closure() {
     test(&[
         (
@@ -230,25 +259,25 @@ fn test_run_closure() {
             fn f() -> i32 {
                 return 1;
             }
-            f()
+            f();
             "#,
             Object::I32(1),
         ),
         (
             r#"
             fn f(i: i32) -> i32 {
-                return i
+                return i;
             }
-            f(1)
+            f(1);
             "#,
             Object::I32(1),
         ),
         (
             r#"
             fn f(i: i32) -> i32 {
-                return i + 1
+                return i + 1;
             }
-            f(2)
+            f(1);
             "#,
             Object::I32(2),
         ),
