@@ -105,7 +105,7 @@ impl Compiler {
     fn compile_stmt(&mut self, stmt: &Stmt) {
         match stmt {
             Stmt::Let(ident, _, expr) => {
-                let symbol = self.symbol_table.set(ident.name());
+                let symbol = self.symbol_table.define(&ident.0);
                 self.compile_expr(expr);
                 if symbol.scope == SymbolScope::Global {
                     self.emit(Opcode::SetGlobal, &[symbol.idx]);
@@ -144,6 +144,16 @@ impl Compiler {
                 self.emit(Opcode::RetVal, &[]);
             }
             Stmt::Expr(expr) => {
+                if let Expr::Fn(f) = expr {
+                    self.compile_expr(expr);
+                    let symbol = self.symbol_table.get(&f.name).unwrap();
+                    if symbol.scope == SymbolScope::Global {
+                        self.emit(Opcode::SetGlobal, &[symbol.idx]);
+                    } else {
+                        self.emit(Opcode::SetLocal, &[symbol.idx]);
+                    }
+                    return;
+                }
                 self.compile_expr(expr);
                 self.emit(Opcode::Pop, &[]);
             }
@@ -172,7 +182,7 @@ impl Compiler {
                 ..
             } => self.compile_if(cond, then, elifs, alt),
             Expr::Fn(f) => self.compile_fn(f),
-            Expr::Call { args, .. } => self.compile_call(args),
+            Expr::Call { name, args, .. } => self.compile_call(name, args),
             _ => {}
         }
     }
@@ -311,36 +321,38 @@ impl Compiler {
     fn compile_fn(&mut self, f: &Func) {
         self.enter_scope();
 
+        self.symbol_table.define_fn(&f.name);
+
         for arg in &f.args {
-            self.symbol_table.set(arg.name.clone());
+            self.symbol_table.define(&arg.name);
         }
 
         self.compile_stmts(&f.body);
-        if self.last_instruction().opcode == Opcode::Pop {
-            self.replace_last_pop_with_return();
-        }
         if self.last_instruction().opcode != Opcode::RetVal {
             self.emit(Opcode::Ret, &[]);
         }
 
-        let free = self.symbol_table.free.clone();
+        let free = &self.symbol_table.free.clone();
         let n_locals = self.symbol_table.n_defs;
         let instructions = self.leave_scope();
 
-        for symbol in &free {
-            self.load_symbol(symbol);
-        }
+        free.borrow().iter().for_each(|s| self.load_symbol(s));
+        self.symbol_table.define(&f.name);
 
         let func = CompiledFunc {
             instructions: instructions.0,
             n_locals,
             n_params: f.args.len(),
         };
-        let operands = vec![self.add_constant(Object::CompiledFunc(func)), free.len()];
+        let operands = vec![
+            self.add_constant(Object::CompiledFunc(func)),
+            free.borrow().len(),
+        ];
         self.emit(Opcode::Closure, &operands);
     }
 
-    fn compile_call(&mut self, args: &[Expr]) {
+    fn compile_call(&mut self, name: &str, args: &[Expr]) {
+        self.compile_ident(&Ident::from(name));
         for arg in args {
             self.compile_expr(arg);
         }
@@ -408,11 +420,5 @@ impl Compiler {
 
     fn replace_instruction(&mut self, pos: usize, new_ins: &[u8]) {
         self.instructions_mut().0[pos..pos + new_ins.len()].copy_from_slice(new_ins);
-    }
-
-    fn replace_last_pop_with_return(&mut self) {
-        let last_pos = self.last_instruction().pos;
-        self.replace_instruction(last_pos, &make(Opcode::RetVal, &[]));
-        self.last_instruction_mut().opcode = Opcode::RetVal;
     }
 }
