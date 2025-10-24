@@ -131,7 +131,7 @@ impl VM {
                 },
                 Opcode::Jump => {
                     let pos = read_u16(&ins[ip + 1..ip + 3]) as i32;
-                    self.curr_frame().ip = pos.saturating_sub(1);
+                    self.curr_frame().ip = pos - 1;
                 }
                 Opcode::JumpFalse => {
                     let pos = read_u16(&ins[ip + 1..ip + 3]) as i32;
@@ -139,7 +139,7 @@ impl VM {
 
                     let cond = self.pop();
                     if !cond.is_truthy() {
-                        self.curr_frame().ip = pos.saturating_sub(1);
+                        self.curr_frame().ip = pos - 1;
                     }
                 }
                 Opcode::GetGlobal => {
@@ -213,11 +213,11 @@ impl VM {
                     let n_args = ins[ip + 1] as usize;
                     self.curr_frame().ip += 1;
 
-                    let callee = &*self.stack[self.sp.saturating_sub(1).saturating_sub(n_args)];
+                    let callee = &*self.stack[self.sp - 1 - n_args];
                     match callee {
                         Object::Closure(cl) => {
-                            let frame = Frame::new(cl.clone(), self.sp - n_args);
-                            self.sp = frame.base_ptr + cl.func.n_locals;
+                            let frame = Frame::new(cl.clone(), self.sp - 1 - n_args);
+                            self.sp = frame.base_ptr + 1 + cl.func.n_params + cl.func.n_locals;
                             self.push_frame(frame);
                         }
                         Object::Builtin(_) => {}
@@ -227,29 +227,29 @@ impl VM {
                 Opcode::RetVal => {
                     let val = self.pop();
                     let frame = self.pop_frame();
-                    self.sp = frame.base_ptr.saturating_sub(1);
+                    self.sp = frame.base_ptr;
                     self.push(val);
                 }
                 Opcode::Ret => {
                     let frame = self.pop_frame();
-                    self.sp = frame.base_ptr.saturating_sub(1);
+                    self.sp = frame.base_ptr;
                     self.push(Rc::new(Object::Nil));
                 }
                 Opcode::GetLocal => {
                     let idx = ins[ip + 1] as usize;
                     self.curr_frame().ip += 1;
                     let base = self.curr_frame().base_ptr;
-                    self.push(Rc::clone(&self.stack[base + idx]));
+                    self.push(Rc::clone(&self.stack[base + 1 + idx]));
                 }
                 Opcode::SetLocal => {
                     let idx = ins[ip + 1] as usize;
                     self.curr_frame().ip += 1;
                     let base = self.curr_frame().base_ptr;
-                    self.stack[base + idx] = self.pop();
+                    self.stack[base + 1 + idx] = self.pop();
                 }
                 Opcode::Closure => {
                     let idx = read_u16(&ins[ip + 1..ip + 3]) as usize;
-                    let n_free = read_u16(&ins[ip + 3..ip + 5]) as usize;
+                    let n_free = ins[ip + 3] as usize;
 
                     self.curr_frame().ip += 3;
 
@@ -259,12 +259,10 @@ impl VM {
                             for var in &mut free {
                                 *var = self.stack[self.sp - n_free + 1].clone();
                             }
-                            self.sp = self.sp.saturating_sub(n_free);
-                            let cl = Closure {
+                            self.push(Rc::new(Object::Closure(Closure {
                                 func: Rc::new(f.clone()),
                                 free,
-                            };
-                            self.push(Rc::new(Object::Closure(cl)));
+                            })));
                         }
                         _ => unreachable!(),
                     }
@@ -319,7 +317,7 @@ impl VM {
     }
 
     pub fn last_stack_obj(&mut self) -> Rc<Object> {
-        self.stack[self.sp].clone()
+        Rc::clone(&self.stack[self.sp])
     }
 
     pub fn print_stack(&self) {
