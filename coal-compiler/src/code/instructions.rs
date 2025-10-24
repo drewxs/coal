@@ -7,12 +7,29 @@ use bincode::{Decode, Encode};
 
 use super::{Opcode, make};
 
-#[derive(Clone, Debug, PartialEq, Default, Encode, Decode)]
+#[derive(Clone, PartialEq, Default, Encode, Decode)]
 pub struct Instructions(pub Vec<u8>);
 
 impl Instructions {
     pub fn new(opcode: Opcode, operands: &[usize]) -> Self {
         Self(make(opcode, operands))
+    }
+}
+
+impl fmt::Debug for Instructions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let opcodes = self
+            .0
+            .iter()
+            .map(|&b| {
+                if b <= 33 {
+                    format!("{:?}", Opcode::from(b))
+                } else {
+                    format!("{b:#X}")
+                }
+            })
+            .collect::<Vec<String>>();
+        write!(f, "{opcodes:?}")
     }
 }
 
@@ -46,7 +63,7 @@ impl Deref for Instructions {
 }
 
 impl DerefMut for Instructions {
-    fn deref_mut(&mut self) -> &mut Vec<u8> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
