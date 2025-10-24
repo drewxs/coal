@@ -1,6 +1,8 @@
-use std::vec;
+use std::{rc::Rc, vec};
 
-use coal_objects::Constant;
+use coal_objects::{CompiledFunc, Constant};
+
+use crate::{Symbol, SymbolScope, SymbolTable};
 
 use super::{Compiler, Instructions, Opcode};
 
@@ -379,4 +381,131 @@ fn test_compiler_scopes() {
     assert_eq!(last.opcode, Opcode::Add);
     let prev = &c.scopes[c.scope_idx].prev_instruction;
     assert_eq!(prev.opcode, Opcode::Mul);
+}
+
+#[test]
+fn test_resolve_free() {
+    let mut global = SymbolTable::new();
+    global.define("a");
+    global.define("b");
+
+    let mut first_local = SymbolTable::new_enclosed(&global);
+    first_local.define("c");
+    first_local.define("d");
+
+    let mut second_local = SymbolTable::new_enclosed(&first_local);
+    second_local.define("e");
+    second_local.define("f");
+
+    for (name, table, expected_symbols, expected_free) in [
+        (
+            "first_local",
+            &first_local,
+            vec![
+                Rc::new(Symbol {
+                    name: String::from("a"),
+                    scope: SymbolScope::Global,
+                    idx: 0,
+                }),
+                Rc::new(Symbol {
+                    name: String::from("b"),
+                    scope: SymbolScope::Global,
+                    idx: 1,
+                }),
+                Rc::new(Symbol {
+                    name: String::from("c"),
+                    scope: SymbolScope::Local,
+                    idx: 0,
+                }),
+                Rc::new(Symbol {
+                    name: String::from("d"),
+                    scope: SymbolScope::Local,
+                    idx: 1,
+                }),
+            ],
+            vec![],
+        ),
+        (
+            "second_local",
+            &second_local,
+            vec![
+                Rc::new(Symbol {
+                    name: String::from("a"),
+                    scope: SymbolScope::Global,
+                    idx: 0,
+                }),
+                Rc::new(Symbol {
+                    name: String::from("b"),
+                    scope: SymbolScope::Global,
+                    idx: 1,
+                }),
+                Rc::new(Symbol {
+                    name: String::from("c"),
+                    scope: SymbolScope::Free,
+                    idx: 0,
+                }),
+                Rc::new(Symbol {
+                    name: String::from("d"),
+                    scope: SymbolScope::Free,
+                    idx: 1,
+                }),
+                Rc::new(Symbol {
+                    name: String::from("e"),
+                    scope: SymbolScope::Local,
+                    idx: 0,
+                }),
+                Rc::new(Symbol {
+                    name: String::from("f"),
+                    scope: SymbolScope::Local,
+                    idx: 1,
+                }),
+            ],
+            vec![
+                Rc::new(Symbol {
+                    name: String::from("c"),
+                    scope: SymbolScope::Local,
+                    idx: 0,
+                }),
+                Rc::new(Symbol {
+                    name: String::from("d"),
+                    scope: SymbolScope::Local,
+                    idx: 1,
+                }),
+            ],
+        ),
+    ] {
+        for sym in expected_symbols {
+            if let Some(s) = table.get(&sym.name) {
+                if s != sym {
+                    panic!("expected symbol {sym:?} in table {name}, got {s:?}");
+                }
+            } else {
+                panic!("expected symbol {sym:?} in table {name}");
+            }
+        }
+
+        assert_eq!(*table.free.borrow(), expected_free);
+    }
+}
+
+#[test]
+fn test_compile_functions() {
+    test(&[(
+        r#"fn f() { return 1 + 2; }"#,
+        &[
+            Constant::I32(1),
+            Constant::I32(2),
+            Constant::Func(CompiledFunc {
+                instructions: vec![1, 0, 0, 1, 0, 1, 5, 26],
+                n_locals: 0,
+                n_params: 0,
+            }),
+        ],
+        Instructions::from(vec![
+            (Opcode::Closure, vec![2, 0]),
+            (Opcode::SetGlobal, vec![0]),
+            (Opcode::Nil, vec![]),
+            (Opcode::Nil, vec![]),
+        ]),
+    )]);
 }
