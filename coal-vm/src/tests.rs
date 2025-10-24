@@ -144,9 +144,9 @@ fn test_run_conditionals() {
             let x = 1;
             let y = 2;
             if 2 * 3 > 5 {
-                x + 2
+                x + 2;
             } else {
-                y + 3
+                y + 3;
             }
             "#,
             Object::I32(3),
@@ -214,7 +214,7 @@ fn test_run_index_exprs() {
         ("{1: 1, 2: 2}[1]", Object::I32(1)),
         ("{1: 1, 2: 2}[2]", Object::I32(2)),
         ("{1: 1}[0]", Object::Nil),
-        ("{}[0]", Object::Nil),
+        ("let m: map[i32, i32] = {}; m[0]", Object::Nil),
         (r#""asdf"[0]"#, Object::Str(String::from("a"))),
         (r#""asdf"[2]"#, Object::Str(String::from("d"))),
         (r#""asdf"[4]"#, Object::Nil),
