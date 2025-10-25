@@ -28,4 +28,3 @@ println("1st col:");
 for i in 0..matrix.len() {
     println(matrix[i][0]);
 }
-

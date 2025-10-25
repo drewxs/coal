@@ -25,4 +25,3 @@ let s_len: u64 = s.len();
 
 println(s_len);
 // 4
-

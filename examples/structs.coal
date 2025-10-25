@@ -27,4 +27,3 @@ fn main() {
     john.greet("world");
     john.cat.meow();
 }
-

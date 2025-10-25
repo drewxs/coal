@@ -1,19 +1,14 @@
 fn fib(n: u32) -> i128 {
-    let i: u32 = 0;
     let x: i128 = 0;
     let y: i128 = 1;
-
-    while i < n {
+    for i in 0..n {
         let tmp: i128 = x;
         x = y;
         y = tmp + y;
-        i += 1;
     }
-
     return x;
 }
 
 let result: i128 = fib(184);
 
 println(result);
-

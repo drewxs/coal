@@ -21,4 +21,3 @@ let result: u32 = add_two(2) + add_two_copy(2);
 let result_copy: u32 = add_two_copy(2);
 
 println(result);
-
