@@ -49,12 +49,13 @@ fn main() {
         } => {
             if let Some(path) = path {
                 match coal::fmt_path(&path, dry_run) {
-                    Ok(output) => println!("{output}"),
+                    Ok(out) => println!("{out}"),
                     Err(err) => eprintln!("{err}"),
                 }
             } else {
                 let input = resolve_input(input, path);
-                coal::fmt(&input);
+                let out = coal::fmt(&input);
+                print!("{out}");
             }
         }
         Command::Data { cmd } => match cmd {
