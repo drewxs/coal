@@ -7,8 +7,8 @@ use crate::Object;
 
 #[derive(Clone, Debug)]
 pub struct Builtin {
-    name: &'static str,
-    func: fn(&[Rc<Object>]) -> Option<Rc<Object>>,
+    pub name: &'static str,
+    pub func: fn(&[Rc<Object>]) -> Option<Rc<Object>>,
 }
 
 impl PartialEq for Builtin {

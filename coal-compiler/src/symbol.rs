@@ -1,5 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+use coal_objects::builtin_defs;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum SymbolScope {
     Global,
@@ -16,7 +18,7 @@ pub struct Symbol {
     pub idx: usize,
 }
 
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SymbolTable {
     pub store: Rc<RefCell<HashMap<String, Rc<Symbol>>>>,
     pub outer: Option<Rc<SymbolTable>>,
@@ -26,12 +28,18 @@ pub struct SymbolTable {
 
 impl SymbolTable {
     pub fn new() -> Self {
-        SymbolTable {
+        let mut st = SymbolTable {
             store: Rc::new(RefCell::new(HashMap::new())),
             outer: None,
             free: Rc::new(RefCell::new(vec![])),
             n_defs: 0,
+        };
+
+        for (i, b) in builtin_defs().iter().enumerate() {
+            st.define_builtin(i, b.name.to_owned());
         }
+
+        st
     }
 
     pub fn new_enclosed(outer: &SymbolTable) -> Self {
@@ -93,8 +101,8 @@ impl SymbolTable {
     pub fn define_builtin(&mut self, idx: usize, key: String) -> Rc<Symbol> {
         let symbol = Rc::new(Symbol {
             name: key.clone(),
-            idx,
             scope: SymbolScope::Builtin,
+            idx,
         });
         self.store
             .borrow_mut()
@@ -119,5 +127,11 @@ impl SymbolTable {
         drop(store);
 
         s
+    }
+}
+
+impl Default for SymbolTable {
+    fn default() -> Self {
+        Self::new()
     }
 }

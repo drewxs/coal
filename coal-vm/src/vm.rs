@@ -1,7 +1,7 @@
 use std::{collections::HashMap, rc::Rc};
 
 use coal_compiler::{Bytecode, Opcode, read_u16};
-use coal_objects::{Closure, CompiledFunc, Constant, FALSE, Object, TRUE};
+use coal_objects::{Builtin, Closure, CompiledFunc, Constant, FALSE, Object, TRUE, builtin_defs};
 
 use crate::Frame;
 
@@ -17,6 +17,7 @@ pub struct VM {
     pub sp: usize,
     pub frames: Vec<Frame>,
     pub frame_idx: usize,
+    pub builtins: Vec<Builtin>,
 }
 
 impl VM {
@@ -28,6 +29,7 @@ impl VM {
             sp: 0,
             frames: vec![Frame::default(); MAX_FRAMES],
             frame_idx: 1,
+            builtins: builtin_defs(),
         }
     }
 
@@ -220,7 +222,11 @@ impl VM {
                             self.sp = frame.base_ptr + 1 + cl.func.n_params + cl.func.n_locals;
                             self.push_frame(frame);
                         }
-                        Object::Builtin(_) => {}
+                        Object::Builtin(b) => {
+                            let args = &self.stack[self.sp - n_args..self.sp];
+                            let res = (b.func)(args);
+                            self.push(res.unwrap_or(Rc::new(Object::Nil)));
+                        }
                         _ => {}
                     }
                 }
@@ -235,17 +241,23 @@ impl VM {
                     self.sp = frame.base_ptr;
                     self.push(Rc::new(Object::Nil));
                 }
+                Opcode::SetLocal => {
+                    let idx = ins[ip + 1] as usize;
+                    self.curr_frame().ip += 1;
+                    let base = self.curr_frame().base_ptr;
+                    self.stack[base + 1 + idx] = self.pop();
+                }
                 Opcode::GetLocal => {
                     let idx = ins[ip + 1] as usize;
                     self.curr_frame().ip += 1;
                     let base = self.curr_frame().base_ptr;
                     self.push(Rc::clone(&self.stack[base + 1 + idx]));
                 }
-                Opcode::SetLocal => {
+                Opcode::GetBuiltin => {
                     let idx = ins[ip + 1] as usize;
                     self.curr_frame().ip += 1;
-                    let base = self.curr_frame().base_ptr;
-                    self.stack[base + 1 + idx] = self.pop();
+                    let b = self.builtins[idx].clone();
+                    self.push(Rc::new(Object::Builtin(b)));
                 }
                 Opcode::Closure => {
                     let idx = read_u16(&ins[ip + 1..ip + 3]) as usize;
@@ -277,7 +289,6 @@ impl VM {
                     let cl = self.curr_frame().cl.clone();
                     self.push(Rc::new(Object::Closure(cl)));
                 }
-                _ => {}
             }
         }
     }

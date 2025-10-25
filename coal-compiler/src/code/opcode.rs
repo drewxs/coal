@@ -43,8 +43,8 @@ pub enum Opcode {
     RetVal, // 26
     Ret,    // 27
 
-    GetLocal, // 28
-    SetLocal, // 29
+    SetLocal, // 28
+    GetLocal, // 29
 
     GetBuiltin, // 30
 

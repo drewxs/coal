@@ -25,8 +25,6 @@ pub fn run(path: &str) {
     let mut vm = VM::from(bytecode);
 
     vm.run();
-
-    println!("{}", vm.last_stack_obj());
 }
 
 /// JIT compile and run a given file
@@ -40,7 +38,6 @@ pub fn compile_and_exec(input: &str, c: &mut Compiler) {
         Ok(bytecode) => {
             let mut vm = VM::from(bytecode);
             vm.run();
-            println!("{}", vm.last_stack_obj());
         }
         Err(errs) => errs.iter().for_each(|e| {
             let ((l1, c1), (_, c2)) = e.span;
