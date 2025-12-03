@@ -4,12 +4,12 @@ let y: i32 = 10;
 if x > y {
     if x > 1 {
         let z: f64 = 1.0;
-        return z;
+        println(z);
     } else {
-        return 1;
+        println(1);
     }
 } elif x < y {
-    return y;
+    println(y);
 } else {
-    return 0;
+    println(0);
 }
