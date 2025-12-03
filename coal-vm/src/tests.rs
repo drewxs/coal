@@ -281,6 +281,19 @@ fn test_run_closure() {
             "#,
             Object::I32(2),
         ),
+        (
+            r#"
+            fn new_closure() {
+                fn inner() {
+                    return 10;
+                }
+                return inner;
+            }
+            let cl = new_closure();
+            cl();
+            "#,
+            Object::I32(10),
+        ),
     ]);
 }
 
