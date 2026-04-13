@@ -4,54 +4,54 @@ use coal_core::{Infix, Prefix};
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub enum Opcode {
     #[default]
-    Nil = 0,
+    Nil,
 
-    Const, // 1
-    Pop,   // 2
+    Const,
+    Pop,
 
-    True,  // 3
-    False, // 4
+    True,
+    False,
 
-    Add, // 5
-    Sub, // 6
-    Mul, // 7
-    Div, // 8
-    Rem, // 9
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
 
-    EQ,  // 10
-    NEQ, // 11
-    LT,  // 12
-    LTE, // 13
-    GT,  // 14
-    GTE, // 15
+    EQ,
+    NEQ,
+    LT,
+    LTE,
+    GT,
+    GTE,
 
-    Minus, // 16
-    Bang,  // 17
+    Minus,
+    Bang,
 
-    Jump,      // 18
-    JumpFalse, // 19
+    Jump,
+    JumpFalse,
 
-    GetGlobal, // 20
-    SetGlobal, // 21
+    GetGlobal,
+    SetGlobal,
 
-    List,  // 22
-    Hash,  // 23
-    Index, // 24
+    List,
+    Hash,
+    Index,
 
-    Call, // 25
+    Call,
 
-    RetVal, // 26
-    Ret,    // 27
+    RetVal,
+    Ret,
 
-    SetLocal, // 28
-    GetLocal, // 29
+    SetLocal,
+    GetLocal,
 
-    GetBuiltin, // 30
+    GetBuiltin,
 
-    Closure,     // 31
-    CurrClosure, // 32
+    Closure,
+    CurrClosure,
 
-    GetFree, // 33
+    GetFree,
 }
 
 impl Opcode {
@@ -131,5 +131,11 @@ impl From<&Infix> for Opcode {
             Infix::GTE => Opcode::GTE,
             Infix::Rem => Opcode::Rem,
         }
+    }
+}
+
+impl From<Opcode> for u8 {
+    fn from(opcode: Opcode) -> Self {
+        opcode as u8
     }
 }

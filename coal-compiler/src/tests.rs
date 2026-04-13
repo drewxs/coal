@@ -1,3 +1,4 @@
+use core::convert::Into;
 use std::{rc::Rc, vec};
 
 use coal_objects::{CompiledFunc, Constant};
@@ -496,7 +497,16 @@ fn test_compile_functions() {
             Constant::I32(1),
             Constant::I32(2),
             Constant::Func(CompiledFunc {
-                instructions: vec![1, 0, 0, 1, 0, 1, 5, 26],
+                instructions: vec![
+                    Opcode::Const.into(),
+                    Opcode::Nil.into(),
+                    Opcode::Nil.into(),
+                    Opcode::Const.into(),
+                    Opcode::Nil.into(),
+                    Opcode::Const.into(),
+                    Opcode::Add.into(),
+                    Opcode::RetVal.into(),
+                ],
                 n_locals: 0,
                 n_params: 0,
             }),
