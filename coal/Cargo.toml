@@ -15,6 +15,6 @@ coal-vm = { path = "../coal-vm" }
 clap = { version = "4.6.0", features = ["derive"] }
 dirs = "6.0.0"
 ignore = "0.4.25"
-rustyline = { version = "15.0.0", features = ["derive", "rustyline-derive"] }
+rustyline = { version = "18.0.0", features = ["derive"] }
 terminal_size = "0.4.4"
 bincode = "2.0.1"
