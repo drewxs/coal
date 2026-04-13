@@ -1,11 +1,15 @@
-use std::{fs::File, io::BufReader};
+use std::{
+    fs::File,
+    io::{BufReader, Read},
+};
 
-use bincode::decode_from_std_read;
 use terminal_size::{Width, terminal_size};
 
 use coal_compiler::{Bytecode, Compiler};
 use coal_core::clean_input;
 use coal_vm::VM;
+
+use rkyv::{from_bytes, rancor};
 
 use crate::{compile, path::resolve_bin, read_file_to_str};
 
@@ -18,12 +22,18 @@ pub fn run(path: &str) {
 
     let path = resolve_bin("target", path).unwrap();
     let file = File::open(&path).unwrap();
-    let mut reader = BufReader::new(file);
+    let reader = BufReader::new(file);
 
-    let config = bincode::config::standard();
-    let bytecode: Bytecode = decode_from_std_read(&mut reader, config).unwrap();
+    let Ok(bytes) = reader.bytes().collect::<Result<Vec<u8>, _>>() else {
+        eprintln!("Failed to read bytecode");
+        return;
+    };
+    let Ok(bytecode) = from_bytes::<Bytecode, rancor::Error>(&bytes) else {
+        eprintln!("Failed to deserialize bytecode");
+        return;
+    };
+
     let mut vm = VM::from(bytecode);
-
     vm.run();
 }
 

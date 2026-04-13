@@ -3,11 +3,11 @@ use std::{
     ops::{Deref, DerefMut, Index, IndexMut},
 };
 
-use bincode::{Decode, Encode};
+use rkyv::{Archive, Deserialize, Serialize};
 
 use super::{Opcode, make};
 
-#[derive(Clone, PartialEq, Default, Encode, Decode)]
+#[derive(Clone, PartialEq, Default, Archive, Serialize, Deserialize)]
 pub struct Instructions(pub Vec<u8>);
 
 impl Instructions {

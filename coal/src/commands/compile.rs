@@ -2,11 +2,11 @@ use std::{
     fs::{self, File},
     io::{BufWriter, Write},
     path::Path,
+    time::Instant,
 };
 
-use bincode::encode_into_std_write;
-
 use coal_compiler::Compiler;
+use rkyv::{rancor, to_bytes};
 
 use crate::{path::resolve_main, read_file_to_str};
 
@@ -24,6 +24,8 @@ pub fn compile(working_dir: &str) {
     let filename = Path::new(&path).file_name().unwrap().to_str().unwrap();
     let input = read_file_to_str(&path);
 
+    let start = Instant::now();
+
     let mut c = Compiler::new();
     c.compile(&input).unwrap();
     let bytecode = c.bytecode();
@@ -34,9 +36,16 @@ pub fn compile(working_dir: &str) {
     let file = File::create(path.clone()).unwrap();
 
     let mut writer = BufWriter::new(file);
-    let config = bincode::config::standard();
-    encode_into_std_write(bytecode, &mut writer, config).unwrap();
 
-    println!("Compiled: {}", path.display());
-    writer.flush().unwrap();
+    let Ok(bytes) = to_bytes::<rancor::Error>(&bytecode) else {
+        eprintln!("Failed to serialize bytecode");
+        return;
+    };
+    if let Err(e) = writer.write_all(&bytes.into_vec()) {
+        eprintln!("Failed to write bytecode: {e}");
+        return;
+    }
+
+    let elapsed = start.elapsed().as_millis();
+    println!("Finished `{}` in {elapsed}ms", path.display());
 }

@@ -1,8 +1,8 @@
-use bincode::{Decode, Encode};
+use rkyv::{Archive, Deserialize, Serialize};
 
 use super::{CompiledFunc, Object};
 
-#[derive(Clone, Debug, PartialEq, Encode, Decode)]
+#[derive(Clone, Debug, PartialEq, Archive, Serialize, Deserialize)]
 pub enum Constant {
     U32(u32),
     U64(u64),

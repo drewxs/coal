@@ -3,7 +3,7 @@ use std::{
     rc::Rc,
 };
 
-use bincode::{Decode, Encode};
+use rkyv::{Archive, Deserialize, Serialize};
 
 use coal_core::Stmt;
 
@@ -24,7 +24,7 @@ impl Hash for Func {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Encode, Decode)]
+#[derive(Clone, Debug, Default, PartialEq, Archive, Serialize, Deserialize)]
 pub struct CompiledFunc {
     pub instructions: Vec<u8>,
     pub n_locals: usize,

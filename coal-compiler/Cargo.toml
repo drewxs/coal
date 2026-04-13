@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bincode = "2.0.1"
 coal-core = { path = "../coal-core" }
 coal-objects = { path = "../coal-objects" }
+rkyv = "0.8.15"
 thiserror = "2.0.18"
