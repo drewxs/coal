@@ -1,6 +1,3 @@
-#![feature(test)]
-#![feature(assert_matches)]
-
 pub mod ast;
 mod lexer;
 mod parser;
