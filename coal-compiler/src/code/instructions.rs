@@ -36,8 +36,8 @@ impl fmt::Debug for Instructions {
 impl From<Vec<Instructions>> for Instructions {
     fn from(ins: Vec<Instructions>) -> Self {
         Instructions(
-            ins.iter()
-                .map(|i| i.0.clone())
+            ins.into_iter()
+                .map(|i| i.0)
                 .collect::<Vec<Vec<u8>>>()
                 .concat(),
         )
@@ -46,10 +46,11 @@ impl From<Vec<Instructions>> for Instructions {
 
 impl From<Vec<(Opcode, Vec<usize>)>> for Instructions {
     fn from(ins: Vec<(Opcode, Vec<usize>)>) -> Self {
-        Instructions::from(
+        Instructions(
             ins.iter()
-                .map(|(opcode, operands)| Instructions::new(*opcode, operands))
-                .collect::<Vec<Instructions>>(),
+                .map(|(opcode, operands)| Instructions::new(*opcode, operands).0)
+                .collect::<Vec<Vec<u8>>>()
+                .concat(),
         )
     }
 }
