@@ -7,4 +7,4 @@ edition = "2024"
 bincode = "2.0.1"
 coal-core = { path = "../coal-core" }
 coal-objects = { path = "../coal-objects" }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
