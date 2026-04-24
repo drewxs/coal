@@ -15,13 +15,11 @@ use crate::{compile, path::resolve_bin, read_file_to_str};
 
 /// Run a binary (e.g. `main.coal.bin`)
 pub fn run(path: &str) {
-    let path_res = resolve_bin("target", path);
-    if path_res.is_err() {
+    let target = resolve_bin("target", path).unwrap_or_else(|_| {
         compile(".");
-    }
-
-    let path = resolve_bin("target", path).unwrap();
-    let file = File::open(&path).unwrap();
+        resolve_bin("target", path).unwrap()
+    });
+    let file = File::open(&target).unwrap();
     let reader = BufReader::new(file);
 
     let Ok(bytes) = reader.bytes().collect::<Result<Vec<u8>, _>>() else {
