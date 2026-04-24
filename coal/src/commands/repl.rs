@@ -336,7 +336,10 @@ impl ConditionalEventHandler for EnterHandler {
         let line = ctx.line();
         let pos = ctx.pos();
 
-        let ws: String = line[line.rfind('\n').unwrap_or(0) + 1..]
+        let ws: String = line
+            .rsplit('\n')
+            .next()
+            .unwrap_or("")
             .chars()
             .take_while(|c| c.is_whitespace())
             .collect();
