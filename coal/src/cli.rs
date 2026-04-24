@@ -21,6 +21,17 @@ pub enum Command {
     #[command(visible_alias = "c")]
     Compile,
 
+    #[command(about = "Remove build artifacts")]
+    Clean {
+        #[arg(short = 'n', long)]
+        #[arg(help = "Preview deletions without actually deleting")]
+        dry_run: bool,
+
+        #[arg(short = 'q', long)]
+        #[arg(help = "Suppress output")]
+        quiet: bool,
+    },
+
     #[command(about = "Run the current project")]
     #[command(visible_alias = "r")]
     Run,
@@ -34,7 +45,8 @@ pub enum Command {
     Parse {
         input: Option<String>,
 
-        #[arg(short = 'p', long, help = "Parse a given path")]
+        #[arg(short = 'p', long)]
+        #[arg(help = "Parse a given path")]
         path: Option<String>,
 
         #[arg(short = 't', long, action)]
@@ -49,7 +61,8 @@ pub enum Command {
     Lint {
         input: Option<String>,
 
-        #[arg(short = 'p', long, help = "Lint a given path")]
+        #[arg(short = 'p', long)]
+        #[arg(help = "Lint a given path")]
         path: Option<String>,
     },
 
@@ -59,7 +72,8 @@ pub enum Command {
     Fmt {
         input: Option<String>,
 
-        #[arg(short = 'p', long, help = "Format a given path")]
+        #[arg(short = 'p', long)]
+        #[arg(help = "Format a given path")]
         path: Option<String>,
 
         #[arg(short = 'n', long)]

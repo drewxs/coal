@@ -19,6 +19,9 @@ fn main() {
         Command::Compile => {
             coal::compile(".");
         }
+        Command::Clean { dry_run, quiet } => {
+            coal::clean(".", dry_run, quiet);
+        }
         Command::Run => {
             coal::run("main");
         }
