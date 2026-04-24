@@ -23,7 +23,7 @@ fn main() {
             coal::run("main");
         }
         Command::Exec { path } => {
-            coal::compile_and_run(&path);
+            coal::exec(&path);
         }
         Command::Parse {
             input,

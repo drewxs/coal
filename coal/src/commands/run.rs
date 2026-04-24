@@ -1,12 +1,14 @@
 use std::{
     fs::File,
     io::{BufReader, Read},
+    rc::Rc,
 };
 
 use terminal_size::{Width, terminal_size};
 
 use coal_compiler::{Bytecode, Compiler};
-use coal_core::clean_input;
+use coal_core::{ParserError, clean_input};
+use coal_objects::Object;
 use coal_vm::VM;
 
 use rkyv::{from_bytes, rancor};
@@ -35,40 +37,62 @@ pub fn run(path: &str) {
     vm.run();
 }
 
-/// JIT compile and run a given file
-pub fn compile_and_run(path: &str) {
-    compile_and_exec(&read_file_to_str(path), &mut Compiler::new());
+/// Compile and run a given file
+pub fn exec(path: &str) {
+    exec_input(&read_file_to_str(path), &mut Compiler::new());
 }
 
-/// JIT compile and run the given input
-pub fn compile_and_exec(input: &str, c: &mut Compiler) {
+/// Compile and run the given input
+pub fn exec_input(input: &str, c: &mut Compiler) {
     match c.compile(input) {
         Ok(bytecode) => {
             let mut vm = VM::from(bytecode);
             vm.run();
         }
-        Err(errs) => errs.iter().for_each(|e| {
-            let ((l1, c1), (_, c2)) = e.span;
-            let term_w = terminal_size().map(|(w, _)| w).unwrap_or(Width(80)).0 as usize;
+        Err(errs) => print_errs(input, &errs),
+    }
+}
 
-            if input.lines().count() > 1 {
-                let line = input.lines().nth(l1 - 1).unwrap();
-                println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
-                println!("{}", clean_input(line));
-                println!(
-                    "\x1b[31m{}\x1b[0m",
-                    " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
-                );
-                println!("{e}");
-            } else {
-                println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
-                println!("{}", clean_input(input));
-                println!(
-                    "\x1b[31m{}\x1b[0m",
-                    " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
-                );
-                println!("{}\n", e.kind);
+/// Compile and run a single REPL input, carrying `globals` across calls.
+/// Each call gets fresh instructions, persisting constants, symbol table, and globals.
+/// Prints last statement if it's an expression.
+pub fn exec_repl_input(input: &str, c: &mut Compiler, globals: &mut Vec<Rc<Object>>) {
+    match c.compile_repl(input) {
+        Ok((bytecode, echo_last)) => {
+            let mut vm = VM::from(bytecode);
+            if !globals.is_empty() {
+                vm.globals = std::mem::take(globals);
             }
-        }),
+            vm.run();
+            *globals = std::mem::take(&mut vm.globals);
+
+            if echo_last {
+                let val = vm.last_stack_obj();
+                if *val != Object::Nil {
+                    println!("{val}");
+                }
+            }
+        }
+        Err(errs) => print_errs(input, &errs),
+    }
+}
+
+fn print_errs(input: &str, errs: &[ParserError]) {
+    let term_w = terminal_size().map(|(w, _)| w).unwrap_or(Width(80)).0 as usize;
+    let multiline = input.lines().count() > 1;
+    for e in errs {
+        let ((l1, c1), (_, c2)) = e.span;
+        let caret = " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1);
+        println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
+        if multiline {
+            let line = input.lines().nth(l1 - 1).unwrap_or("");
+            println!("{}", clean_input(line));
+            println!("\x1b[31m{caret}\x1b[0m");
+            println!("{e}");
+        } else {
+            println!("{}", clean_input(input));
+            println!("\x1b[31m{caret}\x1b[0m");
+            println!("{}\n", e.kind);
+        }
     }
 }

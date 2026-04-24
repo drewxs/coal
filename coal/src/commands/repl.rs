@@ -14,7 +14,7 @@ use rustyline::{
 
 use coal_compiler::Compiler;
 
-use crate::compile_and_exec;
+use crate::exec_repl_input;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const TAB: &str = "    ";
@@ -24,6 +24,7 @@ pub fn repl() {
 
     let mut rl = editor();
     let mut compiler = Compiler::new();
+    let mut globals = vec![];
 
     loop {
         match rl.readline(">> ") {
@@ -31,7 +32,7 @@ pub fn repl() {
                 "exit" | "quit" => break,
                 "clear" => println!("\x1B[2J\x1B[1;1H"),
                 input => {
-                    compile_and_exec(input, &mut compiler);
+                    exec_repl_input(input, &mut compiler, &mut globals);
                     let _ = rl.add_history_entry(input);
                 }
             },

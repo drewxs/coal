@@ -64,6 +64,30 @@ impl Compiler {
         Ok(self.bytecode())
     }
 
+    pub fn compile_repl(&mut self, input: &str) -> Result<(Bytecode, bool), Vec<ParserError>> {
+        self.scopes = vec![CompilationScope::default()];
+        self.scope_idx = 0;
+
+        self.parser.extend(input);
+        let stmts = self.parser.parse();
+
+        if !self.parser.errors.is_empty() {
+            self.parser.errors.clear();
+            return Err(self.parser.errors.clone());
+        }
+
+        let echo_last = matches!(
+            stmts.last(),
+            Some(Stmt::Expr(e)) if !matches!(e, Expr::Fn(_))
+        );
+
+        for stmt in &stmts {
+            self.compile_stmt(stmt);
+        }
+
+        Ok((self.bytecode(), echo_last))
+    }
+
     pub fn bytecode(&mut self) -> Bytecode {
         Bytecode {
             instructions: self.instructions_mut().clone(),
