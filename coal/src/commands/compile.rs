@@ -1,4 +1,5 @@
 use std::{
+    env,
     fs::{self, File},
     io::{BufWriter, Write},
     path::Path,
@@ -8,10 +9,17 @@ use std::{
 use coal_compiler::Compiler;
 use rkyv::{rancor, to_bytes};
 
-use crate::{path::resolve_main, read_file_to_str};
+use crate::{path::resolve_main, read_file_to_str, status};
 
 /// Compile the project at the given working directory
-pub fn compile(working_dir: &str) {
+pub fn compile(working_dir: &str, quiet: bool) {
+    let project_root = env::current_dir().unwrap_or_default().join(working_dir);
+    let project_root = project_root.canonicalize().unwrap_or(project_root);
+    let name = project_root
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("project");
+
     let mut root = Path::new(working_dir);
     if root.join("src").exists() {
         root = root.parent().unwrap();
@@ -23,6 +31,10 @@ pub fn compile(working_dir: &str) {
     };
     let filename = Path::new(&path).file_name().unwrap().to_str().unwrap();
     let input = read_file_to_str(&path);
+
+    if !quiet {
+        println!("{} {name} ({})", status("Compiling"), project_root.display());
+    }
 
     let start = Instant::now();
 
@@ -47,5 +59,7 @@ pub fn compile(working_dir: &str) {
     }
 
     let elapsed = start.elapsed().as_millis();
-    println!("Finished `{}` in {elapsed}ms", path.display());
+    if !quiet {
+        println!("{} `{}` in {elapsed}ms", status("Finished"), path.display());
+    }
 }

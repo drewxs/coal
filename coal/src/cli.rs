@@ -17,9 +17,13 @@ pub enum Command {
     #[command(about = "Create a new project")]
     New { name: String },
 
-    #[command(about = "Compile the current project")]
-    #[command(visible_alias = "c")]
-    Compile,
+    #[command(about = "Build the current project")]
+    #[command(visible_alias = "b")]
+    Build {
+        #[arg(short = 'q', long)]
+        #[arg(help = "Suppress output")]
+        quiet: bool,
+    },
 
     #[command(about = "Remove build artifacts")]
     Clean {

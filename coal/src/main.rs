@@ -16,8 +16,8 @@ fn main() {
             Ok(msg) => println!("{msg}"),
             Err(err) => eprintln!("{err}"),
         },
-        Command::Compile => {
-            coal::compile(".");
+        Command::Build { quiet } => {
+            coal::compile(".", quiet);
         }
         Command::Clean { dry_run, quiet } => {
             coal::clean(".", dry_run, quiet);

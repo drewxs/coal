@@ -19,7 +19,7 @@ use crate::{compile, path::resolve_bin, read_file_to_str};
 /// Run a binary (e.g. `main.coal.bin`)
 pub fn run(path: &str) {
     let target = resolve_bin("target", path).unwrap_or_else(|_| {
-        compile(".");
+        compile(".", false);
         resolve_bin("target", path).unwrap()
     });
     let file = File::open(&target).unwrap();

@@ -2,6 +2,8 @@ use std::{fs, path::Path};
 
 use colored::Colorize;
 
+use crate::status;
+
 /// Clean build artifacts
 pub fn clean(working_dir: &str, dry_run: bool, quiet: bool) {
     let mut root = Path::new(working_dir);
@@ -14,13 +16,13 @@ pub fn clean(working_dir: &str, dry_run: bool, quiet: bool) {
     }
 
     let (files, bytes) = dir_stats(&target_dir);
+    let s = if files == 1 { "" } else { "s" };
 
     if dry_run {
         if !quiet {
             println!(
-                "     {} {files} file{}, {} total",
-                "Summary".green().bold(),
-                if files == 1 { "" } else { "s" },
+                "{} {files} file{s}, {} total",
+                status("Summary"),
                 format_size(bytes),
             );
             println!(
@@ -38,9 +40,8 @@ pub fn clean(working_dir: &str, dry_run: bool, quiet: bool) {
 
     if !quiet {
         println!(
-            "     {} {files} file{}, {} total",
-            "Removed".green().bold(),
-            if files == 1 { "" } else { "s" },
+            "{} {files} file{s}, {} total",
+            status("Removed"),
             format_size(bytes),
         );
     }
