@@ -1,5 +1,6 @@
 use std::fs;
 
+use colored::Colorize;
 use terminal_size::{Width, terminal_size};
 
 use coal_core::{Parser, clean_input};
@@ -11,7 +12,7 @@ pub fn lint(input: &str) {
     parser.parse();
 
     if parser.errors.is_empty() && parser.warnings.is_empty() {
-        println!("\x1b[32mNo errors\x1b[0m");
+        println!("{}", "No errors".green());
         return;
     }
 
@@ -19,47 +20,37 @@ pub fn lint(input: &str) {
 
     for e in parser.errors {
         let ((l1, c1), (_, c2)) = e.span;
+        let caret = " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1);
 
         if input.lines().count() > 1 {
             let line = input.lines().nth(l1 - 1).unwrap();
-            println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
+            println!("{}", "-".repeat(term_w).red());
             println!("{}", clean_input(line));
-            println!(
-                "\x1b[31m{}\x1b[0m",
-                " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
-            );
-            println!("\x1b[31merror\x1b[0m: {e}");
+            println!("{}", caret.red());
+            println!("{}: {e}", "error".red());
         } else {
-            println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
+            println!("{}", "-".repeat(term_w).red());
             println!("{}", clean_input(input));
-            println!(
-                "\x1b[31m{}\x1b[0m",
-                " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
-            );
-            println!("\x1b[31merror\x1b[0m: {}", e.kind);
+            println!("{}", caret.red());
+            println!("{}: {}", "error".red(), e.kind);
         }
     }
 
     for w in parser.warnings {
         let ((l1, c1), (_, c2)) = w.span;
+        let caret = " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1);
 
         if input.lines().count() > 1 {
             let line = input.lines().nth(l1 - 1).unwrap();
-            println!("\x1b[33m{}\x1b[0m", "-".repeat(term_w));
+            println!("{}", "-".repeat(term_w).yellow());
             println!("{}", clean_input(line));
-            println!(
-                "\x1b[33m{}\x1b[0m",
-                " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
-            );
-            println!("\x1b[33mwarning\x1b[0m: {w}");
+            println!("{}", caret.yellow());
+            println!("{}: {w}", "warning".yellow());
         } else {
-            println!("\x1b[33m{}\x1b[0m", "-".repeat(term_w));
+            println!("{}", "-".repeat(term_w).yellow());
             println!("{}", clean_input(input));
-            println!(
-                "\x1b[33m{}\x1b[0m",
-                " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1),
-            );
-            println!("\x1b[33mwarning\x1b[0m: {}", w.kind);
+            println!("{}", caret.yellow());
+            println!("{}: {}", "warning".yellow(), w.kind);
         }
     }
 }

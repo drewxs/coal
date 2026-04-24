@@ -1,5 +1,6 @@
 use std::{borrow::Cow, cell::Cell};
 
+use colored::Colorize;
 use rustyline::{
     Cmd, Completer, CompletionType, ConditionalEventHandler, Config, Context, EditMode, Editor,
     Event, EventContext, EventHandler, Helper, Highlighter, Hinter, KeyCode, KeyEvent, Modifiers,
@@ -157,14 +158,11 @@ impl Highlighter for MatchingBracketHighlighter {
         {
             let mut copy = line.to_owned();
             if idx + 1 < pos {
+                let open = (matching as char).to_string().blue().bold();
+                let close = line.chars().nth(pos).unwrap().to_string().blue().bold();
                 copy.replace_range(
                     idx..=pos,
-                    &format!(
-                        "\x1b[1;34m{}\x1b[0m{}\x1b[1;34m{}\x1b[0m",
-                        matching as char,
-                        &line[idx + 1..pos],
-                        line.chars().nth(pos).unwrap()
-                    ),
+                    &format!("{}{}{}", open, &line[idx + 1..pos], close),
                 );
             }
             return Cow::Owned(copy);
@@ -312,7 +310,7 @@ impl Highlighter for ReplHelper {
     }
 
     fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
-        Cow::Owned("\x1b[1m".to_owned() + hint + "\x1b[m")
+        Cow::Owned(hint.bold().to_string())
     }
 
     fn highlight<'l>(&self, line: &'l str, pos: usize) -> Cow<'l, str> {

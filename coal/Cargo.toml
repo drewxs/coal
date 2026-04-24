@@ -14,8 +14,9 @@ coal-core = { path = "../coal-core" }
 coal-objects = { path = "../coal-objects" }
 coal-vm = { path = "../coal-vm" }
 clap = { version = "4.6.0", features = ["derive"] }
+colored = "3.1.1"
 dirs = "6.0.0"
 ignore = "0.4.25"
+rkyv = "0.8.15"
 rustyline = { version = "18.0.0", features = ["derive"] }
 terminal_size = "0.4.4"
-rkyv = "0.8.15"

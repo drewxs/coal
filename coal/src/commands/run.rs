@@ -4,6 +4,7 @@ use std::{
     rc::Rc,
 };
 
+use colored::Colorize;
 use terminal_size::{Width, terminal_size};
 
 use coal_compiler::{Bytecode, Compiler};
@@ -83,15 +84,15 @@ fn print_errs(input: &str, errs: &[ParserError]) {
     for e in errs {
         let ((l1, c1), (_, c2)) = e.span;
         let caret = " ".repeat(c1 - 1) + &"^".repeat(c2.saturating_sub(c1) + 1);
-        println!("\x1b[31m{}\x1b[0m", "-".repeat(term_w));
+        println!("{}", "-".repeat(term_w).red());
         if multiline {
             let line = input.lines().nth(l1 - 1).unwrap_or("");
             println!("{}", clean_input(line));
-            println!("\x1b[31m{caret}\x1b[0m");
+            println!("{}", caret.red());
             println!("{e}");
         } else {
             println!("{}", clean_input(input));
-            println!("\x1b[31m{caret}\x1b[0m");
+            println!("{}", caret.red());
             println!("{}\n", e.kind);
         }
     }
