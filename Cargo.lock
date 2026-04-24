@@ -207,15 +207,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "coal-interpreter"
-version = "0.1.0"
-dependencies = [
- "coal-core",
- "coal-objects",
- "thiserror",
-]
-
-[[package]]
 name = "coal-objects"
 version = "0.1.0"
 dependencies = [
