@@ -9,128 +9,247 @@ pub const STACK_SIZE: usize = 2048;
 pub const GLOBALS_SIZE: usize = 65536;
 pub const MAX_FRAMES: usize = 1024;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct VM {
     pub globals: Vec<Rc<Object>>,
     pub constants: Vec<Rc<Constant>>,
+    pub const_objects: Vec<Rc<Object>>,
     pub stack: Vec<Rc<Object>>,
     pub sp: usize,
     pub frames: Vec<Frame>,
     pub frame_idx: usize,
     pub builtins: Vec<Builtin>,
+    pub nil_: Rc<Object>,
+    pub true_: Rc<Object>,
+    pub false_: Rc<Object>,
 }
 
 impl VM {
     pub fn new() -> Self {
+        let nil_ = Rc::new(Object::Nil);
+        let true_ = Rc::new(TRUE);
+        let false_ = Rc::new(FALSE);
         VM {
-            globals: (0..GLOBALS_SIZE).map(|_| Rc::new(Object::Nil)).collect(),
+            globals: (0..GLOBALS_SIZE).map(|_| Rc::clone(&nil_)).collect(),
             constants: vec![],
-            stack: (0..STACK_SIZE).map(|_| Rc::new(Object::Nil)).collect(),
+            const_objects: vec![],
+            stack: (0..STACK_SIZE).map(|_| Rc::clone(&nil_)).collect(),
             sp: 0,
             frames: vec![Frame::default(); MAX_FRAMES],
             frame_idx: 1,
             builtins: builtin_defs(),
+            nil_,
+            true_,
+            false_,
+        }
+    }
+
+    #[inline(always)]
+    fn bool_rc(&self, b: bool) -> Rc<Object> {
+        if b {
+            Rc::clone(&self.true_)
+        } else {
+            Rc::clone(&self.false_)
         }
     }
 
     pub fn run(&mut self) {
-        while self.curr_frame().ip < self.curr_frame().instructions().len() as i32 - 1 {
-            self.curr_frame().ip += 1;
+        loop {
+            let frame_idx = self.frame_idx - 1;
+            let func = Rc::clone(&self.frames[frame_idx].cl.func);
+            let ins: &[u8] = &func.instructions;
 
-            let ip = self.curr_frame().ip as usize;
-            let ins = self.curr_frame().instructions().0;
+            if self.frames[frame_idx].ip >= ins.len() as i32 - 1 {
+                break;
+            }
+            self.frames[frame_idx].ip += 1;
+            let ip = self.frames[frame_idx].ip as usize;
 
             let op = ins[ip];
             let opcode = Opcode::from(op);
 
             match opcode {
                 Opcode::Nil => {
-                    self.push(Rc::new(Object::Nil));
+                    self.push(Rc::clone(&self.nil_));
                 }
                 Opcode::Const => {
                     let i = read_u16(&ins[ip + 1..ip + 3]) as usize;
                     self.curr_frame().ip += 2;
-                    self.push(Rc::new((*self.constants[i]).clone().into()));
+                    self.push(Rc::clone(&self.const_objects[i]));
                 }
                 Opcode::Pop => {
                     self.pop();
                 }
                 Opcode::True => {
-                    self.push(Rc::new(TRUE));
+                    self.push(Rc::clone(&self.true_));
                 }
                 Opcode::False => {
-                    self.push(Rc::new(FALSE));
+                    self.push(Rc::clone(&self.false_));
                 }
                 Opcode::Add => {
-                    let rhs = self.popv();
-                    let lhs = self.popv();
-                    self.push(Rc::new(lhs + rhs));
+                    if let (Object::I32(l), Object::I32(r)) = (
+                        &*self.stack[self.sp - 2],
+                        &*self.stack[self.sp - 1],
+                    ) {
+                        let res = Rc::new(Object::I32(l.wrapping_add(*r)));
+                        self.sp -= 1;
+                        self.stack[self.sp - 1] = res;
+                    } else {
+                        let rhs = self.popv();
+                        let lhs = self.popv();
+                        self.push(Rc::new(lhs + rhs));
+                    }
                 }
                 Opcode::Sub => {
-                    let rhs = self.popv();
-                    let lhs = self.popv();
-                    self.push(Rc::new(lhs - rhs));
+                    if let (Object::I32(l), Object::I32(r)) = (
+                        &*self.stack[self.sp - 2],
+                        &*self.stack[self.sp - 1],
+                    ) {
+                        let res = Rc::new(Object::I32(l.wrapping_sub(*r)));
+                        self.sp -= 1;
+                        self.stack[self.sp - 1] = res;
+                    } else {
+                        let rhs = self.popv();
+                        let lhs = self.popv();
+                        self.push(Rc::new(lhs - rhs));
+                    }
                 }
                 Opcode::Mul => {
-                    let rhs = self.popv();
-                    let lhs = self.popv();
-                    self.push(Rc::new(lhs * rhs));
+                    if let (Object::I32(l), Object::I32(r)) = (
+                        &*self.stack[self.sp - 2],
+                        &*self.stack[self.sp - 1],
+                    ) {
+                        let res = Rc::new(Object::I32(l.wrapping_mul(*r)));
+                        self.sp -= 1;
+                        self.stack[self.sp - 1] = res;
+                    } else {
+                        let rhs = self.popv();
+                        let lhs = self.popv();
+                        self.push(Rc::new(lhs * rhs));
+                    }
                 }
                 Opcode::Div => {
-                    let rhs = self.popv();
-                    let lhs = self.popv();
-                    self.push(Rc::new(lhs / rhs));
+                    if let (Object::I32(l), Object::I32(r)) = (
+                        &*self.stack[self.sp - 2],
+                        &*self.stack[self.sp - 1],
+                    ) {
+                        let res = Rc::new(Object::I32(l / r));
+                        self.sp -= 1;
+                        self.stack[self.sp - 1] = res;
+                    } else {
+                        let rhs = self.popv();
+                        let lhs = self.popv();
+                        self.push(Rc::new(lhs / rhs));
+                    }
                 }
                 Opcode::Rem => {
-                    let rhs = self.popv();
-                    let lhs = self.popv();
-                    self.push(Rc::new(lhs % rhs));
+                    if let (Object::I32(l), Object::I32(r)) = (
+                        &*self.stack[self.sp - 2],
+                        &*self.stack[self.sp - 1],
+                    ) {
+                        let res = Rc::new(Object::I32(l % r));
+                        self.sp -= 1;
+                        self.stack[self.sp - 1] = res;
+                    } else {
+                        let rhs = self.popv();
+                        let lhs = self.popv();
+                        self.push(Rc::new(lhs % rhs));
+                    }
                 }
                 Opcode::EQ => {
-                    let rhs = self.pop();
-                    let lhs = self.pop();
-                    self.push(Rc::new(Object::from(lhs == rhs)));
+                    let b = match (
+                        &*self.stack[self.sp - 2],
+                        &*self.stack[self.sp - 1],
+                    ) {
+                        (Object::I32(l), Object::I32(r)) => *l == *r,
+                        _ => self.stack[self.sp - 2] == self.stack[self.sp - 1],
+                    };
+                    let res = self.bool_rc(b);
+                    self.sp -= 1;
+                    self.stack[self.sp - 1] = res;
                 }
                 Opcode::NEQ => {
-                    let rhs = self.pop();
-                    let lhs = self.pop();
-                    self.push(Rc::new(Object::from(lhs != rhs)));
+                    let b = match (
+                        &*self.stack[self.sp - 2],
+                        &*self.stack[self.sp - 1],
+                    ) {
+                        (Object::I32(l), Object::I32(r)) => *l != *r,
+                        _ => self.stack[self.sp - 2] != self.stack[self.sp - 1],
+                    };
+                    let res = self.bool_rc(b);
+                    self.sp -= 1;
+                    self.stack[self.sp - 1] = res;
                 }
                 Opcode::LT => {
-                    let rhs = self.pop();
-                    let lhs = self.pop();
-                    self.push(Rc::new(Object::from(lhs < rhs)));
+                    let b = match (
+                        &*self.stack[self.sp - 2],
+                        &*self.stack[self.sp - 1],
+                    ) {
+                        (Object::I32(l), Object::I32(r)) => *l < *r,
+                        _ => self.stack[self.sp - 2] < self.stack[self.sp - 1],
+                    };
+                    let res = self.bool_rc(b);
+                    self.sp -= 1;
+                    self.stack[self.sp - 1] = res;
                 }
                 Opcode::LTE => {
-                    let rhs = self.pop();
-                    let lhs = self.pop();
-                    self.push(Rc::new(Object::from(lhs <= rhs)));
+                    let b = match (
+                        &*self.stack[self.sp - 2],
+                        &*self.stack[self.sp - 1],
+                    ) {
+                        (Object::I32(l), Object::I32(r)) => *l <= *r,
+                        _ => self.stack[self.sp - 2] <= self.stack[self.sp - 1],
+                    };
+                    let res = self.bool_rc(b);
+                    self.sp -= 1;
+                    self.stack[self.sp - 1] = res;
                 }
                 Opcode::GT => {
-                    let rhs = self.pop();
-                    let lhs = self.pop();
-                    self.push(Rc::new(Object::from(lhs > rhs)));
+                    let b = match (
+                        &*self.stack[self.sp - 2],
+                        &*self.stack[self.sp - 1],
+                    ) {
+                        (Object::I32(l), Object::I32(r)) => *l > *r,
+                        _ => self.stack[self.sp - 2] > self.stack[self.sp - 1],
+                    };
+                    let res = self.bool_rc(b);
+                    self.sp -= 1;
+                    self.stack[self.sp - 1] = res;
                 }
                 Opcode::GTE => {
-                    let rhs = self.pop();
-                    let lhs = self.pop();
-                    self.push(Rc::new(Object::from(lhs >= rhs)));
+                    let b = match (
+                        &*self.stack[self.sp - 2],
+                        &*self.stack[self.sp - 1],
+                    ) {
+                        (Object::I32(l), Object::I32(r)) => *l >= *r,
+                        _ => self.stack[self.sp - 2] >= self.stack[self.sp - 1],
+                    };
+                    let res = self.bool_rc(b);
+                    self.sp -= 1;
+                    self.stack[self.sp - 1] = res;
                 }
                 Opcode::Minus => {
-                    let result = match self.popv() {
-                        Object::I32(i) => Object::I32(-i),
-                        Object::I64(i) => Object::I64(-i),
-                        Object::I128(i) => Object::I128(-i),
-                        Object::F32(f) => Object::F32(-f),
-                        Object::F64(f) => Object::F64(-f),
-                        _ => unreachable!(),
-                    };
-                    self.push(Rc::new(result));
+                    if let Object::I32(i) = &*self.stack[self.sp - 1] {
+                        self.stack[self.sp - 1] = Rc::new(Object::I32(-i));
+                    } else {
+                        let result = match self.popv() {
+                            Object::I32(i) => Object::I32(-i),
+                            Object::I64(i) => Object::I64(-i),
+                            Object::I128(i) => Object::I128(-i),
+                            Object::F32(f) => Object::F32(-f),
+                            Object::F64(f) => Object::F64(-f),
+                            _ => unreachable!(),
+                        };
+                        self.push(Rc::new(result));
+                    }
                 }
-                Opcode::Bang => match *self.pop() {
-                    Object::Nil | FALSE => self.push(Rc::new(TRUE)),
-                    _ => self.push(Rc::new(FALSE)),
-                },
+                Opcode::Bang => {
+                    let res = match *self.pop() {
+                        Object::Nil | FALSE => Rc::clone(&self.true_),
+                        _ => Rc::clone(&self.false_),
+                    };
+                    self.push(res);
+                }
                 Opcode::Jump => {
                     let pos = read_u16(&ins[ip + 1..ip + 3]) as i32;
                     self.curr_frame().ip = pos - 1;
@@ -407,6 +526,11 @@ impl VM {
 impl From<Bytecode> for VM {
     fn from(bytecode: Bytecode) -> Self {
         let mut vm = VM::new();
+        vm.const_objects = bytecode
+            .constants
+            .iter()
+            .map(|c| Rc::new((**c).clone().into()))
+            .collect();
         vm.constants = bytecode.constants;
         vm.frames[0] = Frame::new(
             Closure {
