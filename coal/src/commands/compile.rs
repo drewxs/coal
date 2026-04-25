@@ -9,7 +9,7 @@ use std::{
 use coal_compiler::Compiler;
 use rkyv::{rancor, to_bytes};
 
-use crate::{path::resolve_main, read_file_to_str, status};
+use crate::{hash_str, path::resolve_main, read_file_to_str, status};
 
 /// Compile the project at the given working directory
 pub fn compile(working_dir: &str, quiet: bool) {
@@ -32,8 +32,25 @@ pub fn compile(working_dir: &str, quiet: bool) {
     let filename = Path::new(&path).file_name().unwrap().to_str().unwrap();
     let input = read_file_to_str(&path);
 
+    let target_dir = root.join("target");
+    let bin_path = target_dir.join(format!("{filename}.bin"));
+    let hash_path = target_dir.join(format!("{filename}.hash"));
+
+    let hash = format!("{:016x}", hash_str(&input));
+
+    if bin_path.exists() && fs::read_to_string(&hash_path).is_ok_and(|h| h.trim() == hash) {
+        if !quiet {
+            println!("{} {name} ({})", status("Finished"), project_root.display());
+        }
+        return;
+    }
+
     if !quiet {
-        println!("{} {name} ({})", status("Compiling"), project_root.display());
+        println!(
+            "{} {name} ({})",
+            status("Compiling"),
+            project_root.display()
+        );
     }
 
     let start = Instant::now();
@@ -42,10 +59,8 @@ pub fn compile(working_dir: &str, quiet: bool) {
     c.compile(&input).unwrap();
     let bytecode = c.bytecode();
 
-    let target_dir = root.join("target");
     fs::create_dir_all(&target_dir).unwrap();
-    let path = target_dir.join(format!("{filename}.bin"));
-    let file = File::create(path.clone()).unwrap();
+    let file = File::create(&bin_path).unwrap();
 
     let mut writer = BufWriter::new(file);
 
@@ -58,8 +73,17 @@ pub fn compile(working_dir: &str, quiet: bool) {
         return;
     }
 
+    if let Err(e) = fs::write(&hash_path, &hash) {
+        eprintln!("Failed to write hash: {e}");
+        return;
+    }
+
     let elapsed = start.elapsed().as_millis();
     if !quiet {
-        println!("{} `{}` in {elapsed}ms", status("Finished"), path.display());
+        println!(
+            "{} `{}` in {elapsed}ms",
+            status("Finished"),
+            bin_path.display()
+        );
     }
 }
