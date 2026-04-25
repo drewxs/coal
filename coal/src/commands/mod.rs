@@ -1,4 +1,3 @@
-// mod eval;
 mod clean;
 mod compile;
 mod fmt;
@@ -8,7 +7,6 @@ mod parse;
 mod repl;
 mod run;
 
-// pub use eval::*;
 pub use clean::*;
 pub use compile::*;
 pub use fmt::*;
