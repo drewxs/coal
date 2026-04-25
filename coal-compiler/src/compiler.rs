@@ -143,12 +143,9 @@ impl Compiler {
                     self.compile_expr(rhs);
                     self.store_symbol(&symbol);
                 }
-                Expr::Index(target, idx, _) => {
-                    self.compile_expr(target);
-                    self.compile_expr(idx);
-                    self.compile_expr(rhs);
-                    self.emit(Opcode::SetIndex, &[]);
-                    self.store_index_target(target);
+                Expr::Index(..) => {
+                    let rhs = rhs.clone();
+                    self.compile_index_assign(lhs, &move |c| c.compile_expr(&rhs));
                 }
                 // TODO: handle attr access
                 _ => unreachable!(),
@@ -159,16 +156,15 @@ impl Compiler {
                     self.compile_infix(op, lhs, rhs);
                     self.store_symbol(&symbol);
                 }
-                Expr::Index(target, idx, _) => {
-                    self.compile_expr(target);
-                    self.compile_expr(idx);
-                    self.compile_expr(target);
-                    self.compile_expr(idx);
-                    self.emit(Opcode::Index, &[]);
-                    self.compile_expr(rhs);
-                    self.emit(Opcode::from(op), &[]);
-                    self.emit(Opcode::SetIndex, &[]);
-                    self.store_index_target(target);
+                Expr::Index(..) => {
+                    let lhs_cloned = lhs.clone();
+                    let rhs = rhs.clone();
+                    let op = op.clone();
+                    self.compile_index_assign(lhs, &move |c| {
+                        c.compile_expr(&lhs_cloned);
+                        c.compile_expr(&rhs);
+                        c.emit(Opcode::from(&op), &[]);
+                    });
                 }
                 // TODO: handle attr access
                 _ => unreachable!(),
@@ -221,6 +217,9 @@ impl Compiler {
             } => self.compile_iter(ident, expr, body),
             Expr::Fn(f) => self.compile_fn(f),
             Expr::Call { name, args, .. } => self.compile_call(name, args),
+            Expr::MethodCall {
+                lhs, name, args, ..
+            } => self.compile_method_call(lhs, name, args),
             _ => {}
         }
     }
@@ -268,10 +267,17 @@ impl Compiler {
                 self.emit(Opcode::Const, operands);
             }
             Literal::List(l) => {
-                for e in &l.data {
-                    self.compile_expr(e);
+                if let Some(count) = &l.repeat {
+                    let val = l.data.first().expect("repeat list has no value");
+                    self.compile_expr(val);
+                    self.compile_expr(count);
+                    self.emit(Opcode::ListRepeat, &[]);
+                } else {
+                    for e in &l.data {
+                        self.compile_expr(e);
+                    }
+                    self.emit(Opcode::List, &[l.data.len()]);
                 }
-                self.emit(Opcode::List, &[l.data.len()]);
             }
             Literal::Map(m) => {
                 for (k, v) in &m.data {
@@ -518,6 +524,23 @@ impl Compiler {
         self.emit(Opcode::Call, &[args.len()]);
     }
 
+    fn compile_method_call(&mut self, lhs: &Expr, name: &str, args: &[Expr]) {
+        self.compile_expr(lhs);
+        for arg in args {
+            self.compile_expr(arg);
+        }
+        let name_idx = self.add_constant(Object::Str(name.to_owned()));
+        self.emit(Opcode::Method, &[name_idx, args.len()]);
+        // After Method: stack top is mutated receiver, result is below it.
+        // Store the receiver back when it names a binding, else discard it.
+        if let Expr::Ident(ident, _, _) = lhs {
+            let symbol = self.symbol_table.get(&ident.0).unwrap();
+            self.store_symbol(&symbol);
+        } else {
+            self.emit(Opcode::Pop, &[]);
+        }
+    }
+
     fn scope(&self) -> &CompilationScope {
         &self.scopes[self.scope_idx]
     }
@@ -573,10 +596,35 @@ impl Compiler {
         }
     }
 
-    fn store_index_target(&mut self, target: &Expr) {
-        if let Expr::Ident(ident, _, _) = target {
+    /// Emit code that stores a value into a (possibly nested) index target.
+    ///
+    /// `emit_val` pushes the value to assign.
+    /// For `x[i][j] = v` emitted sequence loads each enclosing collection + index,
+    /// invokes `emit_val`, and runs one SetIndex per level
+    /// before storing the final rebuilt outer collection back into root identifier.
+    fn compile_index_assign(&mut self, target: &Expr, emit_val: &dyn Fn(&mut Self)) {
+        let mut chain: Vec<(Expr, Expr)> = vec![];
+        let mut curr = target;
+
+        while let Expr::Index(outer, idx, _) = curr {
+            chain.push(((**outer).clone(), (**idx).clone()));
+            curr = outer;
+        }
+
+        for (outer, idx) in chain.iter().rev() {
+            self.compile_expr(outer);
+            self.compile_expr(idx);
+        }
+        emit_val(self);
+        for _ in &chain {
+            self.emit(Opcode::SetIndex, &[]);
+        }
+
+        if let Expr::Ident(ident, _, _) = curr {
             let symbol = self.symbol_table.get(&ident.0).unwrap();
             self.store_symbol(&symbol);
+        } else {
+            self.emit(Opcode::Pop, &[]);
         }
     }
 

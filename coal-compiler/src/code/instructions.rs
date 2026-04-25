@@ -22,7 +22,7 @@ impl fmt::Debug for Instructions {
             .0
             .iter()
             .map(|&b| {
-                if b <= 34 {
+                if b <= 36 {
                     format!("{:?}", Opcode::from(b))
                 } else {
                     format!("{b:#X}")

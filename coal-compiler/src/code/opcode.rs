@@ -35,11 +35,13 @@ pub enum Opcode {
     SetGlobal,
 
     List,
+    ListRepeat,
     Hash,
     Index,
     SetIndex,
 
     Call,
+    Method,
 
     RetVal,
     Ret,
@@ -81,10 +83,12 @@ impl Opcode {
             Opcode::GetGlobal => vec![2], // [index]
             Opcode::SetGlobal => vec![2], // [index]
             Opcode::List => vec![2],      // [count]
+            Opcode::ListRepeat => vec![],
             Opcode::Hash => vec![2],      // [count]
             Opcode::Index => vec![],
             Opcode::SetIndex => vec![],
-            Opcode::Call => vec![1], // [num args]
+            Opcode::Call => vec![1],      // [num args]
+            Opcode::Method => vec![2, 1], // [name const idx, num args]
             Opcode::RetVal => vec![],
             Opcode::Ret => vec![],
             Opcode::GetLocal => vec![1],    // [index]

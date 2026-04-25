@@ -166,6 +166,15 @@ impl VM {
                     self.sp -= count;
                     self.push(Rc::new(Object::List(data)));
                 }
+                Opcode::ListRepeat => {
+                    let count: usize = self.popv().try_into().unwrap_or(0);
+                    let val = self.pop();
+                    let mut data = Vec::with_capacity(count);
+                    for _ in 0..count {
+                        data.push(Rc::new((*val).clone()));
+                    }
+                    self.push(Rc::new(Object::List(data)));
+                }
                 Opcode::Hash => {
                     let count = read_u16(&ins[ip + 1..ip + 3]) as usize;
                     self.curr_frame().ip += 2;
@@ -250,6 +259,28 @@ impl VM {
                         }
                         _ => {}
                     }
+                }
+                Opcode::Method => {
+                    let name_idx = read_u16(&ins[ip + 1..ip + 3]) as usize;
+                    let n_args = ins[ip + 3] as usize;
+                    self.curr_frame().ip += 3;
+
+                    let name = match self.constants[name_idx].as_ref() {
+                        Constant::Str(s) => s.clone(),
+                        _ => unreachable!(),
+                    };
+
+                    let mut args = Vec::with_capacity(n_args);
+                    for _ in 0..n_args {
+                        args.push(self.pop());
+                    }
+                    args.reverse();
+
+                    let mut receiver = self.popv();
+                    let result = receiver.call(&name, &args);
+
+                    self.push(result.unwrap_or_else(|| Rc::new(Object::Nil)));
+                    self.push(Rc::new(receiver));
                 }
                 Opcode::RetVal => {
                     let val = self.pop();
