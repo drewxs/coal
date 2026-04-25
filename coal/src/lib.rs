@@ -1,3 +1,4 @@
+mod binfmt;
 mod bytes;
 mod cli;
 mod commands;
@@ -7,6 +8,7 @@ mod output;
 pub mod path;
 mod string;
 
+pub use binfmt::*;
 pub use bytes::*;
 pub use cli::*;
 pub use commands::*;

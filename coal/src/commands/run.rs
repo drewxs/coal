@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{BufReader, Read},
+    io::Read,
     rc::Rc,
 };
 
@@ -14,7 +14,7 @@ use coal_vm::VM;
 
 use rkyv::{from_bytes, rancor};
 
-use crate::{compile, path::resolve_bin, read_file_to_str};
+use crate::{BIN_HEADER_LEN, BIN_MAGIC, compile, path::resolve_bin, read_file_to_str};
 
 /// Run a binary (e.g. `main.coal.bin`)
 pub fn run(path: &str) {
@@ -22,13 +22,19 @@ pub fn run(path: &str) {
         compile(".", false);
         resolve_bin("target", path).unwrap()
     });
-    let file = File::open(&target).unwrap();
-    let reader = BufReader::new(file);
+    let mut file = File::open(&target).unwrap();
 
-    let Ok(bytes) = reader.bytes().collect::<Result<Vec<u8>, _>>() else {
+    let mut header = [0u8; BIN_HEADER_LEN];
+    if file.read_exact(&mut header).is_err() || header[0..4] != BIN_MAGIC {
+        eprintln!("Invalid bytecode file");
+        return;
+    }
+    let mut bytes = Vec::new();
+    if file.read_to_end(&mut bytes).is_err() {
         eprintln!("Failed to read bytecode");
         return;
-    };
+    }
+
     let Ok(bytecode) = from_bytes::<Bytecode, rancor::Error>(&bytes) else {
         eprintln!("Failed to deserialize bytecode");
         return;
