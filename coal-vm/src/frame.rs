@@ -1,4 +1,3 @@
-use coal_compiler::Instructions;
 use coal_objects::Closure;
 
 #[derive(Clone, Debug, Default)]
@@ -17,7 +16,7 @@ impl Frame {
         }
     }
 
-    pub fn instructions(&self) -> Instructions {
-        Instructions(self.cl.func.instructions.clone())
+    pub fn instructions(&self) -> &[u8] {
+        &self.cl.func.instructions
     }
 }
