@@ -361,6 +361,59 @@ fn test_compile_index() {
 }
 
 #[test]
+fn test_compile_index_assign() {
+    test(&[
+        (
+            "let x = [1, 2, 3]; x[0] = 9;",
+            &[
+                Constant::I32(1),
+                Constant::I32(2),
+                Constant::I32(3),
+                Constant::I32(0),
+                Constant::I32(9),
+            ],
+            Instructions::from(vec![
+                (Opcode::Const, vec![0]),
+                (Opcode::Const, vec![1]),
+                (Opcode::Const, vec![2]),
+                (Opcode::List, vec![3]),
+                (Opcode::SetGlobal, vec![0]),
+                (Opcode::GetGlobal, vec![0]),
+                (Opcode::Const, vec![3]),
+                (Opcode::Const, vec![4]),
+                (Opcode::SetIndex, vec![]),
+                (Opcode::SetGlobal, vec![0]),
+            ]),
+        ),
+        (
+            "let x = [1, 2]; x[0] += 5;",
+            &[
+                Constant::I32(1),
+                Constant::I32(2),
+                Constant::I32(0),
+                Constant::I32(0),
+                Constant::I32(5),
+            ],
+            Instructions::from(vec![
+                (Opcode::Const, vec![0]),
+                (Opcode::Const, vec![1]),
+                (Opcode::List, vec![2]),
+                (Opcode::SetGlobal, vec![0]),
+                (Opcode::GetGlobal, vec![0]),
+                (Opcode::Const, vec![2]),
+                (Opcode::GetGlobal, vec![0]),
+                (Opcode::Const, vec![3]),
+                (Opcode::Index, vec![]),
+                (Opcode::Const, vec![4]),
+                (Opcode::Add, vec![]),
+                (Opcode::SetIndex, vec![]),
+                (Opcode::SetGlobal, vec![0]),
+            ]),
+        ),
+    ]);
+}
+
+#[test]
 fn test_compiler_scopes() {
     let mut c = Compiler::new();
     assert_eq!(c.scope_idx, 0);

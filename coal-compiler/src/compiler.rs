@@ -137,32 +137,42 @@ impl Compiler {
                     self.emit(Opcode::SetLocal, &[symbol.idx]);
                 }
             }
-            Stmt::Assign(lhs, rhs) => {
-                let symbol = match lhs {
-                    Expr::Ident(ident, _, _) => self.symbol_table.get(&ident.0).unwrap(),
-                    // TODO: handle index/attr access
-                    _ => unreachable!(),
-                };
-                self.compile_expr(rhs);
-                if symbol.scope == SymbolScope::Global {
-                    self.emit(Opcode::SetGlobal, &[symbol.idx]);
-                } else {
-                    self.emit(Opcode::SetLocal, &[symbol.idx]);
+            Stmt::Assign(lhs, rhs) => match lhs {
+                Expr::Ident(ident, _, _) => {
+                    let symbol = self.symbol_table.get(&ident.0).unwrap();
+                    self.compile_expr(rhs);
+                    self.store_symbol(&symbol);
                 }
-            }
-            Stmt::OpAssign(op, lhs, rhs) => {
-                let symbol = match lhs {
-                    Expr::Ident(ident, _, _) => self.symbol_table.get(&ident.0).unwrap(),
-                    // TODO: handle index/attr access
-                    _ => unreachable!(),
-                };
-                self.compile_infix(op, lhs, rhs);
-                if symbol.scope == SymbolScope::Global {
-                    self.emit(Opcode::SetGlobal, &[symbol.idx]);
-                } else {
-                    self.emit(Opcode::SetLocal, &[symbol.idx]);
+                Expr::Index(target, idx, _) => {
+                    self.compile_expr(target);
+                    self.compile_expr(idx);
+                    self.compile_expr(rhs);
+                    self.emit(Opcode::SetIndex, &[]);
+                    self.store_index_target(target);
                 }
-            }
+                // TODO: handle attr access
+                _ => unreachable!(),
+            },
+            Stmt::OpAssign(op, lhs, rhs) => match lhs {
+                Expr::Ident(ident, _, _) => {
+                    let symbol = self.symbol_table.get(&ident.0).unwrap();
+                    self.compile_infix(op, lhs, rhs);
+                    self.store_symbol(&symbol);
+                }
+                Expr::Index(target, idx, _) => {
+                    self.compile_expr(target);
+                    self.compile_expr(idx);
+                    self.compile_expr(target);
+                    self.compile_expr(idx);
+                    self.emit(Opcode::Index, &[]);
+                    self.compile_expr(rhs);
+                    self.emit(Opcode::from(op), &[]);
+                    self.emit(Opcode::SetIndex, &[]);
+                    self.store_index_target(target);
+                }
+                // TODO: handle attr access
+                _ => unreachable!(),
+            },
             Stmt::Return(expr) => {
                 self.compile_expr(expr);
                 self.emit(Opcode::RetVal, &[]);
@@ -553,6 +563,21 @@ impl Compiler {
             SymbolScope::Free => self.emit(Opcode::GetFree, &[symbol.idx]),
             SymbolScope::Func => self.emit(Opcode::CurrClosure, &[]),
         };
+    }
+
+    fn store_symbol(&mut self, symbol: &Rc<Symbol>) {
+        if symbol.scope == SymbolScope::Global {
+            self.emit(Opcode::SetGlobal, &[symbol.idx]);
+        } else {
+            self.emit(Opcode::SetLocal, &[symbol.idx]);
+        }
+    }
+
+    fn store_index_target(&mut self, target: &Expr) {
+        if let Expr::Ident(ident, _, _) = target {
+            let symbol = self.symbol_table.get(&ident.0).unwrap();
+            self.store_symbol(&symbol);
+        }
     }
 
     fn remove_last_pop(&mut self) {

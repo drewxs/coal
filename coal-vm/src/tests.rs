@@ -225,6 +225,94 @@ fn test_run_index_exprs() {
 }
 
 #[test]
+fn test_run_index_assign_list() {
+    test(&[
+        ("let x = [1, 2, 3]; x[0] = 9; x[0]", Object::I32(9)),
+        ("let x = [1, 2, 3]; x[2] = 9; x[2]", Object::I32(9)),
+        ("let x = [1, 2, 3]; x[0] = 9; x[1]", Object::I32(2)),
+        ("let x = [1, 2, 3]; x[-1] = 9; x[2]", Object::I32(9)),
+        ("let x = [1, 2, 3]; x[-3] = 9; x[0]", Object::I32(9)),
+        ("let x = [1, 2, 3]; x[99] = 9; x[0]", Object::I32(1)),
+        ("let x = [1, 2, 3]; x[-99] = 9; x[0]", Object::I32(1)),
+        ("let x = [10, 20]; x[0] += 5; x[0]", Object::I32(15)),
+        ("let x = [10, 20]; x[1] -= 3; x[1]", Object::I32(17)),
+        ("let x = [10, 20]; x[0] *= 4; x[0]", Object::I32(40)),
+        ("let x = [10, 20]; x[1] /= 4; x[1]", Object::I32(5)),
+        ("let x = [10, 20]; x[1] %= 7; x[1]", Object::I32(6)),
+    ]);
+}
+
+#[test]
+fn test_run_index_assign_map() {
+    test(&[
+        (
+            r#"let m: map[str, i32] = {"a": 1}; m["a"] = 9; m["a"]"#,
+            Object::I32(9),
+        ),
+        (
+            r#"let m: map[str, i32] = {"a": 1}; m["b"] = 7; m["b"]"#,
+            Object::I32(7),
+        ),
+        (
+            r#"let m: map[str, i32] = {"a": 1}; m["b"] = 7; m["a"]"#,
+            Object::I32(1),
+        ),
+        (
+            r#"let m: map[str, i32] = {"a": 1}; m["a"] += 5; m["a"]"#,
+            Object::I32(6),
+        ),
+        (
+            "let m: map[i32, i32] = {1: 10}; m[1] = 99; m[1]",
+            Object::I32(99),
+        ),
+        (
+            "let m: map[i32, i32] = {1: 10}; m[2] = 99; m[2]",
+            Object::I32(99),
+        ),
+    ]);
+}
+
+#[test]
+fn test_run_index_assign_local() {
+    test(&[
+        (
+            r#"
+            fn f() -> i32 {
+                let a: list[i32] = [1, 2, 3];
+                a[1] = 50;
+                return a[1];
+            }
+            f()
+            "#,
+            Object::I32(50),
+        ),
+        (
+            r#"
+            fn f() -> i32 {
+                let a: list[i32] = [1, 2, 3];
+                a[2] += 100;
+                return a[2];
+            }
+            f()
+            "#,
+            Object::I32(103),
+        ),
+        (
+            r#"
+            fn f() -> i32 {
+                let m: map[str, i32] = {"k": 10};
+                m["k"] *= 3;
+                m["new"] = 7;
+                return m["k"] + m["new"];
+            }
+            f()
+            "#,
+            Object::I32(37),
+        ),
+    ]);
+}
+
+#[test]
 fn test_run_functions_without_args() {
     test(&[
         (

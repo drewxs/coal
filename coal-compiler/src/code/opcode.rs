@@ -37,6 +37,7 @@ pub enum Opcode {
     List,
     Hash,
     Index,
+    SetIndex,
 
     Call,
 
@@ -82,6 +83,7 @@ impl Opcode {
             Opcode::List => vec![2],      // [count]
             Opcode::Hash => vec![2],      // [count]
             Opcode::Index => vec![],
+            Opcode::SetIndex => vec![],
             Opcode::Call => vec![1], // [num args]
             Opcode::RetVal => vec![],
             Opcode::Ret => vec![],

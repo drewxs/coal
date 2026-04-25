@@ -211,6 +211,27 @@ impl VM {
                         _ => {}
                     }
                 }
+                Opcode::SetIndex => {
+                    let val = self.popv();
+                    let idx = self.popv();
+                    let mut coll = self.popv();
+
+                    match (&mut coll, &idx) {
+                        (Object::List(data), Object::I32(i)) => {
+                            let len = data.len() as i32;
+                            if !(len == 0 || *i >= len || *i < -len) {
+                                let i = if *i < 0 { len + *i } else { *i };
+                                data[i as usize] = Rc::new(val);
+                            }
+                        }
+                        (Object::Map(data), k) if k.is_hashable() => {
+                            data.insert(Rc::new(idx), Rc::new(val));
+                        }
+                        _ => {}
+                    }
+
+                    self.push(Rc::new(coll));
+                }
                 Opcode::Call => {
                     let n_args = ins[ip + 1] as usize;
                     self.curr_frame().ip += 1;
