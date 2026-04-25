@@ -1,14 +1,11 @@
-use std::{
-    hash::{Hash, Hasher},
-    rc::Rc,
-};
+use std::hash::{Hash, Hasher};
 
 use crate::Object;
 
 #[derive(Clone, Debug)]
 pub struct Builtin {
     pub name: &'static str,
-    pub func: fn(&[Rc<Object>]) -> Option<Rc<Object>>,
+    pub func: fn(&[Object]) -> Option<Object>,
 }
 
 impl PartialEq for Builtin {
@@ -24,27 +21,27 @@ impl Hash for Builtin {
     }
 }
 
-fn assert(args: &[Rc<Object>]) -> Option<Rc<Object>> {
+fn assert(args: &[Object]) -> Option<Object> {
     assert!(args[0].is_truthy());
     None
 }
 
-fn assert_eq(args: &[Rc<Object>]) -> Option<Rc<Object>> {
+fn assert_eq(args: &[Object]) -> Option<Object> {
     assert_eq!(args[0], args[1]);
     None
 }
 
-fn dbg(args: &[Rc<Object>]) -> Option<Rc<Object>> {
+fn dbg(args: &[Object]) -> Option<Object> {
     println!("{:?}", args[0]);
     None
 }
 
-fn print(args: &[Rc<Object>]) -> Option<Rc<Object>> {
+fn print(args: &[Object]) -> Option<Object> {
     print!("{}", args[0]);
     None
 }
 
-fn println(args: &[Rc<Object>]) -> Option<Rc<Object>> {
+fn println(args: &[Object]) -> Option<Object> {
     println!("{}", args[0]);
     None
 }

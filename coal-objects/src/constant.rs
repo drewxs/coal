@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use rkyv::{Archive, Deserialize, Serialize};
 
 use super::{CompiledFunc, Object};
@@ -25,8 +27,10 @@ impl From<Object> for Constant {
             Object::I128(i) => Constant::I128(i),
             Object::F32(f) => Constant::F32(f),
             Object::F64(f) => Constant::F64(f),
-            Object::Str(s) => Constant::Str(s),
-            Object::CompiledFunc(f) => Constant::Func(f),
+            Object::Str(s) => Constant::Str(Rc::try_unwrap(s).unwrap_or_else(|r| (*r).clone())),
+            Object::CompiledFunc(f) => {
+                Constant::Func(Rc::try_unwrap(f).unwrap_or_else(|r| (*r).clone()))
+            }
             _ => panic!("invalid constant"),
         }
     }

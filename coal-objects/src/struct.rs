@@ -1,4 +1,7 @@
-use std::hash::{Hash, Hasher};
+use std::{
+    hash::{Hash, Hasher},
+    rc::Rc,
+};
 
 use super::Object;
 
@@ -40,12 +43,12 @@ impl Struct {
                 }
             }
             _ => {
-                let mut curr = self;
+                let mut curr: &mut Struct = self;
                 for key in keys.iter().take(keys.len() - 1) {
                     if let Some((_, Object::Struct(next_struct))) =
                         curr.attrs.iter_mut().find(|(k, _)| k == key)
                     {
-                        curr = next_struct;
+                        curr = Rc::make_mut(next_struct);
                     } else {
                         return;
                     }

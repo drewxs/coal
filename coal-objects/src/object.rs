@@ -20,18 +20,18 @@ pub enum Object {
     I128(i128),
     F32(f32),
     F64(f64),
-    Str(String),
+    Str(Rc<String>),
     Bool(bool),
     Range(usize, usize),
-    List(Vec<Rc<Object>>),
-    Map(HashMap<Rc<Object>, Rc<Object>>),
+    List(Rc<Vec<Object>>),
+    Map(Rc<HashMap<Object, Object>>),
     Builtin(Builtin),
-    Func(Func),
-    CompiledFunc(CompiledFunc),
-    Closure(Closure),
-    Struct(Struct),
+    Func(Rc<Func>),
+    CompiledFunc(Rc<CompiledFunc>),
+    Closure(Rc<Closure>),
+    Struct(Rc<Struct>),
     Return(Rc<Object>),
-    Type(Type),
+    Type(Rc<Type>),
     Nil,
     Void,
 }
@@ -67,30 +67,21 @@ impl Object {
         self.is_int() || matches!(self, Object::Bool(_) | Object::Str(_))
     }
 
-    pub fn call(&mut self, name: &str, args: &[Rc<Object>]) -> Option<Rc<Object>> {
+    pub fn call(&mut self, name: &str, args: &[Object]) -> Option<Object> {
         if name == "to_s" {
-            return Some(Rc::new(Object::Str(self.to_string())));
+            return Some(Object::Str(Rc::new(self.to_string())));
         }
 
         match self {
-            // Object::U32(_)
-            // | Object::U64(_)
-            // | Object::I32(_)
-            // | Object::I64(_)
-            // | Object::I128(_)
-            // | Object::F32(_)
-            // | Object::F64(_) => match name {
-            //     _ => None,
-            // },
             Object::Str(s) => match name {
-                "len" => Some(Rc::new(Object::U64(s.len() as u64))),
+                "len" => Some(Object::U64(s.len() as u64)),
                 "split" => {
-                    if let Object::Str(ch) = &*args[0] {
-                        Some(Rc::new(Object::List(
-                            s.split(ch.as_str())
-                                .map(|s| Rc::new(Object::Str(s.to_owned())))
-                                .collect(),
-                        )))
+                    if let Object::Str(ch) = &args[0] {
+                        let parts: Vec<Object> = s
+                            .split(ch.as_str())
+                            .map(|s| Object::Str(Rc::new(s.to_owned())))
+                            .collect();
+                        Some(Object::List(Rc::new(parts)))
                     } else {
                         None
                     }
@@ -98,14 +89,14 @@ impl Object {
                 _ => None,
             },
             Object::List(data) => match name {
-                "len" => Some(Rc::new(Object::U64(data.len() as u64))),
+                "len" => Some(Object::U64(data.len() as u64)),
                 "push" => {
-                    data.push(Rc::new((*args[0]).clone()));
+                    Rc::make_mut(data).push(args[0].clone());
                     None
                 }
-                "pop" => data.pop(),
+                "pop" => Rc::make_mut(data).pop(),
                 "get" => {
-                    let idx = match *args[0] {
+                    let idx = match args[0] {
                         Object::I64(i) => i,
                         _ => match args[0].cast(&I64) {
                             Some(Object::I64(i)) => i,
@@ -113,20 +104,18 @@ impl Object {
                         },
                     };
 
-                    if idx < 0 {
-                        data.get((data.len() as i64 + idx) as usize)
+                    let len = data.len() as i64;
+                    let effective = if idx < 0 { len + idx } else { idx };
+                    Some(
+                        data.get(effective as usize)
                             .cloned()
-                            .or(Some(Rc::new(Object::Nil)))
-                    } else {
-                        data.get(idx as usize)
-                            .cloned()
-                            .or(Some(Rc::new(Object::Nil)))
-                    }
+                            .unwrap_or(Object::Nil),
+                    )
                 }
-                "first" => data.first().cloned().or(Some(Rc::new(Object::Nil))),
-                "last" => data.last().cloned().or(Some(Rc::new(Object::Nil))),
+                "first" => Some(data.first().cloned().unwrap_or(Object::Nil)),
+                "last" => Some(data.last().cloned().unwrap_or(Object::Nil)),
                 "join" => {
-                    let Object::Str(sep) = &*args[0] else {
+                    let Object::Str(sep) = &args[0] else {
                         return None;
                     };
 
@@ -136,23 +125,23 @@ impl Object {
                         .collect::<Vec<_>>()
                         .join(sep);
 
-                    Some(Rc::new(Object::Str(result)))
+                    Some(Object::Str(Rc::new(result)))
                 }
                 "clear" => {
-                    data.clear();
+                    Rc::make_mut(data).clear();
                     None
                 }
                 _ => None,
             },
             Object::Map(data) => match name {
-                "len" => Some(Rc::new(Object::U64(data.len() as u64))),
-                "get" => data.get(&args[0]).cloned().or(Some(Rc::new(Object::Nil))),
+                "len" => Some(Object::U64(data.len() as u64)),
+                "get" => Some(data.get(&args[0]).cloned().unwrap_or(Object::Nil)),
                 "remove" => {
-                    data.remove(&args[0]);
+                    Rc::make_mut(data).remove(&args[0]);
                     None
                 }
                 "clear" => {
-                    data.clear();
+                    Rc::make_mut(data).clear();
                     None
                 }
                 _ => None,
@@ -316,7 +305,7 @@ impl Object {
 
     pub fn to_string_raw(&self) -> String {
         match self {
-            Object::Str(s) => s.to_owned(),
+            Object::Str(s) => (**s).clone(),
             _ => self.to_string(),
         }
     }
@@ -334,7 +323,7 @@ impl From<&Literal> for Object {
     fn from(literal: &Literal) -> Self {
         match literal {
             Literal::Bool(b) => Object::from(*b),
-            Literal::Str(s) => Object::Str(s.clone()),
+            Literal::Str(s) => Object::Str(Rc::new(s.clone())),
             Literal::U32(i) => Object::U32(*i),
             Literal::U64(i) => Object::U64(*i),
             Literal::I32(i) => Object::I32(*i),
@@ -343,14 +332,14 @@ impl From<&Literal> for Object {
             Literal::F32(f) => Object::F32(*f),
             Literal::F64(f) => Object::F64(*f),
             Literal::List(l) => {
-                Object::List(l.data.iter().map(|e| Rc::new(Object::from(e))).collect())
+                Object::List(Rc::new(l.data.iter().map(Object::from).collect()))
             }
-            Literal::Map(m) => Object::Map(
+            Literal::Map(m) => Object::Map(Rc::new(
                 m.data
                     .iter()
-                    .map(|(k, v)| (Rc::new(Object::from(k)), Rc::new(Object::from(v))))
+                    .map(|(k, v)| (Object::from(k), Object::from(v)))
                     .collect(),
-            ),
+            )),
             Literal::Nil => Object::Nil,
         }
     }
@@ -367,11 +356,11 @@ impl From<&Expr> for Object {
 
 impl From<&ast::Func> for Object {
     fn from(value: &ast::Func) -> Self {
-        Object::Func(Func {
+        Object::Func(Rc::new(Func {
             name: value.name.clone(),
             args: value.args.iter().map(|a| a.name.clone()).collect(),
             body: value.body.clone(),
-        })
+        }))
     }
 }
 
@@ -385,8 +374,8 @@ impl From<Constant> for Object {
             Constant::I128(i) => Object::I128(i),
             Constant::F32(f) => Object::F32(f),
             Constant::F64(f) => Object::F64(f),
-            Constant::Str(s) => Object::Str(s),
-            Constant::Func(f) => Object::CompiledFunc(f),
+            Constant::Str(s) => Object::Str(Rc::new(s)),
+            Constant::Func(f) => Object::CompiledFunc(Rc::new(f)),
         }
     }
 }
@@ -413,7 +402,7 @@ impl Hash for Object {
             }
             Object::Map(data) => {
                 data.len().hash(state);
-                for (k, v) in data {
+                for (k, v) in data.iter() {
                     k.hash(state);
                     v.hash(state);
                 }
@@ -436,12 +425,12 @@ impl Add for Object {
 
     fn add(self, rhs: Self) -> Self::Output {
         match Object::promote(&self, &rhs) {
-            (Object::Str(s1), Object::Str(s2)) => Object::Str(format!("{s1}{s2}")),
-            (Object::U32(lhs), Object::U32(rhs)) => Object::U32(lhs + rhs),
-            (Object::U64(lhs), Object::U64(rhs)) => Object::U64(lhs + rhs),
-            (Object::I32(lhs), Object::I32(rhs)) => Object::I32(lhs + rhs),
-            (Object::I64(lhs), Object::I64(rhs)) => Object::I64(lhs + rhs),
-            (Object::I128(lhs), Object::I128(rhs)) => Object::I128(lhs + rhs),
+            (Object::Str(s1), Object::Str(s2)) => Object::Str(Rc::new(format!("{s1}{s2}"))),
+            (Object::U32(lhs), Object::U32(rhs)) => Object::U32(lhs.wrapping_add(rhs)),
+            (Object::U64(lhs), Object::U64(rhs)) => Object::U64(lhs.wrapping_add(rhs)),
+            (Object::I32(lhs), Object::I32(rhs)) => Object::I32(lhs.wrapping_add(rhs)),
+            (Object::I64(lhs), Object::I64(rhs)) => Object::I64(lhs.wrapping_add(rhs)),
+            (Object::I128(lhs), Object::I128(rhs)) => Object::I128(lhs.wrapping_add(rhs)),
             (Object::F32(lhs), Object::F32(rhs)) => Object::F32(lhs + rhs),
             (Object::F64(lhs), Object::F64(rhs)) => Object::F64(lhs + rhs),
             _ => unreachable!(),
@@ -454,11 +443,11 @@ impl Sub for Object {
 
     fn sub(self, rhs: Self) -> Self::Output {
         match Object::promote(&self, &rhs) {
-            (Object::U32(lhs), Object::U32(rhs)) => Object::U32(lhs - rhs),
-            (Object::U64(lhs), Object::U64(rhs)) => Object::U64(lhs - rhs),
-            (Object::I32(lhs), Object::I32(rhs)) => Object::I32(lhs - rhs),
-            (Object::I64(lhs), Object::I64(rhs)) => Object::I64(lhs - rhs),
-            (Object::I128(lhs), Object::I128(rhs)) => Object::I128(lhs - rhs),
+            (Object::U32(lhs), Object::U32(rhs)) => Object::U32(lhs.wrapping_sub(rhs)),
+            (Object::U64(lhs), Object::U64(rhs)) => Object::U64(lhs.wrapping_sub(rhs)),
+            (Object::I32(lhs), Object::I32(rhs)) => Object::I32(lhs.wrapping_sub(rhs)),
+            (Object::I64(lhs), Object::I64(rhs)) => Object::I64(lhs.wrapping_sub(rhs)),
+            (Object::I128(lhs), Object::I128(rhs)) => Object::I128(lhs.wrapping_sub(rhs)),
             (Object::F32(lhs), Object::F32(rhs)) => Object::F32(lhs - rhs),
             (Object::F64(lhs), Object::F64(rhs)) => Object::F64(lhs - rhs),
             _ => unreachable!(),
@@ -471,16 +460,26 @@ impl Mul for Object {
 
     fn mul(self, rhs: Self) -> Self::Output {
         match Object::promote(&self, &rhs) {
-            (Object::Str(lhs), Object::U32(rhs)) => Object::Str(lhs.repeat(rhs as usize)),
-            (Object::Str(lhs), Object::U64(rhs)) => Object::Str(lhs.repeat(rhs as usize)),
-            (Object::Str(lhs), Object::I32(rhs)) => Object::Str(lhs.repeat(rhs as usize)),
-            (Object::Str(lhs), Object::I64(rhs)) => Object::Str(lhs.repeat(rhs as usize)),
-            (Object::Str(lhs), Object::I128(rhs)) => Object::Str(lhs.repeat(rhs as usize)),
-            (Object::U32(lhs), Object::U32(rhs)) => Object::U32(lhs * rhs),
-            (Object::U64(lhs), Object::U64(rhs)) => Object::U64(lhs * rhs),
-            (Object::I32(lhs), Object::I32(rhs)) => Object::I32(lhs * rhs),
-            (Object::I64(lhs), Object::I64(rhs)) => Object::I64(lhs * rhs),
-            (Object::I128(lhs), Object::I128(rhs)) => Object::I128(lhs * rhs),
+            (Object::Str(lhs), Object::U32(rhs)) => {
+                Object::Str(Rc::new(lhs.repeat(rhs as usize)))
+            }
+            (Object::Str(lhs), Object::U64(rhs)) => {
+                Object::Str(Rc::new(lhs.repeat(rhs as usize)))
+            }
+            (Object::Str(lhs), Object::I32(rhs)) => {
+                Object::Str(Rc::new(lhs.repeat(rhs as usize)))
+            }
+            (Object::Str(lhs), Object::I64(rhs)) => {
+                Object::Str(Rc::new(lhs.repeat(rhs as usize)))
+            }
+            (Object::Str(lhs), Object::I128(rhs)) => {
+                Object::Str(Rc::new(lhs.repeat(rhs as usize)))
+            }
+            (Object::U32(lhs), Object::U32(rhs)) => Object::U32(lhs.wrapping_mul(rhs)),
+            (Object::U64(lhs), Object::U64(rhs)) => Object::U64(lhs.wrapping_mul(rhs)),
+            (Object::I32(lhs), Object::I32(rhs)) => Object::I32(lhs.wrapping_mul(rhs)),
+            (Object::I64(lhs), Object::I64(rhs)) => Object::I64(lhs.wrapping_mul(rhs)),
+            (Object::I128(lhs), Object::I128(rhs)) => Object::I128(lhs.wrapping_mul(rhs)),
             (Object::F32(lhs), Object::F32(rhs)) => Object::F32(lhs * rhs),
             (Object::F64(lhs), Object::F64(rhs)) => Object::F64(lhs * rhs),
             _ => unreachable!(),
@@ -580,7 +579,7 @@ impl fmt::Display for Object {
 
                     if width > 80 {
                         writeln!(f, "[")?;
-                        for item in data {
+                        for item in data.iter() {
                             writeln!(f, "{base_indent}{item},")?;
                         }
                         write!(f, "]")
@@ -608,7 +607,7 @@ impl fmt::Display for Object {
                 }
                 _ => {
                     writeln!(f, "{{")?;
-                    for (k, v) in data {
+                    for (k, v) in data.iter() {
                         writeln!(f, "{base_indent}{k}: {v}")?;
                     }
                     write!(f, "}}")
@@ -618,7 +617,8 @@ impl fmt::Display for Object {
             Object::Func { .. } => write!(f, "<fn_{}>", self.calculate_hash()),
             Object::CompiledFunc(_) => write!(f, "<compiled_fn_{}>", self.calculate_hash()),
             Object::Closure { .. } => write!(f, "<closure_{}>", self.calculate_hash()),
-            Object::Struct(Struct { name, attrs, .. }) => {
+            Object::Struct(s) => {
+                let Struct { name, attrs, .. } = &**s;
                 write!(f, "{name} {{")?;
                 match attrs.len() {
                     0 => {}
@@ -632,7 +632,7 @@ impl fmt::Display for Object {
                     }
                     _ => {
                         writeln!(f)?;
-                        for (k, v) in attrs {
+                        for (k, v) in attrs.iter() {
                             writeln!(f, "{base_indent}{k}: {v},")?;
                         }
                     }

@@ -14,7 +14,7 @@ fn test(tests: &[(&str, Object)]) {
         vm.run();
 
         let actual = vm.last_stack_obj();
-        if *expected != *actual {
+        if *expected != actual {
             panic!("input: {input}\nexpected: {expected}\nactual: {actual}",);
         }
     }
@@ -26,7 +26,7 @@ fn test_run_literal() {
         ("5", Object::I32(5)),
         ("3.14", Object::F64(3.14)),
         ("true", TRUE),
-        (r#""foo""#, Object::Str(String::from("foo"))),
+        (r#""foo""#, Object::Str(std::rc::Rc::new(String::from("foo")))),
     ]);
 }
 
@@ -56,9 +56,9 @@ fn test_run_infix() {
         ("true != false", TRUE),
         ("(1 < 2) == true", TRUE),
         ("(1 > 2) != false", FALSE),
-        (r#""foo" + "bar""#, Object::Str(String::from("foobar"))),
+        (r#""foo" + "bar""#, Object::Str(std::rc::Rc::new(String::from("foobar")))),
         (r#""foo" == "foo""#, TRUE),
-        (r#""a" * 3"#, Object::Str(String::from("aaa"))),
+        (r#""a" * 3"#, Object::Str(std::rc::Rc::new(String::from("aaa")))),
         (r#""a" < "b""#, TRUE),
     ]);
 }
@@ -128,10 +128,10 @@ fn test_run_op_assign_stmts() {
 #[test]
 fn test_run_str_exprs() {
     test(&[
-        (r#""foo""#, Object::Str(String::from("foo"))),
-        (r#""foo" + "bar""#, Object::Str(String::from("foobar"))),
+        (r#""foo""#, Object::Str(std::rc::Rc::new(String::from("foo")))),
+        (r#""foo" + "bar""#, Object::Str(std::rc::Rc::new(String::from("foobar")))),
         (r#""foo" == "foo""#, TRUE),
-        (r#""a" * 3"#, Object::Str(String::from("aaa"))),
+        (r#""a" * 3"#, Object::Str(std::rc::Rc::new(String::from("aaa")))),
         (r#""a" < "b""#, TRUE),
     ]);
 }
@@ -217,10 +217,10 @@ fn test_run_index_exprs() {
         ("{1: 1, 2: 2}[2]", Object::I32(2)),
         ("{1: 1}[0]", Object::Nil),
         ("let m: map[i32, i32] = {}; m[0]", Object::Nil),
-        (r#""asdf"[0]"#, Object::Str(String::from("a"))),
-        (r#""asdf"[2]"#, Object::Str(String::from("d"))),
+        (r#""asdf"[0]"#, Object::Str(std::rc::Rc::new(String::from("a")))),
+        (r#""asdf"[2]"#, Object::Str(std::rc::Rc::new(String::from("d")))),
         (r#""asdf"[4]"#, Object::Nil),
-        (r#""asdf"[-1]"#, Object::Str(String::from("f"))),
+        (r#""asdf"[-1]"#, Object::Str(std::rc::Rc::new(String::from("f")))),
     ]);
 }
 

@@ -1,8 +1,4 @@
-use std::{
-    fs::File,
-    io::Read,
-    rc::Rc,
-};
+use std::{fs::File, io::Read};
 
 use colored::Colorize;
 use terminal_size::{Width, terminal_size};
@@ -63,7 +59,7 @@ pub fn exec_input(input: &str, c: &mut Compiler) {
 /// Compile and run a single REPL input, carrying `globals` across calls.
 /// Each call gets fresh instructions, persisting constants, symbol table, and globals.
 /// Prints last statement if it's an expression.
-pub fn exec_repl_input(input: &str, c: &mut Compiler, globals: &mut Vec<Rc<Object>>) {
+pub fn exec_repl_input(input: &str, c: &mut Compiler, globals: &mut Vec<Object>) {
     match c.compile_repl(input) {
         Ok((bytecode, echo_last)) => {
             let mut vm = VM::from(bytecode);
@@ -75,7 +71,7 @@ pub fn exec_repl_input(input: &str, c: &mut Compiler, globals: &mut Vec<Rc<Objec
 
             if echo_last {
                 let val = vm.last_stack_obj();
-                if *val != Object::Nil {
+                if val != Object::Nil {
                     println!("{val}");
                 }
             }

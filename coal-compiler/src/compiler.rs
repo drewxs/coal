@@ -235,7 +235,7 @@ impl Compiler {
                 self.emit(Opcode::from(*b), &[]);
             }
             Literal::Str(s) => {
-                let operands = &[self.add_constant(Object::Str(s.clone()))];
+                let operands = &[self.add_constant(Object::Str(Rc::new(s.clone())))];
                 self.emit(Opcode::Const, operands);
             }
             Literal::U32(i) => {
@@ -510,7 +510,7 @@ impl Compiler {
             n_params: f.args.len(),
         };
         let operands = vec![
-            self.add_constant(Object::CompiledFunc(func)),
+            self.add_constant(Object::CompiledFunc(Rc::new(func))),
             free.borrow().len(),
         ];
         self.emit(Opcode::Closure, &operands);
@@ -529,7 +529,7 @@ impl Compiler {
         for arg in args {
             self.compile_expr(arg);
         }
-        let name_idx = self.add_constant(Object::Str(name.to_owned()));
+        let name_idx = self.add_constant(Object::Str(Rc::new(name.to_owned())));
         self.emit(Opcode::Method, &[name_idx, args.len()]);
         // After Method: stack top is mutated receiver, result is below it.
         // Store the receiver back when it names a binding, else discard it.

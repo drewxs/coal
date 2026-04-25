@@ -9,6 +9,7 @@ use coal_core::Stmt;
 
 use super::Object;
 
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Func {
     pub name: String,
@@ -43,7 +44,7 @@ impl Hash for CompiledFunc {
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Closure {
     pub func: Rc<CompiledFunc>,
-    pub free: Vec<Rc<Object>>,
+    pub free: Vec<Object>,
 }
 
 impl Hash for Closure {
