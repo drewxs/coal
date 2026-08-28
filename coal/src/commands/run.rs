@@ -14,12 +14,13 @@ use crate::{BIN_HEADER_LEN, BIN_MAGIC, compile, path::resolve_bin, read_file_to_
 
 /// Run a binary (e.g. `main.coal.bin`)
 pub fn run(path: &str) {
-    let target = resolve_bin("target", path).unwrap_or_else(|_| {
-        compile(".", false);
-        resolve_bin("target", path).unwrap()
-    });
-    let mut file = File::open(&target).unwrap();
+    compile(".", false);
+    let Ok(target) = resolve_bin("target", path) else {
+        eprintln!("Failed to resolve binary");
+        return;
+    };
 
+    let mut file = File::open(&target).unwrap();
     let mut header = [0u8; BIN_HEADER_LEN];
     if file.read_exact(&mut header).is_err() || header[0..4] != BIN_MAGIC {
         eprintln!("Invalid bytecode file");
