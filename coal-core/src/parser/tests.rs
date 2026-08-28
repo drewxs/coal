@@ -1289,6 +1289,73 @@ fn test_parse_lists() {
 }
 
 #[test]
+fn test_parse_list_repeat() {
+    check(&[
+        (
+            "[0; 3]",
+            Stmt::Expr(Expr::Literal(
+                Literal::List(List::new_repeat(
+                    &[
+                        Expr::Literal(Literal::I32(0), ((1, 2), (1, 2))),
+                        Expr::Literal(Literal::I32(0), ((1, 2), (1, 2))),
+                        Expr::Literal(Literal::I32(0), ((1, 2), (1, 2))),
+                    ],
+                    I32,
+                    Box::new(Expr::Literal(Literal::I32(3), ((1, 5), (1, 5)))),
+                )),
+                ((1, 1), (1, 6)),
+            )),
+        ),
+        (
+            "let n: u32 = 3;\n[0; n]",
+            Stmt::Expr(Expr::Literal(
+                Literal::List(List::new_repeat(
+                    &[Expr::Literal(Literal::I32(0), ((2, 2), (2, 2)))],
+                    I32,
+                    Box::new(Expr::Ident(
+                        Ident::from("n"),
+                        U32,
+                        ((2, 5), (2, 5)),
+                    )),
+                )),
+                ((2, 1), (2, 6)),
+            )),
+        ),
+        (
+            "let m: u32 = 2;\nlet n: u32 = 3;\n[[0; m]; n]",
+            Stmt::Expr(Expr::Literal(
+                Literal::List(List::new_repeat(
+                    &[Expr::Literal(
+                        Literal::List(List::new_repeat(
+                            &[Expr::Literal(Literal::I32(0), ((3, 3), (3, 3)))],
+                            I32,
+                            Box::new(Expr::Ident(
+                                Ident::from("m"),
+                                U32,
+                                ((3, 6), (3, 6)),
+                            )),
+                        )),
+                        ((3, 2), (3, 7)),
+                    )],
+                    Type::List(Box::new(I32)),
+                    Box::new(Expr::Ident(
+                        Ident::from("n"),
+                        U32,
+                        ((3, 10), (3, 10)),
+                    )),
+                )),
+                ((3, 1), (3, 11)),
+            )),
+        ),
+    ]);
+
+    check_invalid(&[
+        r#"let s: str = "x"; [0; s]"#,
+        r#"let b: bool = true; [0; b]"#,
+    ]);
+}
+
+#[test]
 fn test_parse_maps() {
     check(&[
         (

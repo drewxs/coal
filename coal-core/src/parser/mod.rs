@@ -792,23 +792,17 @@ impl Parser {
             Expr::Literal(Literal::I64(i), _) => {
                 (vec![expr.clone(); *i as usize], Some(Box::new(rhs.clone())))
             }
-            Expr::Call { ret_t, .. } | Expr::MethodCall { ret_t, .. } => {
-                if !ret_t.is_numeric() {
+            _ => {
+                let rhs_t = Type::try_from(&rhs).unwrap_or(Type::Unknown);
+                if rhs_t.is_numeric() {
+                    (vec![expr.clone()], Some(Box::new(rhs.clone())))
+                } else {
                     self.errors.push(ParserError::new(
-                        ParserErrorKind::TypeMismatch(U32.into(), t.clone().into()),
+                        ParserErrorKind::TypeMismatch(U32.into(), rhs_t.into()),
                         self.next_tok.span,
                     ));
                     (vec![], None)
-                } else {
-                    (vec![expr.clone()], Some(Box::new(rhs.clone())))
                 }
-            }
-            _ => {
-                self.errors.push(ParserError::new(
-                    ParserErrorKind::TypeMismatch(U32.into(), t.clone().into()),
-                    self.next_tok.span,
-                ));
-                (vec![], None)
             }
         };
 
