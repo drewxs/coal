@@ -13,6 +13,7 @@ use crate::{bin_header, path::resolve_main, read_file_to_str, read_meta, status,
 
 /// Compile the project at the given working directory
 pub fn compile(working_dir: &str, quiet: bool) {
+    let start = Instant::now();
     let Some(ctx) = Ctx::new(working_dir, quiet) else {
         return;
     };
@@ -21,7 +22,14 @@ pub fn compile(working_dir: &str, quiet: bool) {
         && let Some((cached_mtime, cached_hash)) = read_meta(&ctx.meta_path)
     {
         if cached_mtime == ctx.src_mtime {
-            ctx.print("Finished");
+            if !quiet {
+                println!(
+                    "{} `{}` in {}ms",
+                    status("Finished"),
+                    ctx.bin_path.display(),
+                    start.elapsed().as_millis()
+                );
+            }
             return;
         }
 
@@ -29,7 +37,14 @@ pub fn compile(working_dir: &str, quiet: bool) {
         let hash = *blake3::hash(input.as_bytes()).as_bytes();
         if hash == cached_hash {
             let _ = write_meta(&ctx.meta_path, ctx.src_mtime, &hash);
-            ctx.print("Finished");
+            if !quiet {
+                println!(
+                    "{} `{}` in {}ms",
+                    status("Finished"),
+                    ctx.bin_path.display(),
+                    start.elapsed().as_millis()
+                );
+            }
             return;
         }
         ctx.build(&input, &hash);
@@ -98,14 +113,15 @@ impl Ctx {
         })
     }
 
-    fn print(&self, label: &str) {
-        if !self.quiet {
-            println!("{} {} ({})", status(label), self.name, self.project_root.display());
-        }
-    }
-
     fn build(&self, input: &str, hash: &[u8; 32]) {
-        self.print("Compiling");
+        if !self.quiet {
+            println!(
+                "{} {} ({})",
+                status("Compiling"),
+                self.name,
+                self.project_root.display()
+            );
+        }
         let start = Instant::now();
 
         let mut c = Compiler::new();
@@ -149,21 +165,19 @@ impl Ctx {
 mod tests {
     use super::*;
     use std::{
-        thread,
+        process, thread,
         time::{Duration, SystemTime},
     };
 
     use crate::{BIN_HEADER_LEN, BIN_MAGIC, META_LEN};
 
     fn setup(tag: &str, source: &str) -> PathBuf {
-        let nanos = SystemTime::now()
+        let id = process::id();
+        let ns = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let dir = std::env::temp_dir().join(format!(
-            "coal-compile-{}-{tag}-{nanos}",
-            std::process::id()
-        ));
+        let dir = env::temp_dir().join(format!("coal-compile-{id}-{tag}-{ns}"));
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join("main.coal"), source).unwrap();
         dir
